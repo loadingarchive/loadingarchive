@@ -22,12 +22,11 @@ exports.handler = async function (event) {
     return { statusCode: 500, body: JSON.stringify({ error: "RAWG fetch failed" }) };
   }
 
-  // Filter: alleen games met Steam store link en voldoende interesse
+  // Filter: alleen games met Steam store link, 18+ eruit
   const withSteam = rawgGames.filter(g => {
     const hasSteam = (g.stores || []).some(s => s.store?.slug === "steam");
-    const hasInterest = (g.ratings_count || 0) >= 5 || (g.added || 0) >= 20;
     const notAdult = !g.esrb_rating || g.esrb_rating.slug !== "adults-only";
-    return hasSteam && hasInterest && notAdult;
+    return hasSteam && notAdult;
   });
 
   // Stap 2: Steam App ID ophalen per game via RAWG store URL
