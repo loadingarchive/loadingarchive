@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0E1015;
+  color: #fff;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hero {
+  background: url('assets/header-bg.jpg') center center / cover no-repeat;
+  height: 720px;
+  display: flex; flex-direction: column;
+  position: relative;
+  padding-top: 68px;
+}
+
+/* NAV COMPONENT */
+.nav-wrap {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  max-width: 620px; margin: 0 auto;
+  padding: 16px 0 0;
+}
+.nav-card {
+  background: #13151B;
+  border: 1px solid #1F2127;
+  border-radius: 22px;
+  padding: 11px 14px 11px 18px;
+  transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  overflow: hidden;
+}
+.nav-card.scrolled {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+.nav-card.open {
+  padding: 14px 18px;
+}
+.nav-top {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 0 8px rgba(124,147,255,0.5)); }
+.logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
+.nav-right a:hover { color: #fff; }
+.filter-btn {
+  font-size: 10px; color: #fff; border: 1.5px solid rgba(255,255,255,0.22);
+  background: transparent; padding: 6px 18px; border-radius: 100px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s;
+}
+.filter-btn:hover { background: rgba(255,255,255,0.08); }
+.filter-btn.active { background: #fff; color: #13151B; border-color: #fff; }
+
+.nav-filter {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-card.open .nav-filter { max-height: 400px; }
+.nav-filter-inner { padding-top: 18px; }
+
+/* Oud header css weggehaald */
+.header-shadow { display: none; }
+.header-mask { display: none; }
+.header-wrap { display: none; }
+.header-inner { display: none; }
+.filter-clip { display: none; }
+.filter-panel { display: none; }
+.filter-inner { display: none; }
+.filter-search {
+  width: 100%; background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 8px 12px 12px; margin-bottom: 15px;
+  color: #fff; font-size: 10px; outline: none;
+  font-family: 'Inter', sans-serif;
+  border-radius: 0 0 8px 8px;
+}
+.filter-search::placeholder { color: rgba(255,255,255,0.28); }
+.filter-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; padding: 4px 10px 4px 6px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+  color: #fff; font-weight: 500; user-select: none; transition: opacity 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+.chip.active { opacity: 0.35; }
+.chip .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.chip .dot.outline { border: 1.5px solid rgba(255,255,255,0.55); background: transparent; }
+
+.tagline {
+  text-align: center;
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding: 0 20px 60px;
+  max-width: 660px; margin: 0 auto; width: 100%;
+}
+.tagline h1 {
+  font-size: 25px; font-weight: 600; color: #fff;
+  line-height: 1.32; max-width: 470px; margin: 0 auto 22px;
+  letter-spacing: -0.015em;
+}
+.month-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 400;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 10px; padding: 6px 18px; color: #fff; margin-bottom: 8px;
+}
+.tagline-arrow { display: flex; justify-content: center; }
+
+.main-layout {
+  position: relative;
+  max-width: 620px; margin: -30px auto 0;
+  padding: 0 0 140px;
+}
+
+/* SIDE NAV */
+.side-nav {
+  position: sticky;
+  top: 20px;
+  width: 60px; flex-shrink: 0;
+  float: left; margin-left: -80px;
+  margin-top: 60px;
+}
+.side-nav-inner {
+  position: relative; height: 330px; width: 60px;
+  cursor: grab; user-select: none;
+}
+.side-nav-inner:active { cursor: grabbing; }
+.sn-label {
+  position: absolute; right: 44px;
+  font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 500;
+  white-space: nowrap; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; gap: 6px;
+  transform: translateY(-50%); transition: top 0.08s ease;
+  pointer-events: none;
+}
+.sn-label::after {
+  content: ''; display: block; width: 10px; height: 1px;
+  background: rgba(255,255,255,0.7);
+}
+
+/* GAME LIST */
+.game-list { display: flex; flex-direction: column; gap: 12px; max-width: 620px; margin: 0 auto; }
+.month-label {
+  font-size: 10px; color: rgba(255,255,255,0.25);
+  letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500;
+}
+
+/* CARD */
+.game-card {
+  background: #13151B; border-radius: 10px;
+  border: 1px solid #1F2127; overflow: hidden;
+  transition: border-color 0.15s;
+}
+.game-card:hover { border-color: #2c2f3a; }
+
+.card-date-row {
+  padding: 8px;
+  font-size: 10px; color: rgba(255,255,255,0.35);
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #1F2127;
+}
+.date-val { color: rgba(255,255,255,0.65); }
+.anticipated-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; color: #fff;
+  background: #FCA311; border-radius: 20px; padding: 3px 8px;
+}
+
+.card-body { display: flex; gap: 14px; padding: 8px; }
+.card-cover {
+  width: 96px; height: 114px; flex-shrink: 0;
+  border-radius: 5px; overflow: hidden;
+}
+.card-cover-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1a1d27 0%, #232630 100%);
+}
+.card-cover-placeholder svg { width: 20px; height: 20px; opacity: 0.2; }
+.card-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+.card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.card-title-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  margin-bottom: 8px;
+}
+.card-title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.25; letter-spacing: -0.01em; }
+.trailer-btn {
+  flex-shrink: 0; font-size: 10px; color: rgba(255,255,255,0.45);
+  background: transparent; border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 3px;
+  font-family: 'Inter', sans-serif; font-weight: 500; padding: 2px 0;
+  transition: color 0.15s; white-space: nowrap;
+}
+.trailer-btn:hover { color: #fff; }
+.trailer-btn svg { transition: transform 0.2s; }
+.trailer-btn.open svg { transform: rotate(180deg); }
+
+.ptags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 10px; }
+.ptag {
+  font-size: 10px; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px; font-family:'Inter', sans-serif; color: #fff;
+}
+.ptag.WIN { background: #44454D; }
+.ptag.NS  { background: #E0342B; }
+.ptag.PS4 { background: #2E6DB4; }
+.ptag.PS5 { background: #3B82C4; }
+.ptag.XBO { background: #2CA243; }
+.ptag.XSX { background: #2CA243; }
+.ptag.MAC { background: #565A63; }
+.ptag.LIN { background: #C9742A; }
+.ptag.IOS { background: #565A63; }
+.ptag.AND { background: #4C8C3F; }
+
+.card-meta-row {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 5px; font-size: 10px; color: rgba(255,255,255,0.5);
+  margin-bottom: 5px;
+}
+.card-meta-row .mlabel { color: rgba(255,255,255,0.28); }
+.card-meta-row .msep { color: rgba(255,255,255,0.15); margin: 0 1px; }
+
+.card-bottom-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10px; margin-top: auto; padding-top: 4px;
+}
+.card-bottom-left { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.card-bottom-left .mlabel { color: rgba(255,255,255,0.28); font-size: 10px; }
+.card-dev { color: rgba(255,255,255,0.62); font-size: 10px; }
+.card-bottom-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.card-price { color: rgba(255,255,255,0.7); font-weight: 600; font-size: 10px; }
+.steam-link {
+  font-size: 10px; color: #66A8E0; text-decoration: none;
+  display: flex; align-items: center; gap: 4px; font-weight: 500;
+  transition: color 0.15s; white-space: nowrap;
+}
+.steam-link:hover { color: #8FC4F5; }
+.wl-btn { display: none !important; }
+.wl-counter { display: none !important; }
+
+.trailer-wrap { display: none; padding: 15px 0; }
+.trailer-wrap.open { display: block; }
+.trailer-wrap iframe { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
+
+.empty-state {
+  padding: 48px 24px; text-align: center;
+  border: 1px dashed rgba(255,255,255,0.1); border-radius: 18px; display: none;
+}
+.empty-state.show { display: block; }
+.empty-state p { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 500; margin-bottom: 4px; }
+.empty-state span { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+/* MONTH NAV */
+.month-nav-wrap {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  padding: 18px 20px 16px;
+  background: linear-gradient(180deg, rgba(14,16,21,0) 0%, #0E1015 42%);
+}
+.month-nav-inner {
+  max-width: 620px; margin: 0 auto;
+  display: flex; align-items: center;
+  background: rgba(24,26,32,0.94); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 100px; padding: 15px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+}
+.month-nav-label { font-size: 10px; color: #fff; padding: 0; font-weight: 500; flex-shrink: 0; margin-right: 0; }
+.months { display: flex; align-items: center; gap: 10px; margin-left: auto; padding-right: 0; }
+.mnav {
+  font-size: 10px; color: rgba(255,255,255,0.3); padding: 0;
+  border-radius: 0; cursor: pointer; border: none; background: transparent;
+  transition: color 0.15s; font-family: 'Inter', sans-serif; font-weight: 500;
+  line-height: 1;
+}
+.mnav:hover { color: rgba(255,255,255,0.7); }
+.mnav.active { color: #fff; }
+.month-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; }
+.wl-counter {
+  position: fixed; top: 20px; right: 20px; z-index: 200;
+  font-size: 11px; color: #FF9B9B;
+  background: rgba(24,26,32,0.94); backdrop-filter: blur(12px);
+  border: 1px solid rgba(224,85,85,0.25);
+  border-radius: 10px; padding: 8px 14px;
+  font-weight: 500; display: none;
+  align-items: center; gap: 5px;
+}
+.wl-counter.vis { display: inline-flex; }
+.month-nav-label { font-size: 10px; color: #fff; padding: 0; font-weight: 500; flex-shrink: 0; margin-right: 0; padding-right: 20px; }
+</style>
+</head>
+<body>
+
+<div class="header-shadow"></div>
+
+<div class="hero">
+  <div class="nav-wrap">
+    <div class="nav-card" id="navCard">
+      <!-- Top rij: altijd zichtbaar -->
+      <div class="nav-top">
+        <a class="logo" href="#">
+          <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" fill="#fff">
+            <path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/>
+          </svg>
+          <span>Loading Archive</span>
+        </a>
+        <div class="nav-right">
+          <a href="#">2025</a>
+          <a href="#">Contact</a>
+          <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">Filter</button>
+        </div>
+      </div>
+      <!-- Filter content: verschijnt bij open -->
+      <div class="nav-filter" id="filterPanel">
+        <div class="nav-filter-inner">
+          <input class="filter-search" id="searchInput" type="text" placeholder="Search game" oninput="renderGames()">
+          <div class="filter-label">Filter</div>
+          <div class="chips" id="chipsContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tagline">
+    <h1>Discover the release dates for all the major upcoming video games across every platform</h1>
+    <div class="month-pill" id="heroPill">January 2025</div>
+    <div class="tagline-arrow">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </div>
+  </div>
+</div>
+
+<div class="main-layout">
+  <div class="side-nav" id="sideNav">
+    <div class="side-nav-inner" id="sideNavInner"></div>
+  </div>
+  <div class="game-list" id="gameList">
+    <div class="empty-state" id="emptyState">
+      <p>No releases listed yet</p>
+      <span>Data syncs in from RAWG &amp; Steam.</span>
+    </div>
+  </div>
+</div>
+
+<span class="wl-counter" id="wlCounter">
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+  <span id="wlCount">0</span> wishlisted
+</span>
+
+<div class="month-nav-wrap">
+  <div class="month-nav-inner">
+    <span class="month-nav-label">Month</span>
+    <div class="months" id="monthNav"></div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const CHIP_DEFS = [
+  { key:"anticipated", label:"Anticipated", dot:"#D4A017" },
+  { key:"Win",  label:"Win",      dot:"outline" },
+  { key:"Mac",  label:"Mac",      dot:"outline" },
+  { key:"Lin",  label:"Lin",      dot:"#F0A030" },
+  { key:"NS",   label:"NS",       dot:"#E03030" },
+  { key:"PS4",  label:"PS4",      dot:"#2060E0" },
+  { key:"PS5",  label:"PS5",      dot:"#2060E0" },
+  { key:"XBO",  label:"XBO",      dot:"#208020" },
+  { key:"XSX",  label:"XSX/S",   dot:"#208020" },
+  { key:"IOS",  label:"iOS",      dot:"outline" },
+  { key:"Android", label:"Droid", dot:"#7040C0" },
+];
+
+const GAMES = [
+  { id:1, title:"Wuthering Waves",                    date:"2025-01-02", platforms:["PS5"],                           genre:["Action","Role-Playing"],  dev:"Kuro Games",        anticipated:false, trailer:"R8htow_6tRc",  steam:null,      price:null },
+  { id:2, title:"Project Tower",                      date:"2025-01-06", platforms:["Win","PS5"],                     genre:["Third-Person Shooter"],   dev:"Yummy Games",       anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2242970", price:"€59,99" },
+  { id:3, title:"Freedom Wars Remastered",            date:"2025-01-10", platforms:["Win","NS","PS4","PS5"],          genre:["Action","Role-Playing"],  dev:"Dimps",             anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"3004100", price:"€39,99" },
+  { id:4, title:"Dynasty Warriors: Origins",          date:"2025-01-21", platforms:["Win","PS5","XSX"],              genre:["Hack & Slash","Action"],  dev:"Omega Force",       anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2384580", price:"€59,99" },
+  { id:5, title:"Ender Magnolia: Bloom in the Mist", date:"2025-01-23", platforms:["Win","NS","PS4","PS5","XSX"],   genre:["Metroidvania"],           dev:"Live Wire",         anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2725260", price:"€24,99" },
+  { id:6, title:"Final Fantasy VII Rebirth",          date:"2025-01-23", platforms:["Win"],                          genre:["Action","RPG"],           dev:"Square Enix",       anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2909400", price:"€69,99" },
+  { id:7, title:"Sniper Elite: Resistance",           date:"2025-01-30", platforms:["Win","PS4","PS5","XBO","XSX"],  genre:["Third-Person Shooter"],   dev:"Rebellion",         anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2169200", price:"€49,99" },
+  { id:8, title:"Citizen Sleeper 2",                  date:"2025-01-31", platforms:["Win","Mac","NS","PS5","XSX"],   genre:["Role-Playing"],           dev:"Jump Over the Age", anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2442460", price:"€19,99" },
+];
+
+let activeMonth = 0;
+let activeFilters = new Set();
+let wishlist = new Set();
+let filterOpen = false;
+let openTrailers = new Set();
+
+function formatDate(str) {
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+}
+function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
+function getDay(str) { return parseInt(str.split('-')[2]); }
+
+function buildChips() {
+  const c = document.getElementById('chipsContainer');
+  c.innerHTML = '';
+  CHIP_DEFS.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (activeFilters.has(ch.key) ? ' active' : '');
+    const dotHtml = ch.dot === 'outline'
+      ? '<span class="dot outline"></span>'
+      : `<span class="dot" style="background:${ch.dot}"></span>`;
+    btn.innerHTML = dotHtml + ch.label;
+    btn.onclick = () => { toggleFilterKey(ch.key); };
+    c.appendChild(btn);
+  });
+}
+
+function toggleFilter() {
+  filterOpen = !filterOpen;
+  document.getElementById('navCard').classList.toggle('open', filterOpen);
+  document.getElementById('filterBtn').classList.toggle('active', filterOpen);
+}
+
+function toggleFilterKey(key) {
+  if (activeFilters.has(key)) activeFilters.delete(key);
+  else activeFilters.add(key);
+  buildChips();
+  renderGames();
+}
+
+function buildMonthNav() {
+  const nav = document.getElementById('monthNav');
+  nav.innerHTML = '';
+  MONTH_SHORT.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mnav' + (i === activeMonth ? ' active' : '');
+    btn.textContent = m;
+    btn.onclick = () => setMonth(i);
+    nav.appendChild(btn);
+    if (i < MONTH_SHORT.length - 1) {
+      const sep = document.createElement('span');
+      sep.className = 'month-sep';
+      sep.textContent = '|';
+      nav.appendChild(sep);
+    }
+  });
+}
+
+function setMonth(i) {
+  activeMonth = i;
+  document.getElementById('heroPill').textContent = MONTHS[i] + ' 2025';
+  document.getElementById('monthLabel').textContent = MONTHS[i];
+  buildMonthNav();
+  renderGames();
+  buildSideNav();
+}
+
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return GAMES.filter(g => {
+    if (getMonth(g.date) !== activeMonth) return false;
+    if (q && !g.title.toLowerCase().includes(q)) return false;
+    if (activeFilters.size === 0) return true;
+    if (activeFilters.has('anticipated') && !g.anticipated) return false;
+    const pf = [...activeFilters].filter(f => f !== 'anticipated');
+    if (pf.length > 0 && !pf.some(p => g.platforms.includes(p))) return false;
+    return true;
+  });
+}
+
+function renderGames() {
+  const list = document.getElementById('gameList');
+  const empty = document.getElementById('emptyState');
+  [...list.querySelectorAll('.game-card')].forEach(el => el.remove());
+  empty.classList.remove('show');
+  const games = getFiltered();
+  if (!games.length) { empty.classList.add('show'); return; }
+  games.forEach(g => list.appendChild(buildCard(g)));
+}
+
+function buildCard(g) {
+  const inWl = wishlist.has(g.id);
+  const isOpen = openTrailers.has(g.id);
+  const card = document.createElement('div');
+  card.className = 'game-card';
+  card.id = 'card-' + g.id;
+
+  const ptagsHtml = g.platforms.map(p => {
+    const cls = p === 'Android' ? 'AND' : p === 'Win' ? 'WIN' : p === 'Mac' ? 'MAC' : p === 'Lin' ? 'LIN' : p === 'IOS' ? 'IOS' : p.toUpperCase();
+    const label = p === 'XSX' ? 'XSX/S' : p === 'Android' ? 'Droid' : p;
+    return `<span class="ptag ${cls}">${label}</span>`;
+  }).join('');
+
+  const genreHtml = g.genre.map((gi, i) =>
+    `<span>${gi}</span>${i < g.genre.length - 1 ? '<span class="msep">|</span>' : ''}`
+  ).join('');
+
+  card.innerHTML = `
+    <div class="card-date-row">
+      <span>Release date &nbsp;<span class="date-val">${formatDate(g.date)}</span></span>
+      ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7z"/></svg></span>` : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-cover">
+        <div class="card-cover-placeholder">
+          <svg viewBox="0 0 500 500" fill="rgba(255,255,255,0.15)"><path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/></svg>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title-row">
+          <div class="card-title">${g.title}</div>
+          ${g.trailer ? `<button class="trailer-btn${isOpen ? ' open' : ''}" id="tb-${g.id}" onclick="toggleTrailer(${g.id},'${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
+        </div>
+        <div class="ptags">${ptagsHtml}</div>
+        <div class="card-meta-row"><span class="mlabel">Genre</span>${genreHtml}</div>
+        <div class="card-bottom-row">
+          <div class="card-bottom-left">
+            <span class="mlabel">Developer / Publisher</span>
+            <span class="card-dev">${g.dev}</span>
+          </div>
+          <div class="card-bottom-right">
+            ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
+            ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.65 2 2.28 6.13 2 11.4l5.36 2.22a3 3 0 0 1 1.7-.53l2.38-3.46v-.05a4 4 0 1 1 4 4h-.1l-3.4 2.43a3 3 0 1 1-5.95.66L2 15.43A10 10 0 1 0 11.98 2zm-3.6 15.18l-1.23-.51a2.25 2.25 0 1 0 1.4-1.4l1.27.53a1.66 1.66 0 1 1-1.44 1.38zM18 9.5a2.66 2.66 0 1 0-2.66 2.66h.04A2.66 2.66 0 0 0 18 9.5zm-4.66 0a2 2 0 1 1 2 2 2 2 0 0 1-2-2z"/></svg> Steam page</a>` : ''}
+            <button class="wl-btn${inWl ? ' saved' : ''}" onclick="toggleWl(${g.id})">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="${inWl ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              ${inWl ? 'Saved' : 'Wishlist'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="trailer-wrap${isOpen ? ' open' : ''}" id="tw-${g.id}">
+      ${isOpen ? `<iframe src="https://www.youtube.com/embed/${g.trailer}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : ''}
+    </div>
+  `;
+  return card;
+}
+
+function toggleTrailer(id, ytId) {
+  const w = document.getElementById('tw-' + id);
+  const b = document.getElementById('tb-' + id);
+  const isOpen = openTrailers.has(id);
+
+  // Sluit alle andere open trailers eerst
+  openTrailers.forEach(openId => {
+    if (openId !== id) {
+      const ow = document.getElementById('tw-' + openId);
+      const ob = document.getElementById('tb-' + openId);
+      if (ow) {
+        const iframe = ow.querySelector('iframe');
+        if (iframe) iframe.src = '';
+        setTimeout(() => { ow.classList.remove('open'); ow.innerHTML = ''; }, 50);
+      }
+      if (ob) ob.classList.remove('open');
+    }
+  });
+  openTrailers.clear();
+
+  if (isOpen) {
+    // Sluit huidige
+    const iframe = w.querySelector('iframe');
+    if (iframe) iframe.src = '';
+    setTimeout(() => { w.classList.remove('open'); w.innerHTML = ''; }, 50);
+    b.classList.remove('open');
+  } else {
+    // Open nieuwe
+    openTrailers.add(id);
+    w.classList.add('open');
+    w.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+    b.classList.add('open');
+  }
+}
+
+function toggleWl(id) {
+  if (wishlist.has(id)) wishlist.delete(id); else wishlist.add(id);
+  document.getElementById('wlCount').textContent = wishlist.size;
+  document.getElementById('wlCounter').classList.toggle('vis', wishlist.size > 0);
+  renderGames();
+}
+
+function buildSideNav() {
+  const inner = document.getElementById('sideNavInner');
+  inner.innerHTML = '';
+  const games = GAMES.filter(g => getMonth(g.date) === activeMonth);
+  const totalDays = new Date(2025, activeMonth + 1, 0).getDate();
+  const navH = 330;
+  const tickSpacing = navH / (totalDays - 1);
+  let currentIdx = -1;
+  let dragging = false, startY = 0, startIdx = 0;
+
+  // Ticks
+  for (let i = 0; i < totalDays; i++) {
+    const isWeekStart = i % 7 === 0;
+    const tick = document.createElement('div');
+    tick.id = 'sn-tick-' + i;
+    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:rgba(255,255,255,0.2);transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
+    inner.appendChild(tick);
+  }
+
+  // Label
+  const label = document.createElement('div');
+  label.className = 'sn-label';
+  label.id = 'sn-label';
+  label.style.top = '0px';
+  label.textContent = 'W1/D1';
+  inner.appendChild(label);
+
+  function setActiveDay(idx) {
+    idx = Math.max(0, Math.min(totalDays - 1, idx));
+
+    // Reset vorige
+    if (currentIdx >= 0) {
+      const old = document.getElementById('sn-tick-' + currentIdx);
+      if (old) {
+        const wasWeekStart = currentIdx % 7 === 0;
+        old.style.width = (wasWeekStart ? 18 : 10) + 'px';
+        old.style.height = '1.5px';
+        old.style.background = 'rgba(255,255,255,0.2)';
+      }
+    }
+
+    currentIdx = idx;
+
+    // Activeer nieuwe
+    const tick = document.getElementById('sn-tick-' + idx);
+    if (tick) {
+      tick.style.width = '28px';
+      tick.style.height = '2.5px';
+      tick.style.background = '#ffffff';
+    }
+
+    // Label updaten
+    const week = Math.floor(idx / 7) + 1;
+    const day = idx + 1;
+    label.style.top = (idx * tickSpacing) + 'px';
+    label.textContent = `W${week}/D${day}`;
+  }
+
+  // Init
+  setActiveDay(0);
+
+  // Drag op de hele inner
+  inner.addEventListener('mousedown', e => {
+    dragging = true;
+    startY = e.clientY;
+    startIdx = currentIdx;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const delta = e.clientY - startY;
+    const idxDelta = Math.round(delta / tickSpacing);
+    const newIdx = Math.max(0, Math.min(totalDays - 1, startIdx + idxDelta));
+    setActiveDay(newIdx);
+    const pct = newIdx / (totalDays - 1);
+    const maxScroll = document.body.scrollHeight - window.innerHeight;
+    window.scrollTo({ top: pct * maxScroll, behavior: 'instant' });
+  });
+
+  document.addEventListener('mouseup', () => { dragging = false; });
+
+  // Scroll sync
+  window.addEventListener('scroll', () => {
+    // Shadow op nav card als gescroll
+    const navCard = document.getElementById('navCard');
+    if (window.scrollY > 50) navCard.classList.add('scrolled');
+    else navCard.classList.remove('scrolled');
+
+    if (dragging) return;
+    const pct = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);
+    const idx = Math.round(pct * (totalDays - 1));
+    setActiveDay(idx);
+  }, { passive: true });
+}
+
+buildChips();
+buildMonthNav();
+renderGames();
+buildSideNav();
+</script>
+</body>
+</html>
