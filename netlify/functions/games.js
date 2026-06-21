@@ -20,7 +20,6 @@ exports.handler = async function (event) {
     return { statusCode: 500, body: JSON.stringify({ error: "RAWG fetch failed", detail: e.message }) };
   }
 
-  // Debug: geef direct RAWG resultaten terug als er niets is
   if (rawgGames.length === 0) {
     return {
       statusCode: 200,
@@ -35,32 +34,29 @@ exports.handler = async function (event) {
     "macos": "Mac", "linux": "Lin", "ios": "IOS", "android": "Android"
   };
 
-  // Geen Steam filter — gewoon alle games mappen
-  const results = rawgGames
-    .filter(g => !g.esrb_rating || g.esrb_rating.slug !== "adults-only")
-    .map((g, idx) => {
-      const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
-      const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
+  const results = rawgGames.map((g, idx) => {
+    const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
+    const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
 
-      const platforms = (g.platforms || [])
-        .map(p => PLATFORM_MAP[p.platform?.slug] || null)
-        .filter(Boolean)
-        .filter((v, i, a) => a.indexOf(v) === i);
+    const platforms = (g.platforms || [])
+      .map(p => PLATFORM_MAP[p.platform?.slug] || null)
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i);
 
-      return {
-        id: g.id || idx,
-        title: g.name,
-        date: g.released,
-        platforms,
-        genre: (g.genres || []).map(g => g.name).slice(0, 2),
-        dev: "",
-        anticipated: (g.added || 0) > 200,
-        trailer: null,
-        steam: steamId,
-        price: null,
-        cover: g.background_image || null,
-      };
-    });
+    return {
+      id: g.id || idx,
+      title: g.name,
+      date: g.released,
+      platforms,
+      genre: (g.genres || []).map(g => g.name).slice(0, 2),
+      dev: "",
+      anticipated: (g.added || 0) > 200,
+      trailer: null,
+      steam: steamId,
+      price: null,
+      cover: g.background_image || null,
+    };
+  });
 
   return {
     statusCode: 200,
