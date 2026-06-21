@@ -1,3 +1,2 @@
 [build]
-  publish   = "loading-archive_01"
   functions = "netlify/functions"
