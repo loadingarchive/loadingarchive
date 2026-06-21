@@ -253,6 +253,7 @@ body {
 .trailer-wrap { display: none; padding: 15px 0; }
 .trailer-wrap.open { display: block; }
 .trailer-wrap iframe { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
+.trailer-wrap video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; }
 
 .empty-state {
   padding: 48px 24px; text-align: center;
@@ -317,7 +318,7 @@ body {
           <span>Loading Archive</span>
         </a>
         <div class="nav-right">
-          <a href="#">2025</a>
+          <a href="#">2026</a>
           <a href="#">Contact</a>
           <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">Filter</button>
         </div>
@@ -335,7 +336,7 @@ body {
 
   <div class="tagline">
     <h1>Discover the release dates for all the major upcoming video games across every platform</h1>
-    <div class="month-pill" id="heroPill">January 2025</div>
+    <div class="month-pill" id="heroPill">January 2026</div>
     <div class="tagline-arrow">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </div>
@@ -420,7 +421,7 @@ function mapRawgGame(g, idx) {
 }
 
 async function loadGames(monthIdx) {
-  const year = 2025;
+  const year = 2026;
   const m = String(monthIdx + 1).padStart(2, "0");
   const monthStr = `${year}-${m}`;
 
@@ -448,7 +449,7 @@ async function loadGames(monthIdx) {
   buildSideNav();
 }
 
-let activeMonth = 0;
+let activeMonth = new Date().getMonth();
 let activeFilters = new Set();
 let wishlist = new Set();
 let filterOpen = false;
@@ -509,7 +510,7 @@ function buildMonthNav() {
 
 function setMonth(i) {
   activeMonth = i;
-  document.getElementById('heroPill').textContent = MONTHS[i] + ' 2025';
+  document.getElementById('heroPill').textContent = MONTHS[i] + ' 2026';
   const ml = document.getElementById('monthLabel');
   if (ml) ml.textContent = MONTHS[i];
   buildMonthNav();
@@ -598,7 +599,7 @@ function buildCard(g) {
   return card;
 }
 
-function toggleTrailer(id, ytId) {
+async function toggleTrailer(id, trailerId) {
   const w = document.getElementById('tw-' + id);
   const b = document.getElementById('tb-' + id);
   const isOpen = openTrailers.has(id);
@@ -609,8 +610,8 @@ function toggleTrailer(id, ytId) {
       const ow = document.getElementById('tw-' + openId);
       const ob = document.getElementById('tb-' + openId);
       if (ow) {
-        const iframe = ow.querySelector('iframe');
-        if (iframe) iframe.src = '';
+        const vid = ow.querySelector('video');
+        if (vid) vid.pause();
         setTimeout(() => { ow.classList.remove('open'); ow.innerHTML = ''; }, 50);
       }
       if (ob) ob.classList.remove('open');
@@ -619,16 +620,38 @@ function toggleTrailer(id, ytId) {
   openTrailers.clear();
 
   if (isOpen) {
-    // Sluit huidige
-    const iframe = w.querySelector('iframe');
-    if (iframe) iframe.src = '';
+    const vid = w.querySelector('video');
+    if (vid) vid.pause();
     setTimeout(() => { w.classList.remove('open'); w.innerHTML = ''; }, 50);
     b.classList.remove('open');
-  } else {
-    // Open nieuwe
+    return;
+  }
+
+  // Steam trailer: haal video URL op via Steam API
+  if (trailerId && trailerId.startsWith('steam:')) {
+    const steamAppId = id;
+    b.textContent = 'Loading...';
+    try {
+      const res  = await fetch(`/.netlify/functions/trailer?appid=${steamAppId}`);
+      const data = await res.json();
+      if (data.mp4) {
+        openTrailers.add(id);
+        w.classList.add('open');
+        w.innerHTML = `<video src="${data.mp4}" controls autoplay playsinline></video>`;
+        b.innerHTML = 'Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+        b.classList.add('open');
+        return;
+      }
+    } catch(e) {}
+    b.innerHTML = 'No trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+    return;
+  }
+
+  // YouTube fallback
+  if (trailerId) {
     openTrailers.add(id);
     w.classList.add('open');
-    w.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+    w.innerHTML = `<iframe src="https://www.youtube.com/embed/${trailerId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
     b.classList.add('open');
   }
 }
@@ -644,7 +667,7 @@ function buildSideNav() {
   const inner = document.getElementById('sideNavInner');
   inner.innerHTML = '';
   const games = GAMES.filter(g => getMonth(g.date) === activeMonth);
-  const totalDays = new Date(2025, activeMonth + 1, 0).getDate();
+  const totalDays = new Date(2026, activeMonth + 1, 0).getDate();
   const navH = 330;
   const tickSpacing = navH / (totalDays - 1);
   let currentIdx = -1;
@@ -736,6 +759,7 @@ function buildSideNav() {
   }, { passive: true });
 }
 
+document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' 2026';
 buildChips();
 buildMonthNav();
 loadGames(activeMonth);
