@@ -384,16 +384,69 @@ const CHIP_DEFS = [
   { key:"Android", label:"Droid", dot:"#7040C0" },
 ];
 
-const GAMES = [
-  { id:1, title:"Wuthering Waves",                    date:"2025-01-02", platforms:["PS5"],                           genre:["Action","Role-Playing"],  dev:"Kuro Games",        anticipated:false, trailer:"R8htow_6tRc",  steam:null,      price:null },
-  { id:2, title:"Project Tower",                      date:"2025-01-06", platforms:["Win","PS5"],                     genre:["Third-Person Shooter"],   dev:"Yummy Games",       anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2242970", price:"€59,99" },
-  { id:3, title:"Freedom Wars Remastered",            date:"2025-01-10", platforms:["Win","NS","PS4","PS5"],          genre:["Action","Role-Playing"],  dev:"Dimps",             anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"3004100", price:"€39,99" },
-  { id:4, title:"Dynasty Warriors: Origins",          date:"2025-01-21", platforms:["Win","PS5","XSX"],              genre:["Hack & Slash","Action"],  dev:"Omega Force",       anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2384580", price:"€59,99" },
-  { id:5, title:"Ender Magnolia: Bloom in the Mist", date:"2025-01-23", platforms:["Win","NS","PS4","PS5","XSX"],   genre:["Metroidvania"],           dev:"Live Wire",         anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2725260", price:"€24,99" },
-  { id:6, title:"Final Fantasy VII Rebirth",          date:"2025-01-23", platforms:["Win"],                          genre:["Action","RPG"],           dev:"Square Enix",       anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2909400", price:"€69,99" },
-  { id:7, title:"Sniper Elite: Resistance",           date:"2025-01-30", platforms:["Win","PS4","PS5","XBO","XSX"],  genre:["Third-Person Shooter"],   dev:"Rebellion",         anticipated:true,  trailer:"dQw4w9WgXcQ",  steam:"2169200", price:"€49,99" },
-  { id:8, title:"Citizen Sleeper 2",                  date:"2025-01-31", platforms:["Win","Mac","NS","PS5","XSX"],   genre:["Role-Playing"],           dev:"Jump Over the Age", anticipated:false, trailer:"dQw4w9WgXcQ",  steam:"2442460", price:"€19,99" },
-];
+let GAMES = [];
+
+const PLATFORM_MAP = {
+  "pc": "Win", "playstation4": "PS4", "playstation5": "PS5",
+  "xbox-one": "XBO", "xbox-series-x": "XSX", "nintendo-switch": "NS",
+  "macos": "Mac", "linux": "Lin", "ios": "IOS", "android": "Android"
+};
+
+function mapRawgGame(g, idx) {
+  const platforms = (g.platforms || [])
+    .map(p => PLATFORM_MAP[p.platform?.slug] || null)
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  const genres = (g.genres || []).map(g => g.name).slice(0, 2);
+  const dev = (g.developers && g.developers[0]?.name) || "";
+  const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
+  const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
+  const metacritic = g.metacritic;
+
+  return {
+    id: g.id || idx,
+    title: g.name,
+    date: g.released,
+    platforms,
+    genre: genres,
+    dev,
+    anticipated: metacritic === null && g.ratings_count > 50,
+    trailer: null,
+    steam: steamId,
+    price: null,
+    cover: g.background_image || null,
+  };
+}
+
+async function loadGames(monthIdx) {
+  const year = 2025;
+  const m = String(monthIdx + 1).padStart(2, "0");
+  const monthStr = `${year}-${m}`;
+
+  const list = document.getElementById('gameList');
+  const empty = document.getElementById('emptyState');
+  [...list.querySelectorAll('.game-card, .loading-state')].forEach(el => el.remove());
+  empty.classList.remove('show');
+
+  const loader = document.createElement('div');
+  loader.className = 'loading-state';
+  loader.style.cssText = 'padding:48px 24px;text-align:center;font-size:10px;color:rgba(255,255,255,0.3);font-weight:500;';
+  loader.textContent = 'Loading releases...';
+  list.appendChild(loader);
+
+  try {
+    const res = await fetch(`/.netlify/functions/games?month=${monthStr}`);
+    const data = await res.json();
+    GAMES = (data.results || []).map(mapRawgGame);
+  } catch (e) {
+    GAMES = [];
+  }
+
+  loader.remove();
+  renderGames();
+  buildSideNav();
+}
 
 let activeMonth = 0;
 let activeFilters = new Set();
@@ -457,10 +510,10 @@ function buildMonthNav() {
 function setMonth(i) {
   activeMonth = i;
   document.getElementById('heroPill').textContent = MONTHS[i] + ' 2025';
-  document.getElementById('monthLabel').textContent = MONTHS[i];
+  const ml = document.getElementById('monthLabel');
+  if (ml) ml.textContent = MONTHS[i];
   buildMonthNav();
-  renderGames();
-  buildSideNav();
+  loadGames(i);
 }
 
 function getFiltered() {
@@ -510,9 +563,10 @@ function buildCard(g) {
     </div>
     <div class="card-body">
       <div class="card-cover">
-        <div class="card-cover-placeholder">
-          <svg viewBox="0 0 500 500" fill="rgba(255,255,255,0.15)"><path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/></svg>
-        </div>
+        ${g.cover
+          ? `<img src="${g.cover}" alt="${g.title}" loading="lazy" width="96" height="114" style="width:100%;height:100%;object-fit:cover;display:block;">`
+          : `<div class="card-cover-placeholder"><svg viewBox="0 0 500 500" fill="rgba(255,255,255,0.15)"><path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/></svg></div>`
+        }
       </div>
       <div class="card-info">
         <div class="card-title-row">
@@ -684,8 +738,7 @@ function buildSideNav() {
 
 buildChips();
 buildMonthNav();
-renderGames();
-buildSideNav();
+loadGames(activeMonth);
 </script>
 </body>
 </html>
