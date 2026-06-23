@@ -1,9 +1,4 @@
 {
   "buildCommand": "",
-  "outputDirectory": "loading-archive_01",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "outputDirectory": "loading-archive_01"
 }
