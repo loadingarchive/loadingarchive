@@ -446,31 +446,19 @@ let activeMonth = new Date().getMonth();
 let activeFilters = new Set();
 let openTrailers = new Set();
 
-const PLATFORM_MAP = {
-  "pc": "PC", "playstation4": "PS4", "playstation5": "PS5",
-  "xbox-one": "XBO", "xbox-series-x": "XSX", "nintendo-switch": "NS",
-  "macos": "PC", "linux": "PC", "ios": "IOS", "android": "Android"
-};
-
 function mapRawgGame(g, idx) {
-  const platforms = (g.platforms || [])
-    .map(p => PLATFORM_MAP[p.platform?.slug] || null)
-    .filter(Boolean)
-    .filter((v, i, a) => a.indexOf(v) === i);
-  const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
-  const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
   return {
-    id: g.id || idx,
-    title: g.name,
-    date: g.released,
-    platforms,
-    genre: (g.genres || []).map(g => g.name).slice(0, 2),
-    dev: "",
-    anticipated: (g.added || 0) > 200,
-    trailer: null,
-    steam: steamId,
-    price: null,
-    cover: g.background_image || null,
+    id: g.id ?? idx,
+    title: g.title,
+    date: g.date,
+    platforms: g.platforms || [],
+    genre: g.genre || [],
+    dev: g.dev || "",
+    anticipated: !!g.anticipated,
+    trailer: g.trailer || null,
+    steam: g.steam || null,
+    price: g.price || null,
+    cover: g.cover || null,
   };
 }
 
