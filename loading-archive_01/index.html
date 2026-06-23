@@ -29,7 +29,7 @@ body {
   background: #13151B;
   border: 1px solid #1F2127;
   border-radius: 22px;
-  padding: 0 20px;
+  padding: 11px 20px;
   transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
   overflow: hidden;
 }
@@ -129,7 +129,7 @@ body {
 /* SEARCH + FILTER BAR */
 .list-toolbar {
   display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; margin-top: 30px;
+  margin-bottom: 16px; margin-top: 60px;
 }
 .list-search {
   flex: 1; background: #13151B; border: 1px solid #1F2127;
@@ -137,7 +137,6 @@ body {
   color: #fff; font-size: 10px; outline: none;
   font-family: 'Inter', sans-serif;
   transition: border-color 0.15s;
-  margin-top: -50px;
 }
 .list-search::placeholder { color: rgba(255,255,255,0.28); }
 .list-search:focus { border-color: rgba(255,255,255,0.2); }
@@ -182,14 +181,13 @@ body {
   gap: 12px;
 }
 
-/* DATE ROW — spans full width */
-.date-row {
-  grid-column: 1 / -1;
+/* CARD DATE — sits above the cover, inside the card */
+.card-date {
   font-size: 10px; color: rgba(255,255,255,0.35);
-  padding: 4px 0 2px;
-  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px 0;
+  display: flex; align-items: center; gap: 6px;
 }
-.date-row span { color: rgba(255,255,255,0.65); }
+.card-date span { color: rgba(255,255,255,0.65); }
 
 /* GAME CARD */
 .game-card {
@@ -470,7 +468,7 @@ async function loadGames(monthIdx) {
 
   const grid = document.getElementById('gameGrid');
   const empty = document.getElementById('emptyState');
-  [...grid.querySelectorAll('.game-card, .date-row, .ad-card, .loading-row')].forEach(el => el.remove());
+  [...grid.querySelectorAll('.game-card, .ad-card, .loading-row')].forEach(el => el.remove());
   empty.classList.remove('show');
 
   const loader = document.createElement('div');
@@ -623,48 +621,31 @@ function getFiltered() {
 function renderGames() {
   const grid = document.getElementById('gameGrid');
   const empty = document.getElementById('emptyState');
-  [...grid.querySelectorAll('.game-card, .date-row, .ad-card')].forEach(el => el.remove());
+  [...grid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
   empty.classList.remove('show');
 
-  const games = getFiltered();
+  const games = getFiltered().sort((a, b) => a.date.localeCompare(b.date));
   if (!games.length) { empty.classList.add('show'); return; }
 
-  // Groepeer per datum
-  const byDate = {};
-  games.forEach(g => {
-    if (!byDate[g.date]) byDate[g.date] = [];
-    byDate[g.date].push(g);
-  });
-
-  let cardCount = 0;
   const adPositions = [5, 11]; // Na elke ~6 kaartjes een ad
 
-  Object.keys(byDate).sort().forEach(date => {
-    // Date row
-    const row = document.createElement('div');
-    row.className = 'date-row';
-    row.innerHTML = `Release date / <span>${formatDate(date)}</span>`;
-    grid.appendChild(row);
+  games.forEach((g, i) => {
+    grid.appendChild(buildCard(g));
 
-    byDate[date].forEach(g => {
-      grid.appendChild(buildCard(g));
-      cardCount++;
-
-      // Google Ad na bepaalde posities
-      if (adPositions.includes(cardCount)) {
-        const adCard = document.createElement('div');
-        adCard.className = 'ad-card';
-        adCard.innerHTML = `
-          <ins class="adsbygoogle"
-            style="display:block;width:100%;height:250px;"
-            data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-            data-ad-slot="XXXXXXXXXX"
-            data-ad-format="auto"
-            data-full-width-responsive="true"></ins>
-          <script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>`;
-        grid.appendChild(adCard);
-      }
-    });
+    // Google Ad na bepaalde posities
+    if (adPositions.includes(i + 1)) {
+      const adCard = document.createElement('div');
+      adCard.className = 'ad-card';
+      adCard.innerHTML = `
+        <ins class="adsbygoogle"
+          style="display:block;width:100%;height:250px;"
+          data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+          data-ad-slot="XXXXXXXXXX"
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});<\/script>`;
+      grid.appendChild(adCard);
+    }
   });
 }
 
@@ -685,6 +666,7 @@ function buildCard(g) {
   ).join('');
 
   card.innerHTML = `
+    <div class="card-date">Release date / <span>${formatDate(g.date)}</span></div>
     <div class="card-cover">
       ${g.cover
         ? `<img src="${g.cover}" alt="${g.title}" loading="lazy">`
