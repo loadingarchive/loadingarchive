@@ -184,11 +184,9 @@ body {
 /* CARD DATE — sits above the cover, inside the card */
 .card-date {
   font-size: 10px; color: rgba(255,255,255,0.35);
-  padding: 10px 10px 0;
-  margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
-.card-date span { color: rgba(255,255,255,0.65); }
+.card-date-text span { color: rgba(255,255,255,0.65); }
 
 /* GAME CARD */
 .game-card {
@@ -196,6 +194,7 @@ body {
   border: 1px solid #1F2127; overflow: hidden;
   transition: border-color 0.15s;
   display: flex; flex-direction: column;
+  padding: 15px; gap: 10px;
 }
 .game-card:hover { border-color: #2c2f3a; }
 
@@ -210,7 +209,7 @@ body {
 }
 .card-cover-placeholder svg { width: 20px; height: 20px; opacity: 0.15; }
 
-.card-body { padding: 10px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.card-body { flex: 1; display: flex; flex-direction: column; gap: 9px; }
 
 .card-title {
   font-size: 13px; font-weight: 700; color: #fff;
@@ -243,7 +242,7 @@ body {
 
 .card-footer {
   display: flex; align-items: center; justify-content: space-between;
-  margin-top: auto; padding-top: 4px;
+  margin-top: auto;
   gap: 6px;
 }
 .card-price { font-size: 10px; color: rgba(255,255,255,0.7); font-weight: 600; }
@@ -708,7 +707,10 @@ function buildCard(g) {
   ).join('');
 
   card.innerHTML = `
-    <div class="card-date">Release date / <span>${formatDate(g.date)}</span></div>
+    <div class="card-date">
+      <span class="card-date-text">Release date / <span>${formatDate(g.date)}</span></span>
+      ${g.anticipated ? `<span class="anticipated-tag">Anticipated ★</span>` : ''}
+    </div>
     <div class="card-cover">
       ${g.cover
         ? `<img src="${g.cover}" alt="${g.title}" loading="lazy">`
@@ -716,10 +718,7 @@ function buildCard(g) {
       }
     </div>
     <div class="card-body">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
-        <div class="card-title">${g.title}</div>
-        ${g.anticipated ? `<span class="anticipated-tag">Anticipated ★</span>` : ''}
-      </div>
+      <div class="card-title">${g.title}</div>
       <div class="ptags">${ptagsHtml}</div>
       <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
       <div class="card-footer">
