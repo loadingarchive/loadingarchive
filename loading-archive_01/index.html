@@ -389,7 +389,7 @@ body {
 
   <div class="content-area">
     <div class="list-toolbar">
-      <input class="list-search" id="searchInput" type="text" placeholder="Search game..." oninput="renderGames()">
+      <input class="list-search" id="searchInput" type="text" placeholder="Search game..." oninput="onSearchInput()">
     </div>
 
     <div class="platform-bar" id="platformBar">
@@ -445,6 +445,7 @@ let GAMES = [];
 let activeMonth = new Date().getMonth();
 let activeFilters = new Set();
 let openTrailers = new Set();
+let searchSeq = 0;
 
 function mapRawgGame(g, idx) {
   return {
@@ -617,6 +618,46 @@ function getFiltered() {
     }
     return true;
   });
+}
+
+async function onSearchInput() {
+  renderGames();
+
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (!query) return;
+
+  const matchesThisMonth = GAMES.some(g => g.title.toLowerCase().includes(query));
+  if (matchesThisMonth) return;
+
+  const mySeq = ++searchSeq;
+  const emptyText = document.querySelector('#emptyState p');
+  const originalText = emptyText.textContent;
+  emptyText.textContent = `Searching upcoming months for "${document.getElementById('searchInput').value}"...`;
+
+  try {
+    for (let i = activeMonth + 1; i < MONTHS.length; i++) {
+      if (mySeq !== searchSeq) return; // a newer search took over
+
+      const monthStr = `2026-${String(i + 1).padStart(2, '0')}`;
+      let monthResults = [];
+      try {
+        const res = await fetch(`/api/games?month=${monthStr}`);
+        const data = await res.json();
+        monthResults = data.results || [];
+      } catch (e) { /* skip this month on fetch error */ }
+
+      if (mySeq !== searchSeq) return; // a newer search took over
+
+      const found = monthResults.some(g => (g.title || '').toLowerCase().includes(query));
+      if (found) {
+        const stillSameQuery = document.getElementById('searchInput').value.trim().toLowerCase() === query;
+        if (stillSameQuery && mySeq === searchSeq) setMonth(i);
+        return;
+      }
+    }
+  } finally {
+    if (mySeq === searchSeq) emptyText.textContent = originalText;
+  }
 }
 
 function renderGames() {
