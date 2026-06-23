@@ -5,8 +5,5 @@
     "api/**/*.js": {
       "runtime": "nodejs20.x"
     }
-  },
-  "env": {
-    "RAWG_API_KEY": "@rawg_api_key"
   }
 }
