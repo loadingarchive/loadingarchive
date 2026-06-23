@@ -2,6 +2,10 @@ export default async function handler(req, res) {
   const rawgKey = process.env.RAWG_API_KEY;
   const { month } = req.query;
 
+  if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return res.status(400).json({ error: "Invalid month", detail: `Expected format YYYY-MM, got "${month}"` });
+  }
+
   const now = month ? new Date(month + "-01") : new Date();
   const year = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
@@ -13,10 +17,16 @@ export default async function handler(req, res) {
 
   let rawgGames = [];
   try {
-    const res_rawg  = await fetch(rawgUrl);
+    const res_rawg = await fetch(rawgUrl);
+    if (!res_rawg.ok) {
+      const detail = await res_rawg.text();
+      console.error("RAWG request failed", res_rawg.status, detail);
+      return res.status(502).json({ error: "RAWG request failed", status: res_rawg.status, detail });
+    }
     const data = await res_rawg.json();
-    rawgGames  = data.results || [];
+    rawgGames = data.results || [];
   } catch (e) {
+    console.error("RAWG fetch failed", e);
     return res.status(500).json({ error: "RAWG fetch failed", detail: e.message });
   }
 
@@ -44,7 +54,7 @@ export default async function handler(req, res) {
       title: g.name,
       date: g.released,
       platforms,
-      genre: (g.genres || []).map(g => g.name).slice(0, 2),
+      genre: (g.genres || []).map(genre => genre.name).slice(0, 2),
       dev: "",
       anticipated: (g.added || 0) > 200,
       trailer: null,
