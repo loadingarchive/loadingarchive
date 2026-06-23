@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     "macos": "PC", "linux": "PC", "ios": "IOS", "android": "Android"
   };
 
-  const results = rawgGames.map((g, idx) => {
+  const results = await Promise.all(rawgGames.map(async (g, idx) => {
     const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
     const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
 
@@ -48,6 +48,21 @@ export default async function handler(req, res) {
       .map(p => PLATFORM_MAP[p.platform?.slug] || null)
       .filter(Boolean)
       .filter((v, i, a) => a.indexOf(v) === i);
+
+    let steamHeaderImage = null;
+    if (steamId) {
+      try {
+        const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${steamId}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (steamRes.ok) {
+          const steamData = await steamRes.json();
+          steamHeaderImage = steamData?.[steamId]?.data?.header_image || null;
+        }
+      } catch (e) {
+        console.error("Steam appdetails fetch failed", steamId, e.message);
+      }
+    }
 
     return {
       id: g.id || idx,
@@ -61,8 +76,9 @@ export default async function handler(req, res) {
       steam: steamId,
       price: null,
       cover: g.background_image || null,
+      steam_header_image: steamHeaderImage,
     };
-  });
+  }));
 
   return res.status(200).json({ results });
 }
