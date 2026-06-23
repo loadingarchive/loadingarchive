@@ -1,0 +1,12 @@
+{
+  "buildCommand": "",
+  "outputDirectory": "loading-archive_01",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "RAWG_API_KEY": "@rawg_api_key"
+  }
+}
