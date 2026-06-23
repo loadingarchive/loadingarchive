@@ -199,7 +199,7 @@ body {
 .game-card:hover { border-color: #2c2f3a; }
 
 .card-cover {
-  width: 100%; aspect-ratio: 16/9;
+  width: 100%; aspect-ratio: 460/215;
   overflow: hidden; flex-shrink: 0;
   background: linear-gradient(135deg, #1a1d27 0%, #232630 100%);
 }
@@ -457,8 +457,7 @@ function mapRawgGame(g, idx) {
     trailer: g.trailer || null,
     steam: g.steam || null,
     price: g.price || null,
-    cover: g.cover || null,
-    steam_header_image: g.steam_header_image || null,
+    cover: g.steam_header_image || g.cover || null,
   };
 }
 
@@ -666,13 +665,11 @@ function buildCard(g) {
     `<span>${gi}</span>${i < g.genre.length - 1 ? '<span class="msep"> | </span>' : ''}`
   ).join('');
 
-  const coverImage = g.steam_header_image || g.cover;
-
   card.innerHTML = `
     <div class="card-date">Release date / <span>${formatDate(g.date)}</span></div>
     <div class="card-cover">
-      ${coverImage
-        ? `<img src="${coverImage}" alt="${g.title}" loading="lazy">`
+      ${g.cover
+        ? `<img src="${g.cover}" alt="${g.title}" loading="lazy">`
         : `<div class="card-cover-placeholder"><svg viewBox="0 0 500 500" fill="rgba(255,255,255,0.15)"><path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/></svg></div>`
       }
     </div>
