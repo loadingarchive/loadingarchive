@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loading Archive</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6965515761301412" crossorigin="anonymous"></script>
+<!-- HLS playback for Steam trailers (their CDN no longer serves plain mp4 for newer movies) -->
+<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -180,6 +183,12 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+@media (max-width: 900px) {
+  .game-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .game-grid { grid-template-columns: 1fr; }
+}
 
 /* CARD DATE — sits above the cover, inside the card */
 .card-date {
@@ -261,8 +270,6 @@ body {
   transition: color 0.15s; white-space: nowrap;
 }
 .trailer-btn:hover { color: #fff; }
-.trailer-btn svg { transition: transform 0.2s; }
-.trailer-btn.open svg { transform: rotate(180deg); }
 
 .anticipated-tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -270,10 +277,38 @@ body {
   background: #FCA311; border-radius: 20px; padding: 2px 7px;
 }
 
-.trailer-wrap { display: none; }
-.trailer-wrap.open { display: block; }
-.trailer-wrap iframe { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
-.trailer-wrap video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; }
+/* TRAILER MODAL */
+.trailer-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  align-items: center; justify-content: center;
+  padding: 48px 20px;
+}
+.trailer-modal.open { display: flex; }
+.trailer-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(5,6,9,0.85);
+}
+.trailer-modal-content {
+  position: relative; width: 100%; max-width: 860px;
+  background: #000; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+}
+.trailer-modal-close {
+  position: absolute; top: -36px; right: 0;
+  background: transparent; border: none; color: #fff;
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 6px 10px;
+  font-family: 'Inter', sans-serif; transition: color 0.15s;
+}
+.trailer-modal-close:hover { color: rgba(255,255,255,0.6); }
+.trailer-modal-body iframe,
+.trailer-modal-body video {
+  width: 100%; aspect-ratio: 16/9; display: block; border: none; background: #000;
+}
+.trailer-modal-loading {
+  padding: 80px 24px; text-align: center; color: rgba(255,255,255,0.5);
+  font-size: 12px; font-weight: 500;
+}
 
 /* AD CARD */
 .ad-card {
@@ -411,6 +446,14 @@ body {
   </div>
 </div>
 
+<div class="trailer-modal" id="trailerModal">
+  <div class="trailer-modal-backdrop" onclick="closeTrailerModal()"></div>
+  <div class="trailer-modal-content">
+    <button class="trailer-modal-close" onclick="closeTrailerModal()" aria-label="Close">&times;</button>
+    <div class="trailer-modal-body" id="trailerModalBody"></div>
+  </div>
+</div>
+
 <script>
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 // Volledige maand namen gebruiken
@@ -443,7 +486,6 @@ const CHIP_DEFS = [
 let GAMES = [];
 let activeMonth = new Date().getMonth();
 let activeFilters = new Set();
-let openTrailers = new Set();
 let searchSeq = 0;
 
 function mapGame(g, idx) {
@@ -691,7 +733,6 @@ function renderGames() {
 }
 
 function buildCard(g) {
-  const isOpen = openTrailers.has(g.id);
   const card = document.createElement('div');
   card.className = 'game-card';
   card.id = 'card-' + g.id;
@@ -726,63 +767,74 @@ function buildCard(g) {
           ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
           ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.65 2 2.28 6.13 2 11.4l5.36 2.22a3 3 0 0 1 1.7-.53l2.38-3.46v-.05a4 4 0 1 1 4 4h-.1l-3.4 2.43a3 3 0 1 1-5.95.66L2 15.43A10 10 0 1 0 11.98 2zm-3.6 15.18l-1.23-.51a2.25 2.25 0 1 0 1.4-1.4l1.27.53a1.66 1.66 0 1 1-1.44 1.38zM18 9.5a2.66 2.66 0 1 0-2.66 2.66h.04A2.66 2.66 0 0 0 18 9.5zm-4.66 0a2 2 0 1 1 2 2 2 2 0 0 1-2-2z"/></svg> Steam page</a>` : ''}
         </div>
-        ${g.trailer ? `<button class="trailer-btn${isOpen ? ' open' : ''}" id="tb-${g.id}" onclick="toggleTrailer('${g.id}','${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
+        ${g.trailer ? `<button class="trailer-btn" onclick="openTrailerModal('${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
       </div>
-      <div class="trailer-wrap${isOpen ? ' open' : ''}" id="tw-${g.id}"></div>
     </div>
   `;
   return card;
 }
 
-async function toggleTrailer(id, trailerId) {
-  const w = document.getElementById('tw-' + id);
-  const b = document.getElementById('tb-' + id);
-  const isOpen = openTrailers.has(id);
+async function openTrailerModal(trailerId) {
+  const modal = document.getElementById('trailerModal');
+  const body = document.getElementById('trailerModalBody');
 
-  openTrailers.forEach(openId => {
-    if (openId !== id) {
-      const ow = document.getElementById('tw-' + openId);
-      const ob = document.getElementById('tb-' + openId);
-      if (ow) { const vid = ow.querySelector('video'); if (vid) vid.pause(); setTimeout(() => { ow.classList.remove('open'); ow.innerHTML = ''; }, 50); }
-      if (ob) ob.classList.remove('open');
-    }
-  });
-  openTrailers.clear();
+  body.innerHTML = '<div class="trailer-modal-loading">Loading trailer...</div>';
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
 
-  if (isOpen) {
-    const vid = w.querySelector('video');
-    if (vid) vid.pause();
-    setTimeout(() => { w.classList.remove('open'); w.innerHTML = ''; }, 50);
-    b.classList.remove('open');
-    return;
-  }
-
-  if (trailerId && trailerId.startsWith('steam:')) {
-    b.textContent = 'Loading...';
+  if (trailerId.startsWith('steam:')) {
+    const appid = trailerId.slice('steam:'.length);
     try {
-      const appid = trailerId.slice('steam:'.length);
       const res = await fetch(`/api/trailer?appid=${appid}`);
       const data = await res.json();
+      if (!modal.classList.contains('open')) return; // user closed it while we were loading
+
       if (data.mp4) {
-        openTrailers.add(id);
-        w.classList.add('open');
-        w.innerHTML = `<video src="${data.mp4}" controls autoplay playsinline></video>`;
-        b.innerHTML = 'Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-        b.classList.add('open');
-        return;
+        body.innerHTML = `<video controls autoplay playsinline src="${data.mp4}"></video>`;
+      } else if (data.hls) {
+        body.innerHTML = '<video controls autoplay playsinline></video>';
+        attachHls(body.querySelector('video'), data.hls);
+      } else {
+        body.innerHTML = '<div class="trailer-modal-loading">No trailer found.</div>';
       }
-    } catch(e) {}
-    b.textContent = 'No trailer';
+    } catch (e) {
+      if (modal.classList.contains('open')) body.innerHTML = '<div class="trailer-modal-loading">Could not load trailer.</div>';
+    }
     return;
   }
 
-  if (trailerId) {
-    openTrailers.add(id);
-    w.classList.add('open');
-    w.innerHTML = `<iframe src="https://www.youtube.com/embed/${trailerId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
-    b.classList.add('open');
+  body.innerHTML = `<iframe src="https://www.youtube.com/embed/${trailerId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+}
+
+function attachHls(video, url) {
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url; // Safari/iOS play HLS natively
+    return;
+  }
+  if (window.Hls && window.Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    video._hls = hls;
   }
 }
+
+function closeTrailerModal() {
+  const modal = document.getElementById('trailerModal');
+  const body = document.getElementById('trailerModalBody');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  const video = body.querySelector('video');
+  if (video) {
+    video.pause();
+    if (video._hls) video._hls.destroy();
+  }
+  body.innerHTML = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeTrailerModal();
+});
 
 function buildSideNav() {
   const inner = document.getElementById('sideNavInner');

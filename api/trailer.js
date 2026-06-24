@@ -12,9 +12,14 @@ export default async function handler(req, res) {
     }
 
     const movie = app.movies[0];
-    const mp4   = movie?.mp4?.max || movie?.mp4?.["480"] || null;
+    // Steam dropped the flat mp4 field for newer trailers in favor of HLS/DASH
+    // manifests, so fall back to the HLS stream (playable via hls.js) when needed.
+    const mp4 = movie?.mp4?.max || movie?.mp4?.["480"] || null;
+    const hls = movie?.hls_h264 || null;
 
-    return res.status(200).json({ mp4, name: movie.name });
+    if (!mp4 && !hls) return res.status(404).json({ error: "No playable trailer source" });
+
+    return res.status(200).json({ mp4, hls, name: movie.name });
   } catch (e) {
     return res.status(500).json({ error: "Steam fetch failed" });
   }
