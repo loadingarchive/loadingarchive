@@ -151,6 +151,9 @@ body {
 .pbar-chip.active.XBO  .dot { background: #2CA243; }
 .pbar-chip.active.XSX  { background: rgba(44,162,67,0.2); border-color: #2CA243; }
 .pbar-chip.active.XSX  .dot { background: #2CA243; }
+.pbar-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; }
+.pbar-chip.active.ANTICIPATED { background: rgba(207,175,90,0.2); border-color: #CFAF5A; }
+.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #B98F1D, #CFAF5A); }
 .pbar-chip.cat { color: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.12); }
 .pbar-chip.cat.active { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
 
@@ -531,6 +534,18 @@ function buildPlatformBar() {
     btn.onclick = () => toggleFilterKey(p.key);
     bar.appendChild(btn);
   });
+
+  const sep = document.createElement('span');
+  sep.className = 'pbar-sep';
+  sep.textContent = '|';
+  bar.appendChild(sep);
+
+  const anticipatedBtn = document.createElement('button');
+  const isAnticipatedActive = activeFilters.has('anticipated');
+  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (isAnticipatedActive ? ' active' : '');
+  anticipatedBtn.innerHTML = `<span class="dot"></span>Anticipated`;
+  anticipatedBtn.onclick = () => toggleFilterKey('anticipated');
+  bar.appendChild(anticipatedBtn);
 
   // Categorie dropdown
   const catWrap = document.createElement('div');
