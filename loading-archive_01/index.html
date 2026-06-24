@@ -274,8 +274,10 @@ body {
 .anticipated-tag {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 9px; font-weight: 600; color: #fff;
-  background: #FCA311; border-radius: 20px; padding: 2px 7px;
+  background: linear-gradient(90deg, #B98F1D, #CFAF5A);
+  border-radius: 20px; padding: 2px 7px;
 }
+.anticipated-tag svg { flex-shrink: 0; }
 
 /* TRAILER MODAL */
 .trailer-modal {
@@ -301,6 +303,13 @@ body {
   font-family: 'Inter', sans-serif; transition: color 0.15s;
 }
 .trailer-modal-close:hover { color: rgba(255,255,255,0.6); }
+.trailer-modal-quality {
+  position: absolute; top: -36px; left: 0; display: none;
+  background: #13151B; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  color: #fff; font-size: 11px; font-family: 'Inter', sans-serif; font-weight: 500;
+  padding: 5px 8px; cursor: pointer; outline: none;
+}
+.trailer-modal-quality.show { display: block; }
 .trailer-modal-body iframe,
 .trailer-modal-body video {
   width: 100%; aspect-ratio: 16/9; display: block; border: none; background: #000;
@@ -449,6 +458,7 @@ body {
 <div class="trailer-modal" id="trailerModal">
   <div class="trailer-modal-backdrop" onclick="closeTrailerModal()"></div>
   <div class="trailer-modal-content">
+    <select class="trailer-modal-quality" id="trailerQuality" onchange="setTrailerQuality(this.value)" aria-label="Video quality"></select>
     <button class="trailer-modal-close" onclick="closeTrailerModal()" aria-label="Close">&times;</button>
     <div class="trailer-modal-body" id="trailerModalBody"></div>
   </div>
@@ -750,7 +760,7 @@ function buildCard(g) {
   card.innerHTML = `
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${formatDate(g.date)}</span></span>
-      ${g.anticipated ? `<span class="anticipated-tag">Anticipated ★</span>` : ''}
+      ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
     </div>
     <div class="card-cover">
       ${g.cover
@@ -808,7 +818,7 @@ async function openTrailerModal(trailerId) {
 
 function attachHls(video, url) {
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url; // Safari/iOS play HLS natively
+    video.src = url; // Safari/Chrome with native HLS support already pick quality adaptively
     return;
   }
   if (window.Hls && window.Hls.isSupported()) {
@@ -816,7 +826,25 @@ function attachHls(video, url) {
     hls.loadSource(url);
     hls.attachMedia(video);
     video._hls = hls;
+    hls.on(Hls.Events.MANIFEST_PARSED, () => buildQualityMenu(hls));
   }
+}
+
+function buildQualityMenu(hls) {
+  const select = document.getElementById('trailerQuality');
+  const levels = hls.levels
+    .map((lvl, i) => ({ i, height: lvl.height }))
+    .sort((a, b) => b.height - a.height);
+
+  select.innerHTML = '<option value="-1">Auto</option>' +
+    levels.map(l => `<option value="${l.i}">${l.height}p</option>`).join('');
+  select.value = '-1';
+  select.classList.add('show');
+}
+
+function setTrailerQuality(value) {
+  const video = document.querySelector('#trailerModalBody video');
+  if (video && video._hls) video._hls.currentLevel = parseInt(value, 10);
 }
 
 function closeTrailerModal() {
@@ -830,6 +858,10 @@ function closeTrailerModal() {
     if (video._hls) video._hls.destroy();
   }
   body.innerHTML = '';
+
+  const quality = document.getElementById('trailerQuality');
+  quality.classList.remove('show');
+  quality.innerHTML = '';
 }
 
 document.addEventListener('keydown', e => {
