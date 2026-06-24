@@ -322,6 +322,7 @@ function mergeResults(steamGames, rawgGames) {
       usedSteamIds.add(match.id);
       merged.push({
         ...match,
+        date: match.date, // Steam's date is the source of truth; RAWG's console date can lag/lead it
         platforms: [...new Set([...match.platforms, ...rg.platforms])],
         genre: match.genre.length ? match.genre : rg.genre,
         dev: match.dev || rg.dev,
