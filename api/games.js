@@ -64,6 +64,22 @@ async function mapWithConcurrency(items, limit, fn) {
   return results;
 }
 
+async function fetchSteamAppDetails(appid) {
+  try {
+    const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en`, { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const app = data?.[appid]?.data;
+    if (!app) return null;
+    const descIds = app.content_descriptors?.ids || [];
+    if (descIds.some(id => ADULT_DESCRIPTOR_IDS.has(id))) return null; // authoritative re-check
+    return app;
+  } catch (e) {
+    console.error("Steam appdetails fetch failed", appid, e.message);
+    return null;
+  }
+}
+
 // ---------- RAWG: PlayStation / Xbox / Nintendo only ----------
 
 function mapRawgGame(g, idx, idPrefix) {
@@ -107,9 +123,34 @@ async function fetchRawg(rawgKey, query) {
   }
 }
 
+// RAWG already tells us a game's Steam appid when one exists (used above for `trailer`).
+// Rather than hope our own Steam search/upcoming scrape happened to also surface that
+// exact appid, look it up directly — this is the only fully reliable way to get a PC
+// price/cover/link onto a console game that's also sold on Steam.
+async function enrichRawgGameWithSteam(rg) {
+  if (!rg.steam) return rg;
+  const app = await fetchSteamAppDetails(rg.steam);
+  if (!app) return rg;
+
+  const steamGenre = (app.genres || []).map(g => g.description).slice(0, 2);
+  const steamDate = parseSteamDate(app.release_date?.date);
+
+  return {
+    ...rg,
+    date: steamDate || rg.date, // Steam's date is the source of truth, same rule as the merge step
+    platforms: [...new Set([...rg.platforms, "PC"])],
+    genre: steamGenre.length ? steamGenre : rg.genre,
+    dev: (app.developers || [])[0] || rg.dev,
+    anticipated: rg.anticipated || app.release_date?.coming_soon === true,
+    price: app.is_free ? "Free" : (app.price_overview?.final_formatted || rg.price),
+    cover: app.header_image || rg.cover,
+  };
+}
+
 async function fetchRawgConsoleGames(rawgKey, dateFrom, dateTo) {
   const results = await fetchRawg(rawgKey, `dates=${dateFrom},${dateTo}&ordering=released&page_size=40&exclude_additions=true&parent_platforms=2,3,7`);
-  return results.map((g, idx) => mapRawgGame(g, idx, "rawg")).filter(Boolean);
+  const games = results.map((g, idx) => mapRawgGame(g, idx, "rawg")).filter(Boolean);
+  return mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
 }
 
 // Announced games with no release date yet. Steam has these too ("Coming soon" with
@@ -118,10 +159,11 @@ async function fetchRawgConsoleGames(rawgKey, dateFrom, dateTo) {
 // clean, reliable source, so this tab stays console-only like the rest of the site.
 async function fetchRawgTbaGames(rawgKey) {
   const results = await fetchRawg(rawgKey, `tba=true&ordering=-added&page_size=40&exclude_additions=true&parent_platforms=2,3,7`);
-  return results
+  const games = results
     .filter(g => g.tba === true) // defensive: RAWG's exact tba=true semantics aren't documented precisely
     .map((g, idx) => mapRawgGame(g, idx, "rawg-tba"))
     .filter(Boolean);
+  return mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
 }
 
 // ---------- Steam: PC only ----------
@@ -273,35 +315,22 @@ async function fetchSteamPcGames(dateFrom, dateTo) {
     .slice(0, MAX_PAST_CANDIDATES);
 
   const enriched = await mapWithConcurrency(candidates, 10, async c => {
-    try {
-      const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${c.appid}&cc=us&l=en`, { signal: AbortSignal.timeout(6000) });
-      if (!r.ok) return null;
-      const data = await r.json();
-      const app = data?.[c.appid]?.data;
-      if (!app) return null;
+    const app = await fetchSteamAppDetails(c.appid);
+    if (!app) return null;
 
-      const descIds = app.content_descriptors?.ids || [];
-      if (descIds.some(id => ADULT_DESCRIPTOR_IDS.has(id))) return null; // authoritative re-check
-
-      const price = app.is_free ? "Free" : (app.price_overview?.final_formatted || null);
-
-      return {
-        id: `steam-${c.appid}`,
-        title: app.name || c.name,
-        date: c.date,
-        platforms: ["PC"],
-        genre: (app.genres || []).map(g => g.description).slice(0, 2),
-        dev: (app.developers || [])[0] || "",
-        anticipated: app.release_date?.coming_soon === true,
-        trailer: app.movies?.length ? `steam:${c.appid}` : null,
-        steam: c.appid,
-        price,
-        cover: app.header_image || null,
-      };
-    } catch (e) {
-      console.error("Steam appdetails enrich failed", c.appid, e.message);
-      return null;
-    }
+    return {
+      id: `steam-${c.appid}`,
+      title: app.name || c.name,
+      date: c.date,
+      platforms: ["PC"],
+      genre: (app.genres || []).map(g => g.description).slice(0, 2),
+      dev: (app.developers || [])[0] || "",
+      anticipated: app.release_date?.coming_soon === true,
+      trailer: app.movies?.length ? `steam:${c.appid}` : null,
+      steam: c.appid,
+      price: app.is_free ? "Free" : (app.price_overview?.final_formatted || null),
+      cover: app.header_image || null,
+    };
   });
 
   return enriched.filter(Boolean);
@@ -410,6 +439,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Games fetch failed", detail: e.message });
   }
 
-  const results = mergeResults(steamGames, rawgGames);
+  // RAWG games already enriched via their own known Steam id (see enrichRawgGameWithSteam)
+  // are fully formed on their own — drop that appid from the bulk Steam pool so the merge
+  // step below doesn't also render it as a second, separate standalone PC card.
+  const claimedSteamIds = new Set(rawgGames.filter(g => g.steam).map(g => g.steam));
+  const unclaimedSteamGames = steamGames.filter(sg => !claimedSteamIds.has(sg.steam));
+
+  const results = mergeResults(unclaimedSteamGames, rawgGames);
   return res.status(200).json({ results });
 }
