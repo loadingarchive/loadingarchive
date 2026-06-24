@@ -175,6 +175,7 @@ body {
 }
 @media (max-width: 900px) {
   .game-grid { grid-template-columns: repeat(2, 1fr); }
+  .side-nav { display: none; }
 }
 @media (max-width: 600px) {
   .game-grid { grid-template-columns: 1fr; }
@@ -203,10 +204,6 @@ body {
   background: linear-gradient(135deg, #1a1d27 0%, #232630 100%);
 }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.card-cover-placeholder {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-}
-.card-cover-placeholder svg { width: 20px; height: 20px; opacity: 0.15; }
 
 .card-body { flex: 1; display: flex; flex-direction: column; gap: 9px; }
 
@@ -371,15 +368,20 @@ body {
   box-shadow: 0 8px 28px rgba(0,0,0,0.4);
 }
 .month-nav-label { font-size: 10px; color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
-.months { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.months {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.months::-webkit-scrollbar { display: none; }
 .mnav {
   font-size: 10px; color: rgba(255,255,255,0.3); padding: 0;
   border-radius: 0; cursor: pointer; border: none; background: transparent;
   transition: color 0.15s; font-family: 'Inter', sans-serif; font-weight: 500; line-height: 1;
+  flex-shrink: 0;
 }
 .mnav:hover { color: rgba(255,255,255,0.7); }
 .mnav.active { color: #fff; }
-.month-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; }
+.month-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -787,12 +789,7 @@ function buildCard(g) {
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
     </div>
-    <div class="card-cover">
-      ${g.cover
-        ? `<img src="${g.cover}" alt="${g.title}" loading="lazy">`
-        : `<div class="card-cover-placeholder"><svg viewBox="0 0 500 500" fill="rgba(255,255,255,0.15)"><path d="M497.49,274.99c.84-8.34,2.51-16.43,2.51-24.99s-1.67-16.66-2.53-25.01h-187.08l132.39-132.37c-10.61-12.98-22.38-24.74-35.34-35.35l-132.42,132.4V2.53C266.66,1.67,258.57,0,250,0s-16.65,1.67-24.99,2.51v187.15L92.59,57.24c-12.98,10.62-24.74,22.39-35.35,35.36l132.4,132.39H2.52c-.84,8.35-2.52,16.44-2.52,25.01s1.68,16.65,2.51,24.99h187.17L57.24,407.41c10.61,12.99,22.38,24.74,35.36,35.35l132.41-132.4v187.12c8.34.84,16.43,2.51,24.99,2.51s16.66-1.67,25.01-2.53v-187.11l132.4,132.4c12.98-10.62,24.74-22.39,35.35-35.36l-132.42-132.41h187.15Z"/></svg></div>`
-      }
-    </div>
+    ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
     <div class="card-body">
       <div class="card-title">${g.title}</div>
       <div class="ptags">${ptagsHtml}</div>
