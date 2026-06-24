@@ -468,6 +468,7 @@ let catDropdownOpen = false;
 
 let GAMES = [];
 let activeMonth = new Date().getMonth();
+let tbaMode = false;
 let activeFilters = new Set();
 let searchSeq = 0;
 
@@ -487,11 +488,7 @@ function mapGame(g, idx) {
   };
 }
 
-async function loadGames(monthIdx) {
-  const year = 2026;
-  const m = String(monthIdx + 1).padStart(2, "0");
-  const monthStr = `${year}-${m}`;
-
+async function fetchAndRenderGames(url, loadingText) {
   const grid = document.getElementById('gameGrid');
   const empty = document.getElementById('emptyState');
   [...grid.querySelectorAll('.game-card, .ad-card, .loading-row')].forEach(el => el.remove());
@@ -500,11 +497,11 @@ async function loadGames(monthIdx) {
   const loader = document.createElement('div');
   loader.className = 'loading-row';
   loader.style.cssText = 'grid-column:1/-1;padding:48px 24px;text-align:center;font-size:10px;color:rgba(255,255,255,0.3);font-weight:500;';
-  loader.textContent = 'Loading releases...';
+  loader.textContent = loadingText;
   grid.appendChild(loader);
 
   try {
-    const res = await fetch(`/api/games?month=${monthStr}`);
+    const res = await fetch(url);
     const data = await res.json();
     GAMES = (data.results || []).map(mapGame);
   } catch (e) {
@@ -513,7 +510,17 @@ async function loadGames(monthIdx) {
 
   loader.remove();
   renderGames();
+}
+
+async function loadGames(monthIdx) {
+  const year = 2026;
+  const m = String(monthIdx + 1).padStart(2, "0");
+  await fetchAndRenderGames(`/api/games?month=${year}-${m}`, 'Loading releases...');
   buildSideNav();
+}
+
+async function loadTba() {
+  await fetchAndRenderGames('/api/games?tba=1', 'Loading announced games...');
 }
 
 function formatDate(str) {
@@ -614,30 +621,44 @@ function buildMonthNav() {
   nav.innerHTML = '';
   MONTHS.forEach((m, i) => {
     const btn = document.createElement('button');
-    btn.className = 'mnav' + (i === activeMonth ? ' active' : '');
+    btn.className = 'mnav' + (!tbaMode && i === activeMonth ? ' active' : '');
     btn.textContent = m;
     btn.onclick = () => setMonth(i);
     nav.appendChild(btn);
-    if (i < MONTHS.length - 1) {
-      const sep = document.createElement('span');
-      sep.className = 'month-sep';
-      sep.textContent = '|';
-      nav.appendChild(sep);
-    }
+    const sep = document.createElement('span');
+    sep.className = 'month-sep';
+    sep.textContent = '|';
+    nav.appendChild(sep);
   });
+
+  const tbaBtn = document.createElement('button');
+  tbaBtn.className = 'mnav' + (tbaMode ? ' active' : '');
+  tbaBtn.textContent = 'TBA';
+  tbaBtn.onclick = () => setTba();
+  nav.appendChild(tbaBtn);
 }
 
 function setMonth(i) {
+  tbaMode = false;
   activeMonth = i;
   document.getElementById('heroPill').textContent = MONTHS[i] + ' 2026';
+  document.getElementById('sideNav').style.display = '';
   buildMonthNav();
   loadGames(i);
+}
+
+function setTba() {
+  tbaMode = true;
+  document.getElementById('heroPill').textContent = 'Announced — No Date Yet';
+  document.getElementById('sideNav').style.display = 'none';
+  buildMonthNav();
+  loadTba();
 }
 
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
-    if (getMonth(g.date) !== activeMonth) return false;
+    if (!tbaMode && getMonth(g.date) !== activeMonth) return false;
     if (q && !g.title.toLowerCase().includes(q)) return false;
     // Platform filters
     if (activeFilters.size > 0) {
@@ -657,6 +678,7 @@ function getFiltered() {
 
 async function onSearchInput() {
   renderGames();
+  if (tbaMode) return; // no "search upcoming months" fallback makes sense here
 
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
   if (!query) return;
@@ -701,7 +723,7 @@ function renderGames() {
   [...grid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
   empty.classList.remove('show');
 
-  const games = getFiltered().sort((a, b) => a.date.localeCompare(b.date));
+  const games = getFiltered().sort((a, b) => tbaMode ? 0 : a.date.localeCompare(b.date));
   if (!games.length) { empty.classList.add('show'); return; }
 
   const adPositions = [5, 11]; // Na elke ~6 kaartjes een ad
@@ -745,7 +767,7 @@ function buildCard(g) {
 
   card.innerHTML = `
     <div class="card-date">
-      <span class="card-date-text">Release date / <span>${formatDate(g.date)}</span></span>
+      <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
     </div>
     <div class="card-cover">

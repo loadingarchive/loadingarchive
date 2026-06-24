@@ -66,46 +66,62 @@ async function mapWithConcurrency(items, limit, fn) {
 
 // ---------- RAWG: PlayStation / Xbox / Nintendo only ----------
 
-async function fetchRawgConsoleGames(rawgKey, dateFrom, dateTo) {
-  const url = `https://api.rawg.io/api/games?key=${rawgKey}&dates=${dateFrom},${dateTo}&ordering=released&page_size=40&exclude_additions=true&parent_platforms=2,3,7`;
+function mapRawgGame(g, idx, idPrefix) {
+  const platforms = (g.platforms || [])
+    .map(p => PLATFORM_MAP[p.platform?.slug] || null)
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
+  if (platforms.length === 0) return null;
 
-  let data;
+  const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
+  const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
+
+  return {
+    id: `${idPrefix}-${g.id ?? idx}`,
+    title: g.name,
+    date: g.released || null,
+    platforms,
+    genre: (g.genres || []).map(genre => genre.name).slice(0, 2),
+    dev: "",
+    anticipated: (g.added || 0) > 200,
+    trailer: steamId ? `steam:${steamId}` : null,
+    steam: steamId,
+    price: null,
+    cover: g.background_image || null,
+  };
+}
+
+async function fetchRawg(rawgKey, query) {
+  const url = `https://api.rawg.io/api/games?key=${rawgKey}&${query}`;
   try {
     const r = await fetch(url);
     if (!r.ok) {
       console.error("RAWG request failed", r.status, await r.text());
       return [];
     }
-    data = await r.json();
+    const data = await r.json();
+    return data.results || [];
   } catch (e) {
     console.error("RAWG fetch failed", e.message);
     return [];
   }
+}
 
-  return (data.results || []).map((g, idx) => {
-    const platforms = (g.platforms || [])
-      .map(p => PLATFORM_MAP[p.platform?.slug] || null)
-      .filter(Boolean)
-      .filter((v, i, a) => a.indexOf(v) === i);
-    if (platforms.length === 0) return null;
+async function fetchRawgConsoleGames(rawgKey, dateFrom, dateTo) {
+  const results = await fetchRawg(rawgKey, `dates=${dateFrom},${dateTo}&ordering=released&page_size=40&exclude_additions=true&parent_platforms=2,3,7`);
+  return results.map((g, idx) => mapRawgGame(g, idx, "rawg")).filter(Boolean);
+}
 
-    const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");
-    const steamId = steamStore?.url?.match(/\/app\/(\d+)/)?.[1] || null;
-
-    return {
-      id: `rawg-${g.id ?? idx}`,
-      title: g.name,
-      date: g.released,
-      platforms,
-      genre: (g.genres || []).map(genre => genre.name).slice(0, 2),
-      dev: "",
-      anticipated: (g.added || 0) > 200,
-      trailer: steamId ? `steam:${steamId}` : null,
-      steam: steamId,
-      price: null,
-      cover: g.background_image || null,
-    };
-  }).filter(Boolean);
+// Announced games with no release date yet. Steam has these too ("Coming soon" with
+// no date) but they're far too sparse to find by scraping search results (about 1 in
+// 1500 listings, no way to filter for them directly) — RAWG's "tba" flag gives us a
+// clean, reliable source, so this tab stays console-only like the rest of the site.
+async function fetchRawgTbaGames(rawgKey) {
+  const results = await fetchRawg(rawgKey, `tba=true&ordering=-added&page_size=40&exclude_additions=true&parent_platforms=2,3,7`);
+  return results
+    .filter(g => g.tba === true) // defensive: RAWG's exact tba=true semantics aren't documented precisely
+    .map((g, idx) => mapRawgGame(g, idx, "rawg-tba"))
+    .filter(Boolean);
 }
 
 // ---------- Steam: PC only ----------
@@ -359,7 +375,17 @@ function mergeResults(steamGames, rawgGames) {
 
 export default async function handler(req, res) {
   const rawgKey = process.env.RAWG_API_KEY;
-  const { month } = req.query;
+  const { month, tba } = req.query;
+
+  if (tba) {
+    try {
+      const results = await fetchRawgTbaGames(rawgKey);
+      return res.status(200).json({ results });
+    } catch (e) {
+      console.error("TBA handler failed", e.message);
+      return res.status(500).json({ error: "TBA fetch failed", detail: e.message });
+    }
+  }
 
   if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return res.status(400).json({ error: "Invalid month", detail: `Expected format YYYY-MM, got "${month}"` });
