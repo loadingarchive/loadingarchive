@@ -33,40 +33,17 @@ body {
   border: 1px solid #1F2127;
   border-radius: 22px;
   padding: 11px 20px;
-  transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease;
   overflow: hidden;
 }
 .nav-card.scrolled { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3); }
-.nav-card.open { padding: 14px 18px; }
 .nav-top { display: flex; align-items: center; justify-content: space-between; }
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo svg { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 0 8px rgba(124,147,255,0.5)); }
+.logo svg { width: 22px; height: 22px; flex-shrink: 0; }
 .logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
 .nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
 .nav-right a:hover { color: #fff; }
-.filter-btn {
-  font-size: 10px; color: #fff; border: 1.5px solid rgba(255,255,255,0.22);
-  background: transparent; padding: 6px 18px; border-radius: 100px; cursor: pointer;
-  font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s;
-}
-.filter-btn:hover { background: rgba(255,255,255,0.08); }
-.filter-btn.active { background: #fff; color: #13151B; border-color: #fff; }
-.nav-filter { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-.nav-card.open .nav-filter { max-height: 400px; }
-.nav-filter-inner { padding-top: 18px; }
-.filter-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 10px; padding: 4px 10px 4px 6px; border-radius: 10px; cursor: pointer;
-  border: 1.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
-  color: #fff; font-weight: 500; user-select: none; transition: opacity 0.15s;
-  font-family: 'Inter', sans-serif;
-}
-.chip.active { opacity: 0.35; }
-.chip .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.chip .dot.outline { border: 1.5px solid rgba(255,255,255,0.55); background: transparent; }
 
 /* HERO */
 .hero {
@@ -390,7 +367,6 @@ body {
 .mnav:hover { color: rgba(255,255,255,0.7); }
 .mnav.active { color: #fff; }
 .month-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; }
-.month-nav-label { font-size: 10px; color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; margin-right: 0; }
 </style>
 </head>
 <body>
@@ -466,7 +442,6 @@ body {
 
 <script>
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-// Volledige maand namen gebruiken
 
 const PLATFORM_DEFS = [
   { key:"PC",   label:"PC",    cls:"PC"  },
@@ -487,11 +462,6 @@ const CATEGORY_DEFS = [
 
 let activeCats = new Set();
 let catDropdownOpen = false;
-
-const CHIP_DEFS = [
-  { key:"anticipated", label:"Anticipated", dot:"#D4A017" },
-  ...PLATFORM_DEFS,
-];
 
 let GAMES = [];
 let activeMonth = new Date().getMonth();
@@ -548,7 +518,6 @@ function formatDate(str) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
-function getDay(str) { return parseInt(str.split('-')[2]); }
 
 function buildPlatformBar() {
   const bar = document.getElementById('platformBar');
