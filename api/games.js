@@ -293,24 +293,41 @@ async function fetchSteamPcGames(dateFrom, dateTo) {
 
 // ---------- Merge: collapse a game found on both Steam (PC) and RAWG (console) into one card ----------
 
-function mergeResults(steamGames, rawgGames) {
-  const steamByKey = new Map();
-  for (const g of steamGames) {
-    const key = normalizeTitle(g.title);
-    if (!steamByKey.has(key)) steamByKey.set(key, []);
-    steamByKey.get(key).push(g);
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+    }
+    prev = curr;
   }
+  return prev[b.length];
+}
 
+// RAWG is a crowdsourced database and occasionally has typos in titles (e.g. "Back Flag"
+// instead of "Black Flag"), which an exact match would never catch. Tolerate small edits,
+// but only for titles long enough that a couple of typos can't accidentally collide two
+// genuinely different games (e.g. "DOOM" vs "ROOM").
+function titlesAreCloseEnough(a, b) {
+  if (a === b) return true;
+  if (a.length < 10 || b.length < 10) return false;
+  const threshold = Math.max(1, Math.floor(Math.min(a.length, b.length) * 0.1));
+  return levenshtein(a, b) <= threshold;
+}
+
+function mergeResults(steamGames, rawgGames) {
   const usedSteamIds = new Set();
   const merged = [];
 
   for (const rg of rawgGames) {
     const key = normalizeTitle(rg.title);
-    const candidates = (steamByKey.get(key) || []).filter(sg => !usedSteamIds.has(sg.id));
-    // Same normalized title within the same displayed month is almost certainly the same
-    // game even when the console date differs from the PC date by weeks (timed exclusivity,
-    // certification lead time, etc.) — match on title alone and only use date to disambiguate
-    // when more than one Steam candidate shares that title.
+    const candidates = steamGames.filter(sg => !usedSteamIds.has(sg.id) && titlesAreCloseEnough(key, normalizeTitle(sg.title)));
+    // Same (or near-same) normalized title within the same displayed month is almost certainly
+    // the same game even when the console date differs from the PC date by weeks (timed
+    // exclusivity, certification lead time, etc.) — match on title alone and only use date to
+    // disambiguate when more than one Steam candidate matches.
     let match = null;
     if (candidates.length === 1) {
       match = candidates[0];
