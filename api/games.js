@@ -307,7 +307,16 @@ function mergeResults(steamGames, rawgGames) {
   for (const rg of rawgGames) {
     const key = normalizeTitle(rg.title);
     const candidates = (steamByKey.get(key) || []).filter(sg => !usedSteamIds.has(sg.id));
-    const match = candidates.find(sg => daysBetween(sg.date, rg.date) <= 14);
+    // Same normalized title within the same displayed month is almost certainly the same
+    // game even when the console date differs from the PC date by weeks (timed exclusivity,
+    // certification lead time, etc.) — match on title alone and only use date to disambiguate
+    // when more than one Steam candidate shares that title.
+    let match = null;
+    if (candidates.length === 1) {
+      match = candidates[0];
+    } else if (candidates.length > 1) {
+      match = candidates.reduce((best, c) => daysBetween(c.date, rg.date) < daysBetween(best.date, rg.date) ? c : best);
+    }
 
     if (match) {
       usedSteamIds.add(match.id);
