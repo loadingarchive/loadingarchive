@@ -471,6 +471,7 @@ let activeMonth = new Date().getMonth();
 let tbaMode = false;
 let activeFilters = new Set();
 let searchSeq = 0;
+let loadSeq = 0;
 
 function mapGame(g, idx) {
   return {
@@ -489,6 +490,8 @@ function mapGame(g, idx) {
 }
 
 async function fetchAndRenderGames(url, loadingText) {
+  const mySeq = ++loadSeq;
+
   const grid = document.getElementById('gameGrid');
   const empty = document.getElementById('emptyState');
   [...grid.querySelectorAll('.game-card, .ad-card, .loading-row')].forEach(el => el.remove());
@@ -500,14 +503,18 @@ async function fetchAndRenderGames(url, loadingText) {
   loader.textContent = loadingText;
   grid.appendChild(loader);
 
+  let results;
   try {
     const res = await fetch(url);
     const data = await res.json();
-    GAMES = (data.results || []).map(mapGame);
+    results = data.results || [];
   } catch (e) {
-    GAMES = [];
+    results = [];
   }
 
+  if (mySeq !== loadSeq) return; // a newer tab/month switch took over while this was in flight
+
+  GAMES = results.map(mapGame);
   loader.remove();
   renderGames();
 }

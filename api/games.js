@@ -1,7 +1,24 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const PLATFORM_MAP = {
   "playstation4": "PS4", "playstation5": "PS5",
   "xbox-one": "XBO", "xbox-series-x": "XSX", "nintendo-switch": "NS",
 };
+
+// Populated by scripts/scrape-wikipedia.mjs — a manually-refreshed supplement for games
+// RAWG/Steam's own pipelines miss, already Steam-verified for PC at scrape time.
+function loadExtraGames() {
+  try {
+    const raw = readFileSync(join(__dirname, "data", "extra-games.json"), "utf-8");
+    return JSON.parse(raw).games || [];
+  } catch (e) {
+    return [];
+  }
+}
 
 // Steam content_descriptors ids that flag explicit sexual content.
 // 1=some nudity/sexual content, 2=frequent violence/gore, 5=general mature
@@ -402,14 +419,27 @@ function mergeResults(steamGames, rawgGames) {
   return merged;
 }
 
+// Wikipedia-sourced games (already Steam-verified at scrape time) are dropped whenever a
+// title this close already showed up from RAWG/Steam for the same request, so a game never
+// renders twice just because both sources happen to know about it.
+function withoutAlreadyCovered(extraGames, existingResults) {
+  const existingKeys = existingResults.map(g => normalizeTitle(g.title));
+  return extraGames.filter(eg => {
+    const key = normalizeTitle(eg.title);
+    return !existingKeys.some(k => titlesAreCloseEnough(key, k));
+  });
+}
+
 export default async function handler(req, res) {
   const rawgKey = process.env.RAWG_API_KEY;
   const { month, tba } = req.query;
 
   if (tba) {
     try {
-      const results = await fetchRawgTbaGames(rawgKey);
-      return res.status(200).json({ results });
+      const rawgResults = await fetchRawgTbaGames(rawgKey);
+      const extraTba = loadExtraGames().filter(g => !g.date);
+      const newExtras = withoutAlreadyCovered(extraTba, rawgResults);
+      return res.status(200).json({ results: [...rawgResults, ...newExtras] });
     } catch (e) {
       console.error("TBA handler failed", e.message);
       return res.status(500).json({ error: "TBA fetch failed", detail: e.message });
@@ -445,6 +475,18 @@ export default async function handler(req, res) {
   const claimedSteamIds = new Set(rawgGames.filter(g => g.steam).map(g => g.steam));
   const unclaimedSteamGames = steamGames.filter(sg => !claimedSteamIds.has(sg.steam));
 
-  const results = mergeResults(unclaimedSteamGames, rawgGames);
+  const merged = mergeResults(unclaimedSteamGames, rawgGames);
+
+  const extraGames = loadExtraGames().filter(g => g.date && g.date >= dateFrom && g.date <= dateTo);
+  const newExtras = withoutAlreadyCovered(extraGames, merged);
+
+  const results = [...merged, ...newExtras];
   return res.status(200).json({ results });
 }
+
+// Reused by scripts/scrape-wikipedia.mjs so the offline scraper and the live handler
+// share the exact same date parsing, title matching, and Steam-lookup logic.
+export {
+  PLATFORM_MAP, MONTH_ABBR, MONTH_FULL, isoDate, parseSteamDate, decodeHtmlEntities,
+  normalizeTitle, titlesAreCloseEnough, fetchSteamAppDetails, mapWithConcurrency,
+};
