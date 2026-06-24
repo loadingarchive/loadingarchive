@@ -675,6 +675,38 @@ function setTba() {
   loadTba();
 }
 
+// Swipe left/right on the bottom month bar steps to the next/previous month, following
+// the bar's own visual order (Jan...Dec, then TBA) instead of requiring a precise tap.
+function stepMonth(delta) {
+  const current = tbaMode ? MONTHS.length : activeMonth; // TBA is the slot right after December
+  const next = current + delta;
+  if (next < 0 || next > MONTHS.length) return;
+  if (next === MONTHS.length) setTba();
+  else setMonth(next);
+}
+
+function setupMonthSwipe() {
+  const el = document.getElementById('monthNav');
+  let startX = 0, startY = 0, tracking = false;
+
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  el.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
+    stepMonth(deltaX < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
@@ -956,6 +988,7 @@ function buildSideNav() {
 document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' 2026';
 buildPlatformBar();
 buildMonthNav();
+setupMonthSwipe();
 loadGames(activeMonth);
 </script>
 </body>
