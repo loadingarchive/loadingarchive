@@ -446,7 +446,7 @@ let activeFilters = new Set();
 let openTrailers = new Set();
 let searchSeq = 0;
 
-function mapRawgGame(g, idx) {
+function mapGame(g, idx) {
   return {
     id: g.id ?? idx,
     title: g.title,
@@ -458,7 +458,7 @@ function mapRawgGame(g, idx) {
     trailer: g.trailer || null,
     steam: g.steam || null,
     price: g.price || null,
-    cover: g.steam_header_image || g.cover || null,
+    cover: g.cover || null,
   };
 }
 
@@ -481,7 +481,7 @@ async function loadGames(monthIdx) {
   try {
     const res = await fetch(`/api/games?month=${monthStr}`);
     const data = await res.json();
-    GAMES = (data.results || []).map(mapRawgGame);
+    GAMES = (data.results || []).map(mapGame);
   } catch (e) {
     GAMES = [];
   }
@@ -726,7 +726,7 @@ function buildCard(g) {
           ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
           ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.65 2 2.28 6.13 2 11.4l5.36 2.22a3 3 0 0 1 1.7-.53l2.38-3.46v-.05a4 4 0 1 1 4 4h-.1l-3.4 2.43a3 3 0 1 1-5.95.66L2 15.43A10 10 0 1 0 11.98 2zm-3.6 15.18l-1.23-.51a2.25 2.25 0 1 0 1.4-1.4l1.27.53a1.66 1.66 0 1 1-1.44 1.38zM18 9.5a2.66 2.66 0 1 0-2.66 2.66h.04A2.66 2.66 0 0 0 18 9.5zm-4.66 0a2 2 0 1 1 2 2 2 2 0 0 1-2-2z"/></svg> Steam page</a>` : ''}
         </div>
-        ${g.trailer ? `<button class="trailer-btn${isOpen ? ' open' : ''}" id="tb-${g.id}" onclick="toggleTrailer(${g.id},'${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
+        ${g.trailer ? `<button class="trailer-btn${isOpen ? ' open' : ''}" id="tb-${g.id}" onclick="toggleTrailer('${g.id}','${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
       </div>
       <div class="trailer-wrap${isOpen ? ' open' : ''}" id="tw-${g.id}"></div>
     </div>
@@ -760,7 +760,8 @@ async function toggleTrailer(id, trailerId) {
   if (trailerId && trailerId.startsWith('steam:')) {
     b.textContent = 'Loading...';
     try {
-      const res = await fetch(`/api/trailer?appid=${id}`);
+      const appid = trailerId.slice('steam:'.length);
+      const res = await fetch(`/api/trailer?appid=${appid}`);
       const data = await res.json();
       if (data.mp4) {
         openTrailers.add(id);
