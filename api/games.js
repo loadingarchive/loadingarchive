@@ -120,7 +120,7 @@ function mapRawgGame(g, idx, idPrefix) {
     trailer: steamId ? `steam:${steamId}` : null,
     steam: steamId,
     price: null,
-    cover: g.background_image || null,
+    cover: g.background_image || g.background_image_additional || null,
   };
 }
 
@@ -456,6 +456,23 @@ async function findExistingSteamAppId(title) {
   }
 }
 
+// For console-only games that have no cover after all other enrichment steps,
+// fall back to the first RAWG screenshot (requires one extra API call per game).
+async function enrichRawgCoverWithScreenshot(rawgKey, game) {
+  if (game.cover) return game;
+  const rawgNumId = game.id.replace(/^rawg(-tba)?-/, '');
+  if (!rawgNumId || !/^\d+$/.test(rawgNumId)) return game;
+  try {
+    const r = await fetch(`https://api.rawg.io/api/games/${rawgNumId}/screenshots?key=${rawgKey}&page_size=1`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return game;
+    const data = await r.json();
+    const img = data.results?.[0]?.image || null;
+    return img ? { ...game, cover: img } : game;
+  } catch (e) {
+    return game;
+  }
+}
+
 const RERELEASE_GAP_DAYS = 60; // an existing Steam page released this much earlier than the displayed date marks a port/re-release, not a simultaneous multi-platform launch
 
 async function backfillFromExistingSteamPage(game) {
@@ -490,7 +507,8 @@ export default async function handler(req, res) {
       const extraTba = loadExtraGames().filter(g => !g.date);
       const newExtras = withoutAlreadyCovered(extraTba, rawgResults);
       const backfilled = await mapWithConcurrency([...rawgResults, ...newExtras], 10, backfillFromExistingSteamPage);
-      return res.status(200).json({ results: backfilled });
+      const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+      return res.status(200).json({ results: withCovers });
     } catch (e) {
       console.error("TBA handler failed", e.message);
       return res.status(500).json({ error: "TBA fetch failed", detail: e.message });
@@ -533,7 +551,8 @@ export default async function handler(req, res) {
 
   const results = [...merged, ...newExtras];
   const backfilled = await mapWithConcurrency(results, 10, backfillFromExistingSteamPage);
-  return res.status(200).json({ results: backfilled });
+  const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  return res.status(200).json({ results: withCovers });
 }
 
 // Reused by scripts/scrape-wikipedia.mjs so the offline scraper and the live handler
