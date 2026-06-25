@@ -206,44 +206,26 @@ button, select, input { font-family: inherit; }
 .card-action-rerelease        { color: var(--blue); }
 .card-action-rerelease:hover  { color: var(--blue-hover); }
 
-/* Custom tooltips */
-[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
+/* Global fixed tooltip — rendered outside any overflow:hidden context */
+#site-tooltip {
+  position: fixed;
   background: #16181f;
   border: 1px solid var(--border);
   border-radius: 6px;
   color: rgba(255,255,255,0.75);
-  font-size: 10px; font-weight: 500;
+  font-size: 10px; font-weight: 500; font-family: 'Inter', sans-serif;
   letter-spacing: 0.01em;
   padding: 4px 9px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s;
-  z-index: 20;
-  font-family: 'Inter', sans-serif;
-}
-[data-tooltip]::before {
-  content: '';
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 50%;
+  z-index: 9999;
   transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-bottom-color: var(--border);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.12s;
-  z-index: 20;
 }
-[data-tooltip]:hover::after,
-[data-tooltip]:hover::before { opacity: 1; }
-.card-action-anticipated[data-tooltip]::after { border-color: rgba(207,175,90,0.35); }
-.card-action-rerelease[data-tooltip]::after   { border-color: rgba(102,168,224,0.35); }
+#site-tooltip.show { opacity: 1; }
+#site-tooltip.anticipated { border-color: rgba(207,175,90,0.4); }
+#site-tooltip.rerelease   { border-color: rgba(102,168,224,0.4); }
 
 /* GAME CARD */
 .game-card {
@@ -253,7 +235,7 @@ button, select, input { font-family: inherit; }
   display: flex; flex-direction: column;
   padding: 15px; gap: 10px;
   aspect-ratio: 330 / 300;
-  overflow: visible; position: relative;
+  overflow: hidden; position: relative;
 }
 .game-card:hover { border-color: #2c2f3a; z-index: 2; }
 
@@ -264,7 +246,7 @@ button, select, input { font-family: inherit; }
 }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.card-body { flex: 1; display: flex; flex-direction: column; gap: 9px; overflow: hidden; }
+.card-body { flex: 1; display: flex; flex-direction: column; gap: 9px; }
 
 .card-title {
   font-size: 16px; font-weight: 700; color: #fff;
@@ -977,6 +959,26 @@ buildPlatformBar();
 buildMonthNav();
 setupMonthSwipe();
 loadGames(activeMonth);
+
+// Fixed tooltip — position: fixed escapes all overflow:hidden containers
+(function () {
+  const tip = document.getElementById('site-tooltip');
+  document.addEventListener('mouseenter', e => {
+    const el = e.target.closest('[data-tooltip]');
+    if (!el) return;
+    tip.textContent = el.dataset.tooltip;
+    tip.className = 'show' +
+      (el.classList.contains('card-action-anticipated') ? ' anticipated' : '') +
+      (el.classList.contains('card-action-rerelease')   ? ' rerelease'   : '');
+    const r = el.getBoundingClientRect();
+    tip.style.left = (r.left + r.width / 2) + 'px';
+    tip.style.top  = (r.bottom + 7) + 'px';
+  }, true);
+  document.addEventListener('mouseleave', e => {
+    if (e.target.closest('[data-tooltip]')) tip.className = '';
+  }, true);
+}());
 </script>
+<div id="site-tooltip"></div>
 </body>
 </html>
