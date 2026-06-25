@@ -194,12 +194,15 @@ body {
 .game-card {
   background: #13151B; border-radius: 10px;
   border: 1px solid #1F2127; overflow: hidden;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   display: flex; flex-direction: column;
   padding: 15px; gap: 10px;
   aspect-ratio: 8 / 7;
 }
-.game-card:hover { border-color: #2c2f3a; }
+.game-card:hover {
+  border-color: rgba(150,165,255,0.35);
+  box-shadow: 0 0 0 1px rgba(150,165,255,0.25), 0 12px 36px -8px rgba(102,120,224,0.4), 0 0 64px rgba(140,100,224,0.22);
+}
 
 .card-cover {
   width: 100%; aspect-ratio: 460/215;
@@ -213,31 +216,31 @@ body {
 .card-title {
   font-size: 13px; font-weight: 700; color: #fff;
   line-height: 1.3; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 .ptags { display: flex; flex-wrap: wrap; gap: 4px; }
 .ptag {
   font-size: 9px; font-weight: 600; padding: 2px 8px;
-  border-radius: 20px; font-family:'Inter', sans-serif; color: #fff;
+  border-radius: 20px; font-family:'Inter', sans-serif;
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
 }
-.ptag.PC { background: #5A5D64; }
-.ptag.NS  { background: #E0342B; }
-.ptag.NS2 { background: #C0282B; }
-.ptag.PS4 { background: #2E6DB4; }
-.ptag.PS5 { background: #3B82C4; }
-.ptag.XBO { background: #2CA243; }
-.ptag.XSX { background: #2CA243; }
-.ptag.MAC { background: #565A63; }
-.ptag.LIN { background: #C9742A; }
-.ptag.IOS { background: #565A63; }
-.ptag.AND { background: #4C8C3F; }
 
 .rerelease-tag {
-  display: inline-flex; align-items: center; white-space: nowrap;
-  font-size: 9px; font-weight: 600; color: #66A8E0;
-  background: rgba(102,168,224,0.12); border: 1px solid rgba(102,168,224,0.3);
-  border-radius: 20px; padding: 2px 7px;
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%; flex-shrink: 0;
+  color: #66A8E0; background: rgba(102,168,224,0.12); border: 1px solid rgba(102,168,224,0.3);
+  cursor: default;
 }
+.rerelease-tooltip {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #1c1e26; color: #fff; font-size: 9px; font-weight: 600;
+  padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10;
+}
+.rerelease-tag:hover .rerelease-tooltip { opacity: 1; }
 
 .card-genre {
   font-size: 10px; color: rgba(255,255,255,0.45);
@@ -260,13 +263,13 @@ body {
 }
 .steam-link:hover { color: #8FC4F5; }
 .trailer-btn {
-  flex-shrink: 0; font-size: 10px; color: rgba(255,255,255,0.45);
-  background: transparent; border: none; cursor: pointer;
-  display: flex; align-items: center; gap: 3px;
-  font-family: 'Inter', sans-serif; font-weight: 500; padding: 2px 0;
-  transition: color 0.15s; white-space: nowrap;
+  flex-shrink: 0; font-size: 10px; color: #fff;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-weight: 600; padding: 6px 14px;
+  transition: background 0.15s, border-color 0.15s; white-space: nowrap;
 }
-.trailer-btn:hover { color: #fff; }
+.trailer-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
 
 .anticipated-tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -835,7 +838,7 @@ function buildCard(g) {
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       <span class="card-date-badges">
-        ${g.rerelease ? `<span class="rerelease-tag">Re-release · ${formatDateShort(g.rerelease.date)}</span>` : ''}
+        ${g.rerelease ? `<span class="rerelease-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg><span class="rerelease-tooltip">Released ${formatDateShort(g.rerelease.date)}</span></span>` : ''}
         ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
       </span>
     </div>
@@ -849,7 +852,7 @@ function buildCard(g) {
           ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
           ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.65 2 2.28 6.13 2 11.4l5.36 2.22a3 3 0 0 1 1.7-.53l2.38-3.46v-.05a4 4 0 1 1 4 4h-.1l-3.4 2.43a3 3 0 1 1-5.95.66L2 15.43A10 10 0 1 0 11.98 2zm-3.6 15.18l-1.23-.51a2.25 2.25 0 1 0 1.4-1.4l1.27.53a1.66 1.66 0 1 1-1.44 1.38zM18 9.5a2.66 2.66 0 1 0-2.66 2.66h.04A2.66 2.66 0 0 0 18 9.5zm-4.66 0a2 2 0 1 1 2 2 2 2 0 0 1-2-2z"/></svg> Steam page</a>` : ''}
         </div>
-        ${g.trailer ? `<button class="trailer-btn" onclick="openTrailerModal('${g.trailer}')">Trailer <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>` : ''}
+        ${g.trailer ? `<button class="trailer-btn" onclick="openTrailerModal('${g.trailer}')">Trailer</button>` : ''}
       </div>
     </div>
   `;
