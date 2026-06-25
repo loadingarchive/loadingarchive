@@ -22,15 +22,29 @@
 <!-- HLS playback for Steam trailers (their CDN no longer serves plain mp4 for newer movies) -->
 <script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
+:root {
+  --bg:         #0E1015;
+  --surface:    #13151B;
+  --border:     #1F2127;
+  --blue:       #66A8E0;
+  --blue-hover: #8FC4F5;
+  --gold:       #CFAF5A;
+  --dim:        rgba(255,255,255,0.35);
+  --dimmer:     rgba(255,255,255,0.15);
+  --pill:       20px;
+  --xs:         10px;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
   font-family: 'Inter', sans-serif;
-  background: #0E1015;
+  background: var(--bg);
   color: #fff;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
+button, select, input { font-family: inherit; }
 
 /* NAV */
 .nav-wrap {
@@ -39,8 +53,8 @@ body {
   padding: 16px 20px 0;
 }
 .nav-card {
-  background: #13151B;
-  border: 1px solid #1F2127;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 22px;
   padding: 11px 20px;
   transition: box-shadow 0.3s ease;
@@ -52,7 +66,7 @@ body {
 .logo svg { width: 22px; height: 22px; flex-shrink: 0; }
 .logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
-.nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
+.nav-right a { font-size: var(--xs); color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
 .nav-right a:hover { color: #fff; }
 
 /* HERO */
@@ -77,7 +91,7 @@ body {
 }
 .month-pill {
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 400;
+  font-size: var(--xs); font-weight: 400;
   border: 1px solid rgba(255,255,255,0.4);
   border-radius: 10px; padding: 6px 18px; color: #fff; margin-bottom: 8px;
 }
@@ -95,8 +109,7 @@ body {
 /* SIDE NAV */
 .side-nav {
   position: absolute; left: -70px; top: 80px; bottom: 140px;
-  width: 50px;
-  flex-shrink: 0;
+  width: 50px; flex-shrink: 0;
 }
 .side-nav-inner {
   position: sticky; top: 96px; height: 330px; width: 50px;
@@ -105,8 +118,8 @@ body {
 .side-nav-inner:active { cursor: grabbing; }
 .sn-label {
   position: absolute; right: 36px;
-  font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 500;
-  white-space: nowrap; font-family: 'Inter', sans-serif;
+  font-size: var(--xs); color: rgba(255,255,255,0.9); font-weight: 500;
+  white-space: nowrap;
   display: flex; align-items: center; gap: 6px;
   transform: translateY(-50%); transition: top 0.08s ease;
   pointer-events: none;
@@ -122,10 +135,9 @@ body {
   margin-bottom: 16px; margin-top: 60px;
 }
 .list-search {
-  flex: 1; background: #13151B; border: 1px solid #1F2127;
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 9px 14px;
-  color: #fff; font-size: 10px; outline: none;
-  font-family: 'Inter', sans-serif;
+  color: #fff; font-size: var(--xs); outline: none;
   transition: border-color 0.15s;
 }
 .list-search::placeholder { color: rgba(255,255,255,0.28); }
@@ -135,74 +147,75 @@ body {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-bottom: 20px;
 }
-.pbar-label { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 500; margin-right: 4px; }
+.pbar-label { font-size: var(--xs); color: var(--dim); font-weight: 500; margin-right: 4px; }
 .pbar-chip {
-  font-size: 10px; font-weight: 600; padding: 4px 12px;
-  border-radius: 20px; cursor: pointer; border: 1.5px solid transparent;
-  font-family: 'Inter', sans-serif; color: rgba(255,255,255,0.35);
-  background: rgba(255,255,255,0.05);
-  transition: color 0.15s, background 0.15s, border-color 0.15s; user-select: none;
-  display: flex; align-items: center; gap: 5px;
+  font-size: var(--xs); font-weight: 600; padding: 4px 12px;
+  border-radius: var(--pill); cursor: pointer; border: 1.5px solid transparent;
+  color: var(--dim); background: rgba(255,255,255,0.05);
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  user-select: none; display: flex; align-items: center; gap: 5px;
 }
 .pbar-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); transition: background 0.15s, border-color 0.15s; }
 .pbar-chip.active { color: #fff; }
 .pbar-chip.active .dot { border-color: transparent; }
-.pbar-chip.active.PC   { background: rgba(90,93,100,0.3); border-color: #5A5D64; }
-.pbar-chip.active.PC   .dot { background: #A0A3AA; }
-.pbar-chip.active.NS   { background: rgba(224,52,43,0.2); border-color: #E0342B; }
-.pbar-chip.active.NS   .dot { background: #E0342B; }
-.pbar-chip.active.NS2  { background: rgba(192,40,43,0.2); border-color: #C0282B; }
-.pbar-chip.active.NS2  .dot { background: #E03030; }
-.pbar-chip.active.PS4  { background: rgba(46,109,180,0.2); border-color: #2E6DB4; }
-.pbar-chip.active.PS4  .dot { background: #2E6DB4; }
-.pbar-chip.active.PS5  { background: rgba(59,130,196,0.2); border-color: #3B82C4; }
-.pbar-chip.active.PS5  .dot { background: #3B82C4; }
-.pbar-chip.active.XBO  { background: rgba(44,162,67,0.2); border-color: #2CA243; }
-.pbar-chip.active.XBO  .dot { background: #2CA243; }
-.pbar-chip.active.XSX  { background: rgba(44,162,67,0.2); border-color: #2CA243; }
-.pbar-chip.active.XSX  .dot { background: #2CA243; }
-.pbar-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; }
-.pbar-chip.active.ANTICIPATED { background: rgba(207,175,90,0.2); border-color: #CFAF5A; }
-.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #B98F1D, #CFAF5A); }
-.pbar-chip.cat { color: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.12); }
+.pbar-chip.active.PC  { background: rgba(90,93,100,0.3); border-color: #5A5D64; }
+.pbar-chip.active.PC  .dot { background: #A0A3AA; }
+.pbar-chip.active.NS  { background: rgba(224,52,43,0.2); border-color: #E0342B; }
+.pbar-chip.active.NS  .dot { background: #E0342B; }
+.pbar-chip.active.NS2 { background: rgba(192,40,43,0.2); border-color: #C0282B; }
+.pbar-chip.active.NS2 .dot { background: #E03030; }
+.pbar-chip.active.PS4 { background: rgba(46,109,180,0.2); border-color: #2E6DB4; }
+.pbar-chip.active.PS4 .dot { background: #2E6DB4; }
+.pbar-chip.active.PS5 { background: rgba(59,130,196,0.2); border-color: #3B82C4; }
+.pbar-chip.active.PS5 .dot { background: #3B82C4; }
+.pbar-chip.active.XBO,
+.pbar-chip.active.XSX { background: rgba(44,162,67,0.2); border-color: #2CA243; }
+.pbar-chip.active.XBO .dot,
+.pbar-chip.active.XSX .dot { background: #2CA243; }
+.pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
+.pbar-chip.active.ANTICIPATED { background: rgba(207,175,90,0.2); border-color: var(--gold); }
+.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #B98F1D, var(--gold)); }
+.pbar-chip.cat { color: var(--dim); border-color: rgba(255,255,255,0.12); }
 .pbar-chip.cat.active { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
 
 /* GAME GRID */
-.game-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
+.game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 @media (max-width: 900px) {
   .game-grid { grid-template-columns: repeat(2, 1fr); }
   .side-nav { display: none; }
 }
-@media (max-width: 600px) {
-  .game-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 600px) { .game-grid { grid-template-columns: 1fr; } }
 
-/* CARD DATE — sits above the cover, inside the card */
+/* CARD DATE */
 .card-date {
-  font-size: 10px; color: rgba(255,255,255,0.35);
+  font-size: var(--xs); color: var(--dim);
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
 .card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-date-text span { color: rgba(255,255,255,0.65); }
-.card-date-badges { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.card-action-btn {
+  background: none; border: none; color: rgba(255,255,255,0.3);
+  cursor: pointer; padding: 0; font-size: 13px; line-height: 1;
+  transition: color 0.15s;
+}
+.card-action-btn:hover        { color: rgba(255,255,255,0.75); }
+.card-action-anticipated      { color: var(--gold); }
+.card-action-anticipated:hover { color: #E8CC7A; }
+.card-action-rerelease        { color: var(--blue); }
+.card-action-rerelease:hover  { color: var(--blue-hover); }
 
 /* GAME CARD */
 .game-card {
-  background: #13151B; border-radius: 10px;
-  border: 1px solid #1F2127; overflow: hidden;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background: var(--surface); border-radius: 10px;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
   display: flex; flex-direction: column;
   padding: 15px; gap: 10px;
-  aspect-ratio: 8 / 7;
+  aspect-ratio: 330 / 300;
+  overflow: hidden; position: relative;
 }
-.game-card:hover {
-  border-color: rgba(150,165,255,0.35);
-  box-shadow: 0 0 0 1px rgba(150,165,255,0.25), 0 12px 36px -8px rgba(102,120,224,0.4), 0 0 64px rgba(140,100,224,0.22);
-}
+.game-card:hover { border-color: #2c2f3a; z-index: 2; }
 
 .card-cover {
   width: 100%; aspect-ratio: 460/215;
@@ -214,70 +227,42 @@ body {
 .card-body { flex: 1; display: flex; flex-direction: column; gap: 9px; }
 
 .card-title {
-  font-size: 13px; font-weight: 700; color: #fff;
-  line-height: 1.3; letter-spacing: -0.01em;
+  font-size: 16px; font-weight: 700; color: #fff;
+  line-height: 1.3; letter-spacing: -0.02em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 .ptags { display: flex; flex-wrap: wrap; gap: 4px; }
 .ptag {
   font-size: 9px; font-weight: 600; padding: 2px 8px;
-  border-radius: 20px; font-family:'Inter', sans-serif;
+  border-radius: var(--pill);
   color: rgba(255,255,255,0.75);
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
 }
 
-.rerelease-tag {
-  position: relative; display: inline-flex; align-items: center; justify-content: center;
-  width: 17px; height: 17px; border-radius: 50%; flex-shrink: 0;
-  color: #66A8E0; background: rgba(102,168,224,0.12); border: 1px solid rgba(102,168,224,0.3);
-  cursor: default;
-}
-.rerelease-tooltip {
-  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-  background: #1c1e26; color: #fff; font-size: 9px; font-weight: 600;
-  padding: 4px 8px; border-radius: 6px; white-space: nowrap;
-  opacity: 0; pointer-events: none; transition: opacity 0.15s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10;
-}
-.rerelease-tag:hover .rerelease-tooltip { opacity: 1; }
-
 .card-genre {
-  font-size: 10px; color: rgba(255,255,255,0.45);
+  font-size: var(--xs); color: rgba(255,255,255,0.45);
   display: flex; align-items: center; gap: 4px;
 }
 .card-genre .mlabel { color: rgba(255,255,255,0.25); }
-.card-genre .msep { color: rgba(255,255,255,0.15); }
 
 .card-footer {
   display: flex; align-items: center; justify-content: space-between;
-  margin-top: auto;
-  gap: 6px;
+  margin-top: auto; gap: 6px;
 }
-.card-price { font-size: 10px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.card-price { font-size: var(--xs); color: rgba(255,255,255,0.7); font-weight: 600; }
 .card-links { display: flex; align-items: center; gap: 8px; }
 .steam-link {
-  font-size: 10px; color: #66A8E0; text-decoration: none;
-  display: flex; align-items: center; gap: 4px; font-weight: 500;
-  transition: color 0.15s; white-space: nowrap;
+  font-size: var(--xs); color: var(--blue); text-decoration: none;
+  font-weight: 500; transition: color 0.15s; white-space: nowrap;
 }
-.steam-link:hover { color: #8FC4F5; }
-.trailer-btn {
-  flex-shrink: 0; font-size: 10px; color: #fff;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 20px; cursor: pointer;
-  font-family: 'Inter', sans-serif; font-weight: 600; padding: 6px 14px;
-  transition: background 0.15s, border-color 0.15s; white-space: nowrap;
+.steam-link:hover { color: var(--blue-hover); }
+.trailer-link {
+  flex-shrink: 0; font-size: var(--xs); color: rgba(255,255,255,0.65); font-weight: 500;
+  background: none; border: none; cursor: pointer;
+  white-space: nowrap; transition: color 0.15s; padding: 0;
 }
-.trailer-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
-
-.anticipated-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 9px; font-weight: 600; color: #fff;
-  background: linear-gradient(90deg, #B98F1D, #CFAF5A);
-  border-radius: 20px; padding: 2px 7px;
-}
-.anticipated-tag svg { flex-shrink: 0; }
+.trailer-link:hover { color: #fff; }
 
 /* TRAILER MODAL */
 .trailer-modal {
@@ -287,10 +272,7 @@ body {
   padding: 48px 20px;
 }
 .trailer-modal.open { display: flex; }
-.trailer-modal-backdrop {
-  position: absolute; inset: 0;
-  background: rgba(5,6,9,0.85);
-}
+.trailer-modal-backdrop { position: absolute; inset: 0; background: rgba(5,6,9,0.85); }
 .trailer-modal-content {
   position: relative; width: 100%; max-width: 860px;
   background: #000; border-radius: 12px; overflow: hidden;
@@ -300,20 +282,18 @@ body {
   position: absolute; top: -36px; right: 0;
   background: transparent; border: none; color: #fff;
   font-size: 22px; line-height: 1; cursor: pointer; padding: 6px 10px;
-  font-family: 'Inter', sans-serif; transition: color 0.15s;
+  transition: color 0.15s;
 }
 .trailer-modal-close:hover { color: rgba(255,255,255,0.6); }
 .trailer-modal-quality {
   position: absolute; top: -36px; left: 0; display: none;
-  background: #13151B; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-  color: #fff; font-size: 11px; font-family: 'Inter', sans-serif; font-weight: 500;
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  color: #fff; font-size: 11px; font-weight: 500;
   padding: 5px 8px; cursor: pointer; outline: none;
 }
 .trailer-modal-quality.show { display: block; }
 .trailer-modal-body iframe,
-.trailer-modal-body video {
-  width: 100%; aspect-ratio: 16/9; display: block; border: none; background: #000;
-}
+.trailer-modal-body video { width: 100%; aspect-ratio: 16/9; display: block; border: none; background: #000; }
 .trailer-modal-loading {
   padding: 80px 24px; text-align: center; color: rgba(255,255,255,0.5);
   font-size: 12px; font-weight: 500;
@@ -321,11 +301,10 @@ body {
 
 /* AD CARD */
 .ad-card {
-  background: #13151B; border-radius: 10px;
-  border: 1px solid #1F2127;
+  background: var(--surface); border-radius: 10px;
+  border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  aspect-ratio: unset; min-height: 200px;
-  overflow: hidden;
+  min-height: 200px; overflow: hidden;
 }
 
 /* EMPTY STATE */
@@ -335,14 +314,14 @@ body {
   border: 1px dashed rgba(255,255,255,0.1); border-radius: 18px; display: none;
 }
 .empty-state.show { display: block; }
-.empty-state p { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 500; margin-bottom: 4px; }
-.empty-state span { font-size: 10px; color: rgba(255,255,255,0.25); }
+.empty-state p    { font-size: var(--xs); color: rgba(255,255,255,0.4); font-weight: 500; margin-bottom: 4px; }
+.empty-state span { font-size: var(--xs); color: rgba(255,255,255,0.25); }
 
 /* CATEGORY DROPDOWN */
 .cat-wrap { position: relative; }
 .cat-dropdown {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
-  background: #13151B; border: 1px solid #1F2127;
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; padding: 12px;
   min-width: 260px; display: none;
   box-shadow: 0 12px 32px rgba(0,0,0,0.5);
@@ -350,26 +329,20 @@ body {
 .cat-dropdown.open { display: block; }
 .cat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .cat-chip {
-  font-size: 10px; font-weight: 500; padding: 4px 10px;
-  border-radius: 20px; cursor: pointer;
-  border: 1.5px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.4);
-  font-family: 'Inter', sans-serif;
+  font-size: var(--xs); font-weight: 500; padding: 4px 10px;
+  border-radius: var(--pill); cursor: pointer;
+  border: 1.5px solid var(--dimmer);
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);
   transition: color 0.15s, background 0.15s, border-color 0.15s;
   user-select: none;
 }
-.cat-chip.active {
-  color: #fff;
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.35);
-}
+.cat-chip.active { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.35); }
 
 /* MONTH NAV */
 .month-nav-wrap {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
   padding: 18px 20px 16px;
-  background: linear-gradient(180deg, rgba(14,16,21,0) 0%, #0E1015 42%);
+  background: linear-gradient(180deg, rgba(14,16,21,0) 0%, var(--bg) 42%);
 }
 .month-nav-inner {
   max-width: 1020px; margin: 0 auto;
@@ -380,21 +353,20 @@ body {
   border-radius: 100px; padding: 15px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.4);
 }
-.month-nav-label { font-size: 10px; color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
+.month-nav-label { font-size: var(--xs); color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
 .months {
   display: flex; align-items: center; gap: 10px; margin-left: auto;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .months::-webkit-scrollbar { display: none; }
 .mnav {
-  font-size: 10px; color: rgba(255,255,255,0.3); padding: 0;
+  font-size: var(--xs); color: rgba(255,255,255,0.3); padding: 0;
   border-radius: 0; cursor: pointer; border: none; background: transparent;
-  transition: color 0.15s; font-family: 'Inter', sans-serif; font-weight: 500; line-height: 1;
-  flex-shrink: 0;
+  transition: color 0.15s; font-weight: 500; line-height: 1; flex-shrink: 0;
 }
 .mnav:hover { color: rgba(255,255,255,0.7); }
 .mnav.active { color: #fff; }
-.month-sep { color: rgba(255,255,255,0.15); font-size: 10px; user-select: none; flex-shrink: 0; }
+.month-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -472,13 +444,13 @@ body {
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const PLATFORM_DEFS = [
-  { key:"PC",   label:"PC",    cls:"PC"  },
-  { key:"NS",   label:"NS",    cls:"NS"  },
-  { key:"NS2",  label:"NS2",   cls:"NS2" },
-  { key:"PS4",  label:"PS4",   cls:"PS4" },
-  { key:"PS5",  label:"PS5",   cls:"PS5" },
-  { key:"XBO",  label:"XBO",   cls:"XBO" },
-  { key:"XSX",  label:"XBX/S", cls:"XSX" },
+  { key:"PC",  label:"PC",    cls:"PC"  },
+  { key:"NS",  label:"NS",    cls:"NS"  },
+  { key:"NS2", label:"NS2",   cls:"NS2" },
+  { key:"PS4", label:"PS4",   cls:"PS4" },
+  { key:"PS5", label:"PS5",   cls:"PS5" },
+  { key:"XBO", label:"XBO",   cls:"XBO" },
+  { key:"XSX", label:"XBX/S", cls:"XSX" },
 ];
 
 const CATEGORY_DEFS = [
@@ -488,9 +460,12 @@ const CATEGORY_DEFS = [
   "Survival","Stealth","Visual Novel","Card Game","Turn-Based"
 ];
 
+// Cached DOM refs
+const gameGrid   = document.getElementById('gameGrid');
+const emptyState = document.getElementById('emptyState');
+
 let activeCats = new Set();
 let catDropdownOpen = false;
-
 let GAMES = [];
 let activeMonth = new Date().getMonth();
 let tbaMode = false;
@@ -515,19 +490,29 @@ function mapGame(g, idx) {
   };
 }
 
+function parseDate(str) { return new Date(str + 'T00:00:00'); }
+function formatDate(str) { return parseDate(str).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }
+function formatDateShort(str) { return parseDate(str).toLocaleDateString('en-US', { month:'short', year:'numeric' }); }
+function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
+
+function toggleSet(set, key) {
+  set.has(key) ? set.delete(key) : set.add(key);
+  buildPlatformBar();
+  renderGames();
+}
+function toggleCat(cat) { toggleSet(activeCats, cat); }
+function toggleFilterKey(key) { toggleSet(activeFilters, key); }
+
 async function fetchAndRenderGames(url, loadingText) {
   const mySeq = ++loadSeq;
-
-  const grid = document.getElementById('gameGrid');
-  const empty = document.getElementById('emptyState');
-  [...grid.querySelectorAll('.game-card, .ad-card, .loading-row')].forEach(el => el.remove());
-  empty.classList.remove('show');
+  [...gameGrid.querySelectorAll('.game-card, .ad-card, .loading-row')].forEach(el => el.remove());
+  emptyState.classList.remove('show');
 
   const loader = document.createElement('div');
   loader.className = 'loading-row';
   loader.style.cssText = 'grid-column:1/-1;padding:48px 24px;text-align:center;font-size:10px;color:rgba(255,255,255,0.3);font-weight:500;';
   loader.textContent = loadingText;
-  grid.appendChild(loader);
+  gameGrid.appendChild(loader);
 
   let results;
   try {
@@ -538,17 +523,15 @@ async function fetchAndRenderGames(url, loadingText) {
     results = [];
   }
 
-  if (mySeq !== loadSeq) return; // a newer tab/month switch took over while this was in flight
-
+  if (mySeq !== loadSeq) return;
   GAMES = results.map(mapGame);
   loader.remove();
   renderGames();
 }
 
 async function loadGames(monthIdx) {
-  const year = 2026;
   const m = String(monthIdx + 1).padStart(2, "0");
-  await fetchAndRenderGames(`/api/games?month=${year}-${m}`, 'Loading releases...');
+  await fetchAndRenderGames(`/api/games?month=2026-${m}`, 'Loading releases...');
   buildSideNav();
 }
 
@@ -556,24 +539,13 @@ async function loadTba() {
   await fetchAndRenderGames('/api/games?tba=1', 'Loading announced games...');
 }
 
-function formatDate(str) {
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-}
-function formatDateShort(str) {
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
-}
-function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
-
 function buildPlatformBar() {
   const bar = document.getElementById('platformBar');
   bar.innerHTML = '<span class="pbar-label">Hardware</span>';
 
   PLATFORM_DEFS.forEach(p => {
     const btn = document.createElement('button');
-    const isActive = activeFilters.has(p.key);
-    btn.className = `pbar-chip ${p.cls}` + (isActive ? ' active' : '');
+    btn.className = `pbar-chip ${p.cls}` + (activeFilters.has(p.key) ? ' active' : '');
     btn.innerHTML = `<span class="dot"></span>${p.label}`;
     btn.onclick = () => toggleFilterKey(p.key);
     bar.appendChild(btn);
@@ -585,40 +557,36 @@ function buildPlatformBar() {
   bar.appendChild(sep);
 
   const anticipatedBtn = document.createElement('button');
-  const isAnticipatedActive = activeFilters.has('anticipated');
-  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (isAnticipatedActive ? ' active' : '');
+  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (activeFilters.has('anticipated') ? ' active' : '');
   anticipatedBtn.innerHTML = `<span class="dot"></span>Anticipated`;
   anticipatedBtn.onclick = () => toggleFilterKey('anticipated');
   bar.appendChild(anticipatedBtn);
 
-  // Categorie dropdown
   const catWrap = document.createElement('div');
   catWrap.className = 'cat-wrap';
   catWrap.style.marginLeft = 'auto';
 
-  const activeCatCount = activeCats.size;
   const catBtn = document.createElement('button');
-  catBtn.className = 'pbar-chip cat' + (activeCatCount > 0 ? ' active' : '');
+  catBtn.className = 'pbar-chip cat' + (activeCats.size > 0 ? ' active' : '');
   catBtn.id = 'catBtn';
-  catBtn.innerHTML = activeCatCount > 0 ? `Categorie (${activeCatCount}) ▾` : 'Categorie ▾';
+  catBtn.innerHTML = activeCats.size > 0 ? `Categorie (${activeCats.size}) ▾` : 'Categorie ▾';
   catBtn.onclick = (e) => { e.stopPropagation(); toggleCatDropdown(); };
 
   const dropdown = document.createElement('div');
   dropdown.className = 'cat-dropdown' + (catDropdownOpen ? ' open' : '');
   dropdown.id = 'catDropdown';
 
-  const grid = document.createElement('div');
-  grid.className = 'cat-grid';
-
+  const catGrid = document.createElement('div');
+  catGrid.className = 'cat-grid';
   CATEGORY_DEFS.forEach(cat => {
     const chip = document.createElement('button');
     chip.className = 'cat-chip' + (activeCats.has(cat) ? ' active' : '');
     chip.textContent = cat;
     chip.onclick = (e) => { e.stopPropagation(); toggleCat(cat); };
-    grid.appendChild(chip);
+    catGrid.appendChild(chip);
   });
 
-  dropdown.appendChild(grid);
+  dropdown.appendChild(catGrid);
   catWrap.appendChild(catBtn);
   catWrap.appendChild(dropdown);
   bar.appendChild(catWrap);
@@ -630,14 +598,6 @@ function toggleCatDropdown() {
   if (dd) dd.classList.toggle('open', catDropdownOpen);
 }
 
-function toggleCat(cat) {
-  if (activeCats.has(cat)) activeCats.delete(cat);
-  else activeCats.add(cat);
-  buildPlatformBar();
-  renderGames();
-}
-
-// Sluit dropdown bij klik buiten
 document.addEventListener('click', () => {
   if (catDropdownOpen) {
     catDropdownOpen = false;
@@ -645,13 +605,6 @@ document.addEventListener('click', () => {
     if (dd) dd.classList.remove('open');
   }
 });
-
-function toggleFilterKey(key) {
-  if (activeFilters.has(key)) activeFilters.delete(key);
-  else activeFilters.add(key);
-  buildPlatformBar();
-  renderGames();
-}
 
 function buildMonthNav() {
   const nav = document.getElementById('monthNav');
@@ -667,7 +620,6 @@ function buildMonthNav() {
     sep.textContent = '|';
     nav.appendChild(sep);
   });
-
   const tbaBtn = document.createElement('button');
   tbaBtn.className = 'mnav' + (tbaMode ? ' active' : '');
   tbaBtn.textContent = 'TBA';
@@ -692,27 +644,22 @@ function setTba() {
   loadTba();
 }
 
-// Swipe left/right on the bottom month bar steps to the next/previous month, following
-// the bar's own visual order (Jan...Dec, then TBA) instead of requiring a precise tap.
 function stepMonth(delta) {
-  const current = tbaMode ? MONTHS.length : activeMonth; // TBA is the slot right after December
+  const current = tbaMode ? MONTHS.length : activeMonth;
   const next = current + delta;
   if (next < 0 || next > MONTHS.length) return;
-  if (next === MONTHS.length) setTba();
-  else setMonth(next);
+  if (next === MONTHS.length) setTba(); else setMonth(next);
 }
 
 function setupMonthSwipe() {
   const el = document.getElementById('monthNav');
   let startX = 0, startY = 0, tracking = false;
-
   el.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     tracking = true;
   }, { passive: true });
-
   el.addEventListener('touchend', e => {
     if (!tracking) return;
     tracking = false;
@@ -729,17 +676,14 @@ function getFiltered() {
   return GAMES.filter(g => {
     if (!tbaMode && getMonth(g.date) !== activeMonth) return false;
     if (q && !g.title.toLowerCase().includes(q)) return false;
-    // Platform filters
     if (activeFilters.size > 0) {
       if (activeFilters.has('anticipated') && !g.anticipated) return false;
       const pf = [...activeFilters].filter(f => f !== 'anticipated');
       if (pf.length > 0 && !pf.some(p => g.platforms.includes(p))) return false;
     }
-    // Category filters
     if (activeCats.size > 0) {
       const gameGenres = g.genre.map(gen => gen.toLowerCase());
-      const match = [...activeCats].some(cat => gameGenres.some(gen => gen.includes(cat.toLowerCase())));
-      if (!match) return false;
+      if (![...activeCats].some(cat => gameGenres.some(gen => gen.includes(cat.toLowerCase())))) return false;
     }
     return true;
   });
@@ -747,13 +691,9 @@ function getFiltered() {
 
 async function onSearchInput() {
   renderGames();
-  if (tbaMode) return; // no "search upcoming months" fallback makes sense here
-
+  if (tbaMode) return;
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!query) return;
-
-  const matchesThisMonth = GAMES.some(g => g.title.toLowerCase().includes(query));
-  if (matchesThisMonth) return;
+  if (!query || GAMES.some(g => g.title.toLowerCase().includes(query))) return;
 
   const mySeq = ++searchSeq;
   const emptyText = document.querySelector('#emptyState p');
@@ -762,22 +702,16 @@ async function onSearchInput() {
 
   try {
     for (let i = activeMonth + 1; i < MONTHS.length; i++) {
-      if (mySeq !== searchSeq) return; // a newer search took over
-
-      const monthStr = `2026-${String(i + 1).padStart(2, '0')}`;
+      if (mySeq !== searchSeq) return;
       let monthResults = [];
       try {
-        const res = await fetch(`/api/games?month=${monthStr}`);
+        const res = await fetch(`/api/games?month=2026-${String(i + 1).padStart(2, '0')}`);
         const data = await res.json();
         monthResults = data.results || [];
-      } catch (e) { /* skip this month on fetch error */ }
-
-      if (mySeq !== searchSeq) return; // a newer search took over
-
-      const found = monthResults.some(g => (g.title || '').toLowerCase().includes(query));
-      if (found) {
-        const stillSameQuery = document.getElementById('searchInput').value.trim().toLowerCase() === query;
-        if (stillSameQuery && mySeq === searchSeq) setMonth(i);
+      } catch (e) { /* skip on fetch error */ }
+      if (mySeq !== searchSeq) return;
+      if (monthResults.some(g => (g.title || '').toLowerCase().includes(query))) {
+        if (document.getElementById('searchInput').value.trim().toLowerCase() === query && mySeq === searchSeq) setMonth(i);
         return;
       }
     }
@@ -787,20 +721,15 @@ async function onSearchInput() {
 }
 
 function renderGames() {
-  const grid = document.getElementById('gameGrid');
-  const empty = document.getElementById('emptyState');
-  [...grid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
-  empty.classList.remove('show');
+  [...gameGrid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
+  emptyState.classList.remove('show');
 
   const games = getFiltered().sort((a, b) => tbaMode ? 0 : a.date.localeCompare(b.date));
-  if (!games.length) { empty.classList.add('show'); return; }
+  if (!games.length) { emptyState.classList.add('show'); return; }
 
-  const adPositions = [5, 11]; // Na elke ~6 kaartjes een ad
-
+  const adPositions = [5, 11];
   games.forEach((g, i) => {
-    grid.appendChild(buildCard(g));
-
-    // Google Ad na bepaalde posities
+    gameGrid.appendChild(buildCard(g));
     if (adPositions.includes(i + 1)) {
       const adCard = document.createElement('div');
       adCard.className = 'ad-card';
@@ -811,12 +740,16 @@ function renderGames() {
           data-ad-slot="3703289900"
           data-ad-format="auto"
           data-full-width-responsive="true"></ins>`;
-      grid.appendChild(adCard);
-      // A <script> tag injected via innerHTML never executes, so the push() has to
-      // happen here as real, already-running JS instead of inside that string.
+      gameGrid.appendChild(adCard);
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     }
   });
+}
+
+function platformTag(p) {
+  const cls   = p === 'Android' ? 'AND' : p === 'IOS' ? 'IOS' : p.toUpperCase();
+  const label = p === 'XSX' ? 'XSX/S' : p === 'Android' ? 'Droid' : p;
+  return `<span class="ptag ${cls}">${label}</span>`;
 }
 
 function buildCard(g) {
@@ -824,22 +757,16 @@ function buildCard(g) {
   card.className = 'game-card';
   card.id = 'card-' + g.id;
 
-  const ptagsHtml = g.platforms.map(p => {
-    const cls = p === 'Android' ? 'AND' : p === 'PC' ? 'PC' : p === 'IOS' ? 'IOS' : p.toUpperCase();
-    const label = p === 'XSX' ? 'XSX/S' : p === 'Android' ? 'Droid' : p;
-    return `<span class="ptag ${cls}">${label}</span>`;
-  }).join('');
-
-  const genreHtml = g.genre.map((gi, i) =>
-    `<span>${gi}</span>${i < g.genre.length - 1 ? '<span class="msep"> | </span>' : ''}`
-  ).join('');
+  const ptagsHtml = g.platforms.map(platformTag).join('');
+  const genreHtml = g.genre.map(gi => `<span>${gi}</span>`).join(' ');
 
   card.innerHTML = `
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
-      <span class="card-date-badges">
-        ${g.rerelease ? `<span class="rerelease-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg><span class="rerelease-tooltip">Released ${formatDateShort(g.rerelease.date)}</span></span>` : ''}
-        ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
+      <span class="card-actions">
+        ${g.rerelease  ? `<button class="card-action-btn card-action-rerelease"   title="Re-release (orig. ${formatDateShort(g.rerelease.date)})">↺</button>` : ''}
+        ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" title="Anticipated">✦</button>` : ''}
+        <button class="card-action-btn" title="More">⋮</button>
       </span>
     </div>
     ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
@@ -850,9 +777,9 @@ function buildCard(g) {
       <div class="card-footer">
         <div class="card-links">
           ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
-          ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.65 2 2.28 6.13 2 11.4l5.36 2.22a3 3 0 0 1 1.7-.53l2.38-3.46v-.05a4 4 0 1 1 4 4h-.1l-3.4 2.43a3 3 0 1 1-5.95.66L2 15.43A10 10 0 1 0 11.98 2zm-3.6 15.18l-1.23-.51a2.25 2.25 0 1 0 1.4-1.4l1.27.53a1.66 1.66 0 1 1-1.44 1.38zM18 9.5a2.66 2.66 0 1 0-2.66 2.66h.04A2.66 2.66 0 0 0 18 9.5zm-4.66 0a2 2 0 1 1 2 2 2 2 0 0 1-2-2z"/></svg> Steam page</a>` : ''}
+          ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank">Steam page ›</a>` : ''}
         </div>
-        ${g.trailer ? `<button class="trailer-btn" onclick="openTrailerModal('${g.trailer}')">Trailer</button>` : ''}
+        ${g.trailer ? `<button class="trailer-link" onclick="openTrailerModal('${g.trailer}')">Trailer ›</button>` : ''}
       </div>
     </div>
   `;
