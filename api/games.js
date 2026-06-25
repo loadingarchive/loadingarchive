@@ -430,6 +430,56 @@ function withoutAlreadyCovered(extraGames, existingResults) {
   });
 }
 
+// ---------- Cross-month Steam backfill: covers console ports/re-releases of older PC games ----------
+// RAWG console entries only get matched against Steam games releasing in the SAME month (see
+// fetchSteamPcGames) -- a Switch/PS port of a game whose Steam page is years old falls outside
+// that window entirely and ends up with no cover or Steam link even though one exists. This does
+// an unscoped, exact-title lookup as a last resort so those ports still get a cover image, Steam
+// link, and a "re-release" label carrying the original release date.
+async function findExistingSteamAppId(title) {
+  const target = normalizeTitle(title);
+  if (!target) return null;
+  try {
+    // Steam's storesearch silently returns zero results for queries containing certain
+    // punctuation (em dashes, pipes -- common in subtitle separators like "Title — Subtitle"),
+    // even though the plain-text title matches fine. Search with the punctuation stripped.
+    const r = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(target)}&cc=us&l=en`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Exact normalized match only -- without a date to disambiguate, fuzzy matching here would
+    // too easily pick up DLC/soundtrack/bundle entries or an unrelated same-ish-named game.
+    const exact = (data.items || []).find(it => it.type === "app" && normalizeTitle(it.name) === target);
+    return exact ? exact.id : null;
+  } catch (e) {
+    console.error("Steam storesearch failed", title, e.message);
+    return null;
+  }
+}
+
+const RERELEASE_GAP_DAYS = 60; // an existing Steam page released this much earlier than the displayed date marks a port/re-release, not a simultaneous multi-platform launch
+
+async function backfillFromExistingSteamPage(game) {
+  if (game.steam) return game;
+  const appid = await findExistingSteamAppId(game.title);
+  if (!appid) return game;
+  const app = await fetchSteamAppDetails(appid);
+  if (!app) return game;
+
+  const originalDate = parseSteamDate(app.release_date?.date);
+  const isRerelease = originalDate && game.date && originalDate < game.date && daysBetween(originalDate, game.date) >= RERELEASE_GAP_DAYS;
+
+  return {
+    ...game,
+    steam: String(appid),
+    cover: game.cover || app.header_image || null,
+    price: game.price || (app.is_free ? "Free" : (app.price_overview?.final_formatted || null)),
+    genre: game.genre.length ? game.genre : (app.genres || []).map(g => g.description).slice(0, 2),
+    trailer: game.trailer || (app.movies?.length ? `steam:${appid}` : null),
+    platforms: [...new Set([...game.platforms, "PC"])],
+    rerelease: isRerelease ? { date: originalDate } : game.rerelease || null,
+  };
+}
+
 export default async function handler(req, res) {
   const rawgKey = process.env.RAWG_API_KEY;
   const { month, tba } = req.query;
@@ -439,7 +489,8 @@ export default async function handler(req, res) {
       const rawgResults = await fetchRawgTbaGames(rawgKey);
       const extraTba = loadExtraGames().filter(g => !g.date);
       const newExtras = withoutAlreadyCovered(extraTba, rawgResults);
-      return res.status(200).json({ results: [...rawgResults, ...newExtras] });
+      const backfilled = await mapWithConcurrency([...rawgResults, ...newExtras], 10, backfillFromExistingSteamPage);
+      return res.status(200).json({ results: backfilled });
     } catch (e) {
       console.error("TBA handler failed", e.message);
       return res.status(500).json({ error: "TBA fetch failed", detail: e.message });
@@ -481,7 +532,8 @@ export default async function handler(req, res) {
   const newExtras = withoutAlreadyCovered(extraGames, merged);
 
   const results = [...merged, ...newExtras];
-  return res.status(200).json({ results });
+  const backfilled = await mapWithConcurrency(results, 10, backfillFromExistingSteamPage);
+  return res.status(200).json({ results: backfilled });
 }
 
 // Reused by scripts/scrape-wikipedia.mjs so the offline scraper and the live handler

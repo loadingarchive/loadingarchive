@@ -186,7 +186,9 @@ body {
   font-size: 10px; color: rgba(255,255,255,0.35);
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
+.card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-date-text span { color: rgba(255,255,255,0.65); }
+.card-date-badges { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 /* GAME CARD */
 .game-card {
@@ -229,6 +231,13 @@ body {
 .ptag.LIN { background: #C9742A; }
 .ptag.IOS { background: #565A63; }
 .ptag.AND { background: #4C8C3F; }
+
+.rerelease-tag {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  font-size: 9px; font-weight: 600; color: #66A8E0;
+  background: rgba(102,168,224,0.12); border: 1px solid rgba(102,168,224,0.3);
+  border-radius: 20px; padding: 2px 7px;
+}
 
 .card-genre {
   font-size: 10px; color: rgba(255,255,255,0.45);
@@ -499,6 +508,7 @@ function mapGame(g, idx) {
     steam: g.steam || null,
     price: g.price || null,
     cover: g.cover || null,
+    rerelease: g.rerelease || null,
   };
 }
 
@@ -546,6 +556,10 @@ async function loadTba() {
 function formatDate(str) {
   const d = new Date(str + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+}
+function formatDateShort(str) {
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
 }
 function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
 
@@ -820,7 +834,10 @@ function buildCard(g) {
   card.innerHTML = `
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
-      ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
+      <span class="card-date-badges">
+        ${g.rerelease ? `<span class="rerelease-tag">Re-release · ${formatDateShort(g.rerelease.date)}</span>` : ''}
+        ${g.anticipated ? `<span class="anticipated-tag">Anticipated <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.5 9.5 22 12 14.5 14.5 12 22 9.5 14.5 2 12 9.5 9.5Z"/></svg></span>` : ''}
+      </span>
     </div>
     ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
     <div class="card-body">
