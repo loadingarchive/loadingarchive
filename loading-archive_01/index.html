@@ -514,6 +514,41 @@ function mapGame(g, idx) {
   };
 }
 
+// Smart search: handles substrings, multi-word, acronyms (GTA5→Grand Theft Auto V, FF7→Final Fantasy VII)
+function matchesSearch(title, query) {
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+  const toArabic = s => s
+    .replace(/\bxvii\b/g,'17').replace(/\bxvi\b/g,'16').replace(/\bxv\b/g,'15')
+    .replace(/\bxiv\b/g,'14').replace(/\bxiii\b/g,'13').replace(/\bxii\b/g,'12')
+    .replace(/\bxi\b/g,'11').replace(/\bx\b/g,'10').replace(/\bix\b/g,'9')
+    .replace(/\bviii\b/g,'8').replace(/\bvii\b/g,'7').replace(/\bvi\b/g,'6')
+    .replace(/\bv\b/g,'5').replace(/\biv\b/g,'4').replace(/\biii\b/g,'3').replace(/\bii\b/g,'2');
+  const t = norm(title);
+  const q = norm(query);
+  if (!q) return true;
+  if (t.includes(q)) return true;
+  // Roman numeral normalization: "v" and "5" treated as equal
+  const tA = toArabic(t), qA = toArabic(q);
+  if (tA.includes(qA)) return true;
+  // All query words found in title (handles "mario kart" → "Mario Kart 9")
+  const tWords = tA.split(' ').filter(Boolean);
+  const qWords = qA.split(' ').filter(Boolean);
+  if (qWords.length >= 2 && qWords.every(qw => tWords.some(tw => tw.includes(qw) || qw.includes(tw)))) return true;
+  // Acronym + optional number: "gta5" → "Grand Theft Auto V", "ff7" → "Final Fantasy VII"
+  const m = q.match(/^([a-z]{2,})(\d+)?$/);
+  if (m) {
+    const prefix = m[1], num = m[2];
+    const initials = norm(title).split(' ').filter(Boolean).map(w => w[0]).join('');
+    if (initials.startsWith(prefix)) {
+      if (!num) return true;
+      const roman = ['','i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv','xvi','xvii'];
+      const variants = [num, roman[+num]].filter(Boolean);
+      if (variants.some(v => tWords.includes(v))) return true;
+    }
+  }
+  return false;
+}
+
 function parseDate(str) { return new Date(str + 'T00:00:00'); }
 function formatDate(str) { return parseDate(str).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }
 function formatDateShort(str) { return parseDate(str).toLocaleDateString('en-US', { month:'short', year:'numeric' }); }
@@ -699,7 +734,7 @@ function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
     if (!tbaMode && getMonth(g.date) !== activeMonth) return false;
-    if (q && !g.title.toLowerCase().includes(q)) return false;
+    if (q && !matchesSearch(g.title, q)) return false;
     if (activeFilters.size > 0) {
       if (activeFilters.has('anticipated') && !g.anticipated) return false;
       const pf = [...activeFilters].filter(f => f !== 'anticipated');
@@ -717,7 +752,7 @@ async function onSearchInput() {
   renderGames();
   if (tbaMode) return;
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!query || GAMES.some(g => g.title.toLowerCase().includes(query))) return;
+  if (!query || GAMES.some(g => matchesSearch(g.title, query))) return;
 
   const mySeq = ++searchSeq;
   const emptyText = document.querySelector('#emptyState p');
@@ -734,7 +769,7 @@ async function onSearchInput() {
         monthResults = data.results || [];
       } catch (e) { /* skip on fetch error */ }
       if (mySeq !== searchSeq) return;
-      if (monthResults.some(g => (g.title || '').toLowerCase().includes(query))) {
+      if (monthResults.some(g => matchesSearch(g.title || '', query))) {
         if (document.getElementById('searchInput').value.trim().toLowerCase() === query && mySeq === searchSeq) setMonth(i);
         return;
       }
