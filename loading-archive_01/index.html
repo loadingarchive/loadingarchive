@@ -998,24 +998,26 @@ buildMonthNav();
 setupMonthSwipe();
 loadGames(activeMonth);
 
-// Fixed tooltip — position: fixed escapes all overflow:hidden containers
+// Tooltip for data-tooltip elements (mouseover/out bubbles, works on dynamic cards)
 (function () {
   const tip = document.getElementById('site-tooltip');
-  document.addEventListener('mouseenter', e => {
+  document.addEventListener('mouseover', e => {
     if (!(e.target instanceof Element)) return;
     const el = e.target.closest('[data-tooltip]');
     if (!el) return;
     tip.textContent = el.dataset.tooltip;
-    tip.className = 'show' +
-      (el.classList.contains('card-action-anticipated') ? ' anticipated' : '') +
-      (el.classList.contains('card-action-rerelease')   ? ' rerelease'   : '');
+    tip.className = 'show'
+      + (el.classList.contains('card-action-anticipated') ? ' anticipated' : '')
+      + (el.classList.contains('card-action-rerelease')   ? ' rerelease'   : '');
     const r = el.getBoundingClientRect();
     tip.style.left = (r.left + r.width / 2) + 'px';
     tip.style.top  = (r.bottom + 7) + 'px';
-  }, true);
-  document.addEventListener('mouseleave', e => {
-    if (e.target instanceof Element && e.target.closest('[data-tooltip]')) tip.className = '';
-  }, true);
+  });
+  document.addEventListener('mouseout', e => {
+    if (!(e.target instanceof Element)) return;
+    if (e.target.closest('[data-tooltip]') && !e.relatedTarget?.closest('[data-tooltip]'))
+      tip.className = '';
+  });
 }());
 </script>
 <div id="site-tooltip"></div>
