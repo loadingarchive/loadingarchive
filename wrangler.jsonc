@@ -1,33 +1,33 @@
 {
-  // Cloudflare Workers — Loading Archive
-  // Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
-  "name": "loadingarchive",
-  "main": "worker/src/index.js",
-  "compatibility_date": "2024-09-23",
-
-  // Static Assets: serves everything in loading-archive_01/ as static files.
-  // The ASSETS binding lets the worker fall through to these files for any
-  // route it doesn't handle itself.
-  "assets": {
-    "directory": "./loading-archive_01",
-    "binding": "ASSETS"
-  },
-
-  // KV namespace for pre-built game data.
-  // Keys: "games:2026-01" … "games:2026-12", "games:tba", "config:extra-games"
-  // Fill in real IDs after running: wrangler kv namespace create GAMES_KV
-  "kv_namespaces": [
-    {
-      "binding": "GAMES_KV",
-      "id": "REPLACE_WITH_PROD_KV_ID",
-      "preview_id": "REPLACE_WITH_PREVIEW_KV_ID"
-    }
-  ],
-
-  // Two cron triggers, both handled by the scheduled() export in index.js:
-  //   0 3 * * *  → daily: rebuild active months + TBA (runDailyCron)
-  //   0 4 * * 0  → weekly Sunday: Wikipedia incremental scrape (runWeeklyWikipediaCron)
-  "triggers": {
-    "crons": ["0 3 * * *", "0 4 * * 0"]
-  }
+	// Cloudflare Workers — Loading Archive
+	// Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+	"name": "loadingarchive",
+	"main": "worker/src/index.js",
+	"compatibility_date": "2024-09-23",
+	// Static Assets: serves everything in loading-archive_01/ as static files.
+	// The ASSETS binding lets the worker fall through to these files for any
+	// route it doesn't handle itself.
+	"assets": {
+		"directory": "./loading-archive_01",
+		"binding": "ASSETS"
+	},
+	// KV namespace for pre-built game data.
+	// Keys: "games:2026-01" … "games:2026-12", "games:tba", "config:extra-games"
+	// remote: true → wrangler dev also uses the real KV (no local simulation needed)
+	"kv_namespaces": [
+		{
+			"binding": "GAMES_KV",
+			"id": "cccc2aea7c3c44379b6fe07a28e06bff",
+			"remote": true
+		}
+	],
+	// Two cron triggers, both handled by the scheduled() export in index.js:
+	//   0 3 * * *  → daily: rebuild active months + TBA (runDailyCron)
+	//   0 4 * * 0  → weekly Sunday: Wikipedia incremental scrape (runWeeklyWikipediaCron)
+	"triggers": {
+		"crons": [
+			"0 3 * * *",
+			"0 4 * * 0"
+		]
+	}
 }
