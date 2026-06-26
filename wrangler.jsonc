@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers — Loading Archive
+  // Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+  "name": "loadingarchive",
+  "main": "worker/src/index.js",
+  "compatibility_date": "2024-09-23",
+
+  // Static Assets: serves everything in loading-archive_01/ as static files.
+  // The ASSETS binding lets the worker fall through to these files for any
+  // route it doesn't handle itself.
+  "assets": {
+    "directory": "./loading-archive_01",
+    "binding": "ASSETS"
+  }
+}

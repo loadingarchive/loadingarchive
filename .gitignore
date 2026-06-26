@@ -1,2 +1,4 @@
 .vercel
+.wrangler
 .env*
+node_modules

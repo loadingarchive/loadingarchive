@@ -1,5 +1,12 @@
 {
   "name": "loadingarchive",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
 }
