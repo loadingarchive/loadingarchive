@@ -3,7 +3,7 @@ import { handleTrailer } from './handlers/trailer.js';
 import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
 
     if (pathname === '/api/games')   return handleGames(request, env);
@@ -13,7 +13,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    // "0 4 * * 0" fires Sundays at 04:00 UTC → Wikipedia scrape
+    // "0 4 * * 7" fires Sundays at 04:00 UTC → Wikipedia scrape
     // All other triggers (daily "0 3 * * *") → monthly pipeline
     if (event.cron === '0 4 * * 7') {
       ctx.waitUntil(runWeeklyWikipediaCron(env));
