@@ -29,5 +29,10 @@
 			"0 3 * * *",
 			"0 4 * * 7"
 		]
-	}
+	},
+	"workers_dev": true,
+	"routes": [
+		{ "pattern": "www.loadingarchive.com", "custom_domain": true },
+		{ "pattern": "loadingarchive.com",     "custom_domain": true }
+	]
 }
