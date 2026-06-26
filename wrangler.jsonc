@@ -11,5 +11,16 @@
   "assets": {
     "directory": "./loading-archive_01",
     "binding": "ASSETS"
-  }
+  },
+
+  // KV namespace for pre-built game data.
+  // Keys: "games:2026-01" … "games:2026-12" and "games:tba"
+  // Fill in real IDs after running: wrangler kv namespace create GAMES_KV
+  "kv_namespaces": [
+    {
+      "binding": "GAMES_KV",
+      "id": "REPLACE_WITH_PROD_KV_ID",
+      "preview_id": "REPLACE_WITH_PREVIEW_KV_ID"
+    }
+  ]
 }
