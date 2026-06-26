@@ -1,6 +1,6 @@
 import { handleGames }   from './handlers/games.js';
 import { handleTrailer } from './handlers/trailer.js';
-import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
+import { runDailyCron, runWeeklyWikipediaCron, seedMonths, makeMonthEntry } from './cron/build-cache.js';
 
 export default {
   async fetch(request, env, ctx) {
