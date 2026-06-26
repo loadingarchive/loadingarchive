@@ -4,11 +4,7 @@ import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (url.hostname === 'loadingarchive.com') {
-      return Response.redirect(`https://www.loadingarchive.com${url.pathname}${url.search}`, 301);
-    }
-    const { pathname } = url;
+    const { pathname } = new URL(request.url);
 
     if (pathname === '/api/games')   return handleGames(request, env);
     if (pathname === '/api/trailer') return handleTrailer(request, env);
