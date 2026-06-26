@@ -14,7 +14,7 @@
   },
 
   // KV namespace for pre-built game data.
-  // Keys: "games:2026-01" … "games:2026-12" and "games:tba"
+  // Keys: "games:2026-01" … "games:2026-12", "games:tba", "config:extra-games"
   // Fill in real IDs after running: wrangler kv namespace create GAMES_KV
   "kv_namespaces": [
     {
@@ -22,5 +22,12 @@
       "id": "REPLACE_WITH_PROD_KV_ID",
       "preview_id": "REPLACE_WITH_PREVIEW_KV_ID"
     }
-  ]
+  ],
+
+  // Two cron triggers, both handled by the scheduled() export in index.js:
+  //   0 3 * * *  → daily: rebuild active months + TBA (runDailyCron)
+  //   0 4 * * 0  → weekly Sunday: Wikipedia incremental scrape (runWeeklyWikipediaCron)
+  "triggers": {
+    "crons": ["0 3 * * *", "0 4 * * 0"]
+  }
 }
