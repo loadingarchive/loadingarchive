@@ -49,7 +49,7 @@ button, select, input { font-family: inherit; }
 /* NAV */
 .nav-wrap {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  max-width: 1020px; margin: 0 auto;
+  max-width: 1060px; margin: 0 auto;
   padding: 16px 20px 0;
 }
 .nav-card {
@@ -1001,6 +1001,7 @@ loadGames(activeMonth);
 (function () {
   const tip = document.getElementById('site-tooltip');
   document.addEventListener('mouseenter', e => {
+    if (!(e.target instanceof Element)) return;
     const el = e.target.closest('[data-tooltip]');
     if (!el) return;
     tip.textContent = el.dataset.tooltip;
@@ -1012,7 +1013,7 @@ loadGames(activeMonth);
     tip.style.top  = (r.bottom + 7) + 'px';
   }, true);
   document.addEventListener('mouseleave', e => {
-    if (e.target.closest('[data-tooltip]')) tip.className = '';
+    if (e.target instanceof Element && e.target.closest('[data-tooltip]')) tip.className = '';
   }, true);
 }());
 </script>
