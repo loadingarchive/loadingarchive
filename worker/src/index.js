@@ -1,7 +1,7 @@
 import { handleGames }    from './handlers/games.js';
 import { handleTrailer }  from './handlers/trailer.js';
 import { handleGamePage } from './handlers/game.js';
-import { runDailyCron, runWeeklyWikipediaCron, seedMonths, makeMonthEntry } from './cron/build-cache.js';
+import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -9,10 +9,6 @@ export default {
 
     if (pathname === '/api/games')   return handleGames(request, env);
     if (pathname === '/api/trailer') return handleTrailer(request, env);
-    if (pathname === '/api/run-cron') {
-      ctx.waitUntil(runDailyCron(env));
-      return Response.json({ status: 'cron gestart' }, { status: 202 });
-    }
 
     if (pathname.startsWith('/game/')) {
       const slug = pathname.slice(6).replace(/\/$/, '');

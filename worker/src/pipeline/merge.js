@@ -1,51 +1,10 @@
-import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate } from './utils.js';
-import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamPcGames } from './steam.js';
-import { fetchRawgConsoleGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
+import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug } from './utils.js';
+import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails } from './steam.js';
+import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
 
 const RERELEASE_GAP_DAYS = 60;
 
-export function mergeResults(steamGames, rawgGames) {
-  const usedSteamIds = new Set();
-  const merged = [];
-
-  for (const rg of rawgGames) {
-    const key = normalizeTitle(rg.title);
-    const candidates = steamGames.filter(
-      sg => !usedSteamIds.has(sg.id) && titlesAreCloseEnough(key, normalizeTitle(sg.title))
-    );
-
-    let match = null;
-    if (candidates.length === 1) {
-      match = candidates[0];
-    } else if (candidates.length > 1) {
-      match = candidates.reduce((best, c) =>
-        daysBetween(c.date, rg.date) < daysBetween(best.date, rg.date) ? c : best
-      );
-    }
-
-    if (match) {
-      usedSteamIds.add(match.id);
-      merged.push({
-        ...match,
-        date:        match.date,
-        platforms:   [...new Set([...match.platforms, ...rg.platforms])],
-        genre:       match.genre.length ? match.genre : rg.genre,
-        dev:         match.dev || rg.dev,
-        anticipated: match.anticipated || rg.anticipated,
-      });
-    } else {
-      merged.push(rg);
-    }
-  }
-
-  for (const sg of steamGames) {
-    if (!usedSteamIds.has(sg.id)) merged.push(sg);
-  }
-
-  return merged;
-}
-
-export function withoutAlreadyCovered(extraGames, existingResults) {
+function withoutAlreadyCovered(extraGames, existingResults) {
   const existingKeys = existingResults.map(g => normalizeTitle(g.title));
   return extraGames.filter(eg => {
     const key = normalizeTitle(eg.title);
@@ -53,12 +12,15 @@ export function withoutAlreadyCovered(extraGames, existingResults) {
   });
 }
 
-export async function backfillFromExistingSteamPage(game) {
+async function backfillFromExistingSteamPage(game) {
   if (game.steam) return game;
   const appid = await findExistingSteamAppId(game.title);
   if (!appid) return game;
   const app   = await fetchSteamAppDetails(appid);
   if (!app)   return game;
+
+  // Laag B: skip Steam-verrijking als Steam het als 18+ markeert (game blijft wel)
+  if (Number(app.required_age) >= 18) return game;
 
   const originalDate = parseSteamDate(app.release_date?.date);
   const isRerelease  = originalDate && game.date && originalDate < game.date
@@ -76,30 +38,83 @@ export async function backfillFromExistingSteamPage(game) {
   };
 }
 
-export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames) {
-  const [rawgGames, steamGames] = await Promise.all([
-    fetchRawgConsoleGames(rawgKey, dateFrom, dateTo),
-    fetchSteamPcGames(dateFrom, dateTo),
-  ]);
+// Genereert unieke slugs voor een lijst games. Bij botsing: voeg jaar toe, dan jaar-maand.
+function assignSlugs(games) {
+  const used = new Map(); // slug → index van eerste gebruiker
+  return games.map(g => {
+    const base = generateSlug(g.title);
+    const year = g.date ? g.date.slice(0, 4) : "tba";
+    const mon  = g.date ? g.date.slice(0, 7).replace("-", "-") : "tba";
 
-  const claimedSteamIds     = new Set(rawgGames.filter(g => g.steam).map(g => g.steam));
-  const unclaimedSteamGames = steamGames.filter(sg => !claimedSteamIds.has(sg.steam));
-  const merged              = mergeResults(unclaimedSteamGames, rawgGames);
+    let slug = base;
+    if (used.has(slug)) slug = `${base}-${year}`;
+    if (used.has(slug)) slug = `${base}-${mon}`;
+    if (used.has(slug)) slug = `${base}-${g.id}`; // absolute fallback op RAWG-id
 
-  const filtered  = extraGames.filter(g => g.date && g.date >= dateFrom && g.date <= dateTo);
-  const newExtras = withoutAlreadyCovered(filtered, merged);
-  const all       = [...merged, ...newExtras];
-
-  const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
-  return mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+    used.set(slug, true);
+    return { ...g, slug };
+  });
 }
 
-export async function runTbaPipeline(rawgKey, extraGames) {
+// Haalt Steam-details op en schrijft game:{slug} naar KV.
+async function saveGameToKV(game, env) {
+  const detail = game.steam ? await fetchSteamGameDetails(game.steam) : null;
+  const entry = {
+    id:          game.id,
+    slug:        game.slug,
+    title:       game.title,
+    date:        game.date,
+    platforms:   game.platforms,
+    genre:       game.genre,
+    dev:         game.dev,
+    anticipated: game.anticipated,
+    rerelease:   game.rerelease || null,
+    trailer:     game.trailer,
+    steam:       game.steam,
+    price:       game.price,
+    cover:       game.cover,
+    // Steam-detailvelden (null als geen Steam-link)
+    short_description:    detail?.short_description    || null,
+    detailed_description: detail?.detailed_description || null,
+    pc_requirements:      detail?.pc_requirements      || null,
+    metacritic:           detail?.metacritic           || null,
+    screenshots:          detail?.screenshots          || [],
+    categories:           detail?.categories           || [],
+  };
+  await env.GAMES_KV.put(`game:${game.slug}`, JSON.stringify(entry));
+}
+
+// RAWG is de enige bron voor game-releases. Steam voegt alleen cover, prijs en trailer toe.
+export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env) {
+  const rawgGames = await fetchRawgGames(rawgKey, dateFrom, dateTo);
+  console.log(`  ${dateFrom}–${dateTo}: ${rawgGames.length} games van RAWG`);
+
+  const filtered  = extraGames.filter(g => g.date && g.date >= dateFrom && g.date <= dateTo);
+  const newExtras = withoutAlreadyCovered(filtered, rawgGames);
+  const all       = [...rawgGames, ...newExtras];
+
+  const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
+  const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+
+  // Slugs toewijzen en game-detailpagina's opslaan in KV
+  const withSlugs = assignSlugs(withCovers);
+  await mapWithConcurrency(withSlugs, 5, g => saveGameToKV(g, env));
+  console.log(`  ${dateFrom}–${dateTo}: ${withSlugs.length} game-slugs opgeslagen in KV`);
+
+  return withSlugs;
+}
+
+export async function runTbaPipeline(rawgKey, extraGames, env) {
   const rawgResults = await fetchRawgTbaGames(rawgKey);
   const extraTba    = extraGames.filter(g => !g.date);
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
   const all         = [...rawgResults, ...newExtras];
 
   const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
-  return mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+
+  const withSlugs = assignSlugs(withCovers);
+  await mapWithConcurrency(withSlugs, 5, g => saveGameToKV(g, env));
+
+  return withSlugs;
 }

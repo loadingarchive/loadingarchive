@@ -1,4 +1,5 @@
 export const PLATFORM_MAP = {
+  "pc": "PC", "linux": "PC", "macos": "PC",
   "playstation4": "PS4", "playstation5": "PS5",
   "xbox-one": "XBO", "xbox-series-x": "XSX", "nintendo-switch": "NS",
 };
@@ -31,6 +32,15 @@ export function decodeHtmlEntities(str) {
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#039;|&apos;/g, "'")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
+}
+
+export function generateSlug(title) {
+  return (title || "")
+    .toLowerCase()
+    .replace(/[®™©'''‘’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
 }
 
 export function normalizeTitle(t) {

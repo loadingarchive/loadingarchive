@@ -1,6 +1,16 @@
 import { PLATFORM_MAP, parseSteamDate, mapWithConcurrency } from './utils.js';
 import { ADULT_DESCRIPTOR_IDS, fetchSteamAppDetails } from './steam.js';
 
+// Laag B: client-side 18+ filter op RAWG-velden
+const ADULT_ESRB_SLUGS = new Set(['adults-only']);
+const ADULT_TAG_SLUGS  = new Set(['nsfw', 'sexual-content', 'nudity']);
+
+function isAdultContent(g) {
+  if (ADULT_ESRB_SLUGS.has(g.esrb_rating?.slug)) return true;
+  if ((g.tags || []).some(t => ADULT_TAG_SLUGS.has(t.slug))) return true;
+  return false;
+}
+
 function mapRawgGame(g, idx, idPrefix) {
   const platforms = (g.platforms || [])
     .map(p => PLATFORM_MAP[p.platform?.slug] || null)
@@ -31,6 +41,12 @@ async function enrichRawgGameWithSteam(rg) {
   const app = await fetchSteamAppDetails(rg.steam);
   if (!app) return rg;
 
+  // Laag B: Steam required_age check — drop het spel als Steam het als 18+ markeert
+  if (Number(app.required_age) >= 18) {
+    console.log(`Steam 18+ filter: dropped "${rg.title}" (required_age=${app.required_age})`);
+    return null;
+  }
+
   const steamGenre = (app.genres || []).map(g => g.description).slice(0, 2);
   const steamDate  = parseSteamDate(app.release_date?.date);
 
@@ -46,36 +62,61 @@ async function enrichRawgGameWithSteam(rg) {
   };
 }
 
-async function fetchRawg(rawgKey, query) {
-  const url = `https://api.rawg.io/api/games?key=${rawgKey}&${query}`;
+async function fetchRawg(rawgKey, query, maxPages = 5) {
+  const all = [];
+  let url = `https://api.rawg.io/api/games?key=${rawgKey}&${query}`;
+  let pages = 0;
   try {
-    const r = await fetch(url);
-    if (!r.ok) { console.error("RAWG request failed", r.status); return []; }
-    const data = await r.json();
-    return data.results || [];
+    while (url && pages < maxPages) {
+      const r = await fetch(url);
+      if (!r.ok) { console.error("RAWG request failed", r.status); break; }
+      const data = await r.json();
+      all.push(...(data.results || []));
+      url = data.next || null;
+      pages++;
+    }
   } catch (e) {
     console.error("RAWG fetch failed", e.message);
-    return [];
   }
+  return all;
 }
 
-export async function fetchRawgConsoleGames(rawgKey, dateFrom, dateTo) {
+export async function fetchRawgGames(rawgKey, dateFrom, dateTo) {
+  // Laag A: exclude_esrb_ratings=6 filtert "Adults Only" aan RAWG-kant
   const results = await fetchRawg(rawgKey,
-    `dates=${dateFrom},${dateTo}&ordering=released&page_size=40&exclude_additions=true&parent_platforms=2,3,7`
+    `dates=${dateFrom},${dateTo}&ordering=released&page_size=40&exclude_additions=true&parent_platforms=1,2,3,7&exclude_esrb_ratings=6`
   );
-  const games = results.map((g, idx) => mapRawgGame(g, idx, "rawg")).filter(Boolean);
-  return mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+
+  // Laag B: filter resterende 18+ content op ESRB-slug en tags
+  const adultCount = results.filter(isAdultContent).length;
+  if (adultCount) console.log(`RAWG 18+ filter: ${adultCount} games verwijderd (${dateFrom}–${dateTo})`);
+
+  const games = results
+    .filter(g => !isAdultContent(g))
+    .map((g, idx) => mapRawgGame(g, idx, "rawg"))
+    .filter(Boolean);
+
+  const enriched = await mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+  return enriched.filter(Boolean); // null = gedropped door Steam 18+ check
 }
 
 export async function fetchRawgTbaGames(rawgKey) {
+  // Laag A: exclude_esrb_ratings=6, ook PC toegevoegd
   const results = await fetchRawg(rawgKey,
-    `tba=true&ordering=-added&page_size=40&exclude_additions=true&parent_platforms=2,3,7`
+    `tba=true&ordering=-added&page_size=40&exclude_additions=true&parent_platforms=1,2,3,7&exclude_esrb_ratings=6`
   );
+
+  // Laag B
+  const adultCount = results.filter(g => g.tba === true && isAdultContent(g)).length;
+  if (adultCount) console.log(`RAWG 18+ filter: ${adultCount} TBA games verwijderd`);
+
   const games = results
-    .filter(g => g.tba === true)
+    .filter(g => g.tba === true && !isAdultContent(g))
     .map((g, idx) => mapRawgGame(g, idx, "rawg-tba"))
     .filter(Boolean);
-  return mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+
+  const enriched = await mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+  return enriched.filter(Boolean);
 }
 
 export async function enrichRawgCoverWithScreenshot(rawgKey, game) {
