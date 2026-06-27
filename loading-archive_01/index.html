@@ -422,15 +422,17 @@ button, select, input { font-family: inherit; }
   display: flex; align-items: center; gap: 8px;
   padding-bottom: 4px;
 }
-.footer-brand svg { width: 18px; height: 18px; opacity: 0.35; }
+.footer-logo-bars { display: flex; align-items: flex-end; gap: 8px; }
+.footer-logo-b {
+  width: 3px; background: rgba(255,255,255,0.35);
+  border-radius: 2px 2px 0 0; transform-origin: bottom center; flex-shrink: 0;
+}
 .footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
-  display: flex; align-items: center; justify-content: flex-end;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
 }
-.footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
-.footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
-.footer-links a:hover { color: rgba(255,255,255,0.5); }
+.footer-copy { font-size: 10px; color: rgba(255,255,255,0.22); }
 </style>
 </head>
 <body>
@@ -495,17 +497,18 @@ button, select, input { font-family: inherit; }
       <div class="footer-brand-row">
         <div class="footer-domino-wrap" id="footerRow3"></div>
         <div class="footer-brand">
-          <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect y="0.11145" width="3" height="20" fill="white"/>
-            <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
-            <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
-          </svg>
+          <div class="footer-logo-bars" id="footerLogoBars">
+            <div class="footer-logo-b" style="height:18px"></div>
+            <div class="footer-logo-b" style="height:18px"></div>
+            <div class="footer-logo-b" style="height:18px;transform:rotate(-8deg)"></div>
+          </div>
           <span>Loading Archive</span>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
+      <span class="footer-copy">&copy; Loading Archive 2026</span>
+      <span class="footer-copy">All rights reserved</span>
     </div>
   </div>
 </footer>
@@ -1089,14 +1092,14 @@ loadGames(activeMonth);
   });
 }());
 
-// Domino footer — rows 1 & 2 full-width, row 3 next to brand
+// Domino footer — logo bars start cascade; sequential rise back up
 (function () {
   const rows12El = document.getElementById('footerRows12');
   const row3El   = document.getElementById('footerRow3');
   if (!rows12El || !row3El) return;
 
   const GAP = 7, BAR = 3, ROW_H = 22;
-  const T_STEP = 20, T_FALL = 100, T_PAUSE = 700;
+  const T_FALL = 100, T_RISE = 80, T_STEP = 20, T_STEP_R = 14, T_PAUSE = 700;
 
   const FULL_W = rows12El.offsetWidth || 960;
   const R3_W   = row3El.offsetWidth   || FULL_W - 160;
@@ -1120,25 +1123,42 @@ loadGames(activeMonth);
   const r1 = makeRow(FCOLS,  rows12El);
   const r2 = makeRow(FCOLS,  rows12El);
   const r3 = makeRow(R3COLS, row3El);
-  const barEls = [...r1, ...r2, ...r3];
-  const order  = [...r3.slice().reverse(), ...r2.slice().reverse(), ...r1.slice().reverse()];
 
-  let idx = 0;
+  const logoEl   = document.getElementById('footerLogoBars');
+  const logoEls  = logoEl ? [...logoEl.children] : [];
+  const logoInit = new Map(logoEls.map(b => [b, b.style.transform || '']));
+
+  // Logo bars (bottom-right) fall first, then r3→r2→r1 right-to-left each
+  const fallOrd = [...logoEls.slice().reverse(), ...r3.slice().reverse(), ...r2.slice().reverse(), ...r1.slice().reverse()];
+  const riseOrd = [...fallOrd].reverse();
+
+  let idx = 0, rIdx = 0;
+
   function fallNext() {
-    if (idx < order.length) {
-      const b = order[idx++];
+    if (idx < fallOrd.length) {
+      const b = fallOrd[idx++];
       b.style.transition = `transform ${T_FALL}ms ease-in, opacity ${T_FALL}ms ease-in`;
       b.style.transform = 'rotate(85deg)';
       b.style.opacity = '0.05';
       setTimeout(fallNext, T_STEP);
     } else {
-      setTimeout(resetAll, T_PAUSE);
+      setTimeout(riseNext, T_PAUSE);
     }
   }
-  function resetAll() {
-    for (const b of barEls) { b.style.transition = 'none'; b.style.transform = ''; b.style.opacity = ''; }
-    idx = 0; setTimeout(fallNext, 80);
+
+  function riseNext() {
+    if (rIdx < riseOrd.length) {
+      const b = riseOrd[rIdx++];
+      b.style.transition = `transform ${T_RISE}ms ease-out, opacity ${T_RISE}ms ease-out`;
+      b.style.transform = logoInit.has(b) ? logoInit.get(b) : '';
+      b.style.opacity = '';
+      setTimeout(riseNext, T_STEP_R);
+    } else {
+      rIdx = 0; idx = 0;
+      setTimeout(fallNext, T_PAUSE);
+    }
   }
+
   fallNext();
 })();
 
