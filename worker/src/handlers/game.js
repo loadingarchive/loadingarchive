@@ -65,10 +65,6 @@ function renderPage(g) {
   const genres = g.genre || [];
   const plats  = (g.platforms || []).map(p => PLATFORM_FULL[p] || p);
 
-  const heroCenter = shots[0] || g.cover || '';
-  const heroLeft   = shots[1] || g.cover || '';
-  const heroRight  = shots[2] || shots[1] || g.cover || '';
-
   const ogImg    = g.cover || shots[0] || '';
   const rawDesc  = g.short_description
     ? g.short_description.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
@@ -93,8 +89,14 @@ function renderPage(g) {
     } : {}),
   });
 
-  const hasTrailer = !!g.trailer;
-  const hasReqs    = g.pc_requirements?.minimum || g.pc_requirements?.recommended;
+  const hasTrailer  = !!g.trailer;
+  const hasReqs     = g.pc_requirements?.minimum || g.pc_requirements?.recommended;
+
+  const carSlides = hasTrailer
+    ? [`<div class="car-slide" id="carSlide0">${shots[0] ? `<img src="${esc(shots[0])}" alt="${title}" loading="eager" draggable="false">` : ''}<button class="car-play" id="heroPlay" onclick="playTrailer()" aria-label="Play trailer"${!shots[0] ? ' style="background:rgba(0,0,0,0.65)"' : ''}><div class="play-circle"><svg viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg></div></button></div>`,
+       ...shots.slice(1).map((s, i) => `<div class="car-slide"><img src="${esc(s)}" alt="" loading="${i < 3 ? 'eager' : 'lazy'}" draggable="false"></div>`)]
+    : shots.map((s, i) => `<div class="car-slide"><img src="${esc(s)}" alt="" loading="${i < 2 ? 'eager' : 'lazy'}" draggable="false"></div>`);
+  const totalSlides = carSlides.length;
 
   const ptagsHtml = (g.platforms || [])
     .map(p => `<span class="ptag">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
@@ -180,52 +182,44 @@ body {
 .nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
 .nav-right a:hover { color: #fff; }
 
-/* ── HERO STRIP ───────────────────────────────────── */
-.hero-strip {
-  display: flex;
-  width: 100%;
-  overflow: hidden;
-  background: #000;
+/* ── CAROUSEL ─────────────────────────────────────── */
+.carousel { position: relative; width: 100%; background: #000; overflow: hidden; user-select: none; }
+.car-track { display: flex; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
+.car-slide {
+  flex: 0 0 100%; aspect-ratio: 16/9;
+  position: relative; overflow: hidden; background: #0a0b10;
 }
-.hero-side {
-  flex: 1; min-width: 0;
-  overflow: hidden; position: relative;
-}
-.hero-side img {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  opacity: 0.5;
-}
-.hero-center {
-  flex: 0 0 min(1020px, 100%);
-  aspect-ratio: 16 / 9;
-  position: relative; overflow: hidden;
-  background: #0a0b10;
-}
-.hero-center > img {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-}
-.hero-play {
+.car-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.car-play {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.2);
-  border: none; cursor: pointer;
-  transition: background 0.2s;
+  background: rgba(0,0,0,0.18); border: none; cursor: pointer; transition: background 0.2s;
 }
-.hero-play:hover { background: rgba(0,0,0,0.05); }
+.car-play:hover { background: rgba(0,0,0,0.04); }
 .play-circle {
   width: 68px; height: 68px; border-radius: 50%;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   transition: transform 0.2s, background 0.2s;
 }
-.hero-play:hover .play-circle { transform: scale(1.08); background: rgba(0,0,0,0.72); }
+.car-play:hover .play-circle { transform: scale(1.08); background: rgba(0,0,0,0.72); }
 .play-circle svg { width: 26px; height: 26px; margin-left: 4px; }
-@media (max-width: 900px) {
-  .hero-side { display: none; }
-  .hero-center { flex: 0 0 100%; }
+.car-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(0,0,0,0.5); border: none;
+  cursor: pointer; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.car-btn:hover { background: rgba(0,0,0,0.82); }
+.car-prev { left: 14px; }
+.car-next { right: 14px; }
+.car-counter {
+  position: absolute; bottom: 12px; right: 14px;
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.45); padding: 3px 8px; border-radius: 10px;
+  pointer-events: none; letter-spacing: 0.04em;
 }
 
 /* ── MAIN GRID ────────────────────────────────────── */
@@ -332,37 +326,6 @@ body {
 .req-body ul { padding-left: 18px; }
 .req-body strong { color: rgba(255,255,255,0.72); }
 
-/* ── MEDIA STRIP ──────────────────────────────────── */
-.media-strip-wrap { background: #000; }
-.media-strip {
-  display: flex; gap: 10px;
-  overflow-x: auto; padding: 10px 20px;
-  cursor: grab; user-select: none;
-  scrollbar-width: none; -webkit-overflow-scrolling: touch;
-}
-.media-strip::-webkit-scrollbar { display: none; }
-.media-strip.dragging { cursor: grabbing; }
-.ms-item {
-  flex: 0 0 auto; height: 150px; aspect-ratio: 16/9;
-  object-fit: cover; border-radius: 3px; display: block; pointer-events: none;
-}
-.ms-play-btn {
-  flex: 0 0 auto; height: 150px; aspect-ratio: 16/9;
-  position: relative; cursor: pointer; border-radius: 3px;
-  overflow: hidden; border: none; padding: 0; background: #0a0a0a;
-}
-.ms-play-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.65; display: block; }
-.ms-play-icon {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center; pointer-events: none;
-}
-.ms-play-circle {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: rgba(0,0,0,0.65);
-  display: flex; align-items: center; justify-content: center;
-}
-.ms-play-circle svg { width: 14px; height: 14px; margin-left: 2px; }
-
 /* ── FOOTER ───────────────────────────────────────── */
 .site-footer { padding: 0 20px 24px; }
 .footer-card {
@@ -377,7 +340,7 @@ body {
   display: flex; flex-direction: column; gap: 7px;
   padding: 20px 20px 0;
 }
-.footer-brand-row { display: flex; align-items: flex-end; gap: 24px; }
+.footer-brand-row { display: flex; align-items: flex-end; gap: 7px; }
 .domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
 .d-bar {
   background: rgba(255,255,255,0.22);
@@ -388,10 +351,10 @@ body {
 }
 .footer-brand {
   flex-shrink: 0;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 14px;
   padding-bottom: 4px;
 }
-.footer-logo-bars { display: flex; align-items: flex-end; gap: 8px; }
+.footer-logo-bars { display: flex; align-items: flex-end; gap: 7px; }
 .footer-logo-b {
   width: 3px; background: rgba(255,255,255,0.35);
   border-radius: 2px 2px 0 0; transform-origin: bottom center; flex-shrink: 0;
@@ -426,30 +389,20 @@ body {
   </div>
 </div>
 
-<!-- HERO STRIP: left screenshot | center 16:9 media | right screenshot -->
-<div class="hero-strip">
-  <div class="hero-side">${heroLeft ? `<img src="${esc(heroLeft)}" alt="" loading="eager">` : ''}</div>
-  <div class="hero-center" id="heroCenter">
-    ${heroCenter ? `<img id="heroImg" src="${esc(heroCenter)}" alt="${title}" loading="eager">` : ''}
-    ${hasTrailer ? `<button class="hero-play" id="heroPlay" onclick="playTrailer()" aria-label="Play trailer">
-      <div class="play-circle">
-        <svg viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg>
-      </div>
-    </button>` : ''}
+${totalSlides > 0 ? `
+<!-- CAROUSEL -->
+<div class="carousel" id="carousel">
+  <div class="car-track" id="carTrack">
+    ${carSlides.join('')}
   </div>
-  <div class="hero-side">${heroRight ? `<img src="${esc(heroRight)}" alt="" loading="lazy">` : ''}</div>
-</div>
-
-${(shots.length > 0 || hasTrailer) ? `
-<!-- MEDIA STRIP: drag-to-scroll screenshots -->
-<div class="media-strip-wrap">
-  <div class="media-strip" id="mediaStrip">
-    ${hasTrailer ? `<button class="ms-play-btn" onclick="playTrailer()">
-      ${heroCenter ? `<img src="${esc(heroCenter)}" alt="" draggable="false">` : ''}
-      <div class="ms-play-icon"><div class="ms-play-circle"><svg viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg></div></div>
-    </button>` : ''}
-    ${shots.map(s => `<img class="ms-item" src="${esc(s)}" alt="" loading="lazy" draggable="false">`).join('')}
-  </div>
+  ${totalSlides > 1 ? `
+  <button class="car-btn car-prev" id="carPrev" aria-label="Previous">
+    <svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 1 1 9 9 17"/></svg>
+  </button>
+  <button class="car-btn car-next" id="carNext" aria-label="Next">
+    <svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 9 9 1 17"/></svg>
+  </button>
+  <div class="car-counter" id="carCounter">1 / ${totalSlides}</div>` : ''}
 </div>` : ''}
 
 <!-- MAIN CONTENT — max-width 1020px -->
@@ -496,9 +449,9 @@ ${(shots.length > 0 || hasTrailer) ? `
         <div class="domino-wrap" id="dominoRow3"></div>
         <div class="footer-brand">
           <div class="footer-logo-bars" id="footerLogoBars">
-            <div class="footer-logo-b" style="height:18px"></div>
-            <div class="footer-logo-b" style="height:18px"></div>
-            <div class="footer-logo-b" style="height:18px;transform:rotate(-8deg)"></div>
+            <div class="footer-logo-b" style="height:22px"></div>
+            <div class="footer-logo-b" style="height:22px"></div>
+            <div class="footer-logo-b" style="height:22px;transform:rotate(-8deg)"></div>
           </div>
           <span>Loading Archive</span>
         </div>
@@ -516,25 +469,51 @@ window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
 
-// Media strip drag-to-scroll
+// Carousel — click arrows or drag to navigate
 (function () {
-  const strip = document.getElementById('mediaStrip');
-  if (!strip) return;
-  let isDown = false, startX, sl;
-  strip.addEventListener('mousedown', e => {
-    isDown = true; startX = e.pageX; sl = strip.scrollLeft;
-    strip.classList.add('dragging'); e.preventDefault();
+  const track   = document.getElementById('carTrack');
+  if (!track) return;
+  const btnPrev = document.getElementById('carPrev');
+  const btnNext = document.getElementById('carNext');
+  const counter = document.getElementById('carCounter');
+  const total   = track.children.length;
+  if (total <= 1) return;
+  let cur = 0;
+
+  function goTo(n) {
+    cur = ((n % total) + total) % total;
+    track.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
+    track.style.transform  = 'translateX(' + (-cur * 100) + '%)';
+    if (counter) counter.textContent = (cur + 1) + ' / ' + total;
+  }
+
+  if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); goTo(cur - 1); });
+  if (btnNext) btnNext.addEventListener('click', e => { e.stopPropagation(); goTo(cur + 1); });
+
+  let startX = null, didDrag = false;
+  track.addEventListener('mousedown', e => {
+    startX = e.clientX; didDrag = false;
+    track.style.transition = 'none'; e.preventDefault();
   });
-  window.addEventListener('mouseup', () => { isDown = false; strip.classList.remove('dragging'); });
-  strip.addEventListener('mousemove', e => {
-    if (!isDown) return;
-    strip.scrollLeft = sl - (e.pageX - startX);
+  window.addEventListener('mouseup', e => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? cur + 1 : cur - 1); else goTo(cur);
+    startX = null;
   });
-  let touchX, touchSl;
-  strip.addEventListener('touchstart', e => { touchX = e.touches[0].pageX; touchSl = strip.scrollLeft; }, { passive: true });
-  strip.addEventListener('touchmove', e => {
-    if (touchX == null) return;
-    strip.scrollLeft = touchSl - (e.touches[0].pageX - touchX);
+  track.addEventListener('mousemove', e => {
+    if (startX === null) return;
+    didDrag = true;
+    track.style.transform = 'translateX(' + (-cur * track.parentElement.offsetWidth + (e.clientX - startX)) + 'px)';
+  });
+  track.addEventListener('click', e => { if (didDrag) { e.stopPropagation(); e.preventDefault(); } });
+  let touchStart = null;
+  track.addEventListener('touchstart', e => { touchStart = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    if (touchStart === null) return;
+    const dx = e.changedTouches[0].clientX - touchStart;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? cur + 1 : cur - 1);
+    touchStart = null;
   }, { passive: true });
 })();
 
@@ -608,15 +587,17 @@ window.addEventListener('scroll', () => {
 ${hasTrailer ? `
 async function playTrailer() {
   const trailer = ${JSON.stringify(g.trailer)};
-  const center  = document.getElementById('heroCenter');
-  const play    = document.getElementById('heroPlay');
-  const img     = document.getElementById('heroImg');
+  const slide = document.getElementById('carSlide0');
+  const play  = document.getElementById('heroPlay');
   if (play) play.style.display = 'none';
 
   function showMedia(el) {
     el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;display:block';
-    center.appendChild(el);
-    if (img) img.style.display = 'none';
+    if (slide) {
+      slide.appendChild(el);
+      const img = slide.querySelector('img');
+      if (img) img.style.display = 'none';
+    }
   }
 
   if (trailer.startsWith('steam:')) {
