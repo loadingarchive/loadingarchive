@@ -222,11 +222,9 @@ button, select, input { font-family: inherit; }
   opacity: 0;
   transition: opacity 0.12s;
   z-index: 9999;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(-100%);
 }
 #site-tooltip.show { opacity: 1; }
-#site-tooltip.anticipated { border-color: rgba(207,175,90,0.4); }
-#site-tooltip.rerelease   { border-color: rgba(102,168,224,0.4); }
 
 /* GAME CARD */
 .game-card {
@@ -237,8 +235,11 @@ button, select, input { font-family: inherit; }
   padding: 15px; gap: 10px;
   aspect-ratio: 330 / 280;
   overflow: hidden; position: relative;
+  cursor: pointer;
 }
 .game-card:hover { border-color: #2c2f3a; z-index: 2; }
+.card-title a { color: inherit; text-decoration: none; }
+.card-title a:hover { color: var(--blue); }
 
 .card-cover {
   width: 100%; aspect-ratio: 300/140;
@@ -465,6 +466,7 @@ button, select, input { font-family: inherit; }
   </div>
 </div>
 
+<div id="site-tooltip"></div>
 <script>
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -831,7 +833,7 @@ function buildCard(g) {
     </div>
     ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
     <div class="card-body">
-      <div class="card-title">${g.title}</div>
+      <div class="card-title">${g.slug ? `<a href="/game/${g.slug}">${g.title}</a>` : g.title}</div>
       <div class="ptags">${ptagsHtml}</div>
       <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
       <div class="card-footer">
@@ -843,6 +845,12 @@ function buildCard(g) {
       </div>
     </div>
   `;
+  if (g.slug) {
+    card.addEventListener('click', e => {
+      if (e.target.closest('a, button')) return;
+      window.location.href = '/game/' + g.slug;
+    });
+  }
   return card;
 }
 
@@ -1011,7 +1019,7 @@ loadGames(activeMonth);
       + (el.classList.contains('card-action-rerelease')   ? ' rerelease'   : '');
     const r = el.getBoundingClientRect();
     tip.style.left = (r.left + r.width / 2) + 'px';
-    tip.style.top  = (r.bottom + 7) + 'px';
+    tip.style.top  = (r.top - 7) + 'px';
   });
   document.addEventListener('mouseout', e => {
     if (!(e.target instanceof Element)) return;
@@ -1020,6 +1028,5 @@ loadGames(activeMonth);
   });
 }());
 </script>
-<div id="site-tooltip"></div>
 </body>
 </html>
