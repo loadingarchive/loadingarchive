@@ -38,7 +38,7 @@ async function loadExtraGames(env) {
 }
 
 async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo, label }) {
-  const results = await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames);
+  const results = await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env);
   await env.GAMES_KV.put(kvKey, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
   console.log(`  ${label}: ${results.length} games → KV`);
 }
@@ -71,12 +71,47 @@ export async function runDailyCron(env) {
   }
 
   try {
-    const tbaResults = await runTbaPipeline(rawgKey, extraGames);
+    const tbaResults = await runTbaPipeline(rawgKey, extraGames, env);
     await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
     console.log(`  TBA: ${tbaResults.length} games → KV`);
   } catch (e) {
     console.error('  TBA: pipeline failed —', e.message);
   }
+
+  try {
+    await generateSitemap(env);
+  } catch (e) {
+    console.error('  Sitemap: generatie mislukt —', e.message);
+  }
+}
+
+async function generateSitemap(env) {
+  const year   = new Date().getFullYear();
+  const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+
+  const allGames = [];
+  for (const m of months) {
+    const data = await env.GAMES_KV.get(`games:${m}`, 'json');
+    if (data?.results) {
+      for (const g of data.results) {
+        if (g.slug) allGames.push({ slug: g.slug, date: g.date });
+      }
+    }
+  }
+
+  const base  = 'https://www.loadingarchive.com';
+  const today = new Date().toISOString().slice(0, 10);
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${base}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+${allGames.map(({ slug, date }) =>
+  `  <url><loc>${base}/game/${slug}</loc><lastmod>${date || today}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`
+).join('\n')}
+</urlset>`;
+
+  await env.GAMES_KV.put('config:sitemap', xml);
+  console.log(`  Sitemap: ${allGames.length} game-URLs opgeslagen in KV`);
 }
 
 // ---- seed specific months (used by temporary seeding endpoint) ----
@@ -92,6 +127,7 @@ export async function seedMonths(env, months) {
     }
   }
 }
+
 
 export { makeMonthEntry };
 
