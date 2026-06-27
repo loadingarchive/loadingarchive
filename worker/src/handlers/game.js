@@ -370,11 +370,18 @@ body {
 .ms-play-circle svg { width: 14px; height: 14px; margin-left: 2px; }
 
 /* ── FOOTER ───────────────────────────────────────── */
-.site-footer { background: #09090e; }
+.site-footer { padding: 0 20px 24px; }
+.footer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  max-width: 1020px;
+  margin: 0 auto;
+}
 .footer-top {
   display: flex; align-items: flex-end; gap: 24px;
   padding: 20px 20px 0;
-  max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
 .d-bar {
@@ -387,14 +394,13 @@ body {
 .footer-brand {
   flex-shrink: 0;
   display: flex; align-items: center; gap: 8px;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
 }
 .footer-brand svg { width: 18px; height: 18px; opacity: 0.35; }
 .footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 24px;
-  max-width: 1020px; margin-left: auto; margin-right: auto;
+  padding: 20px 20px 20px;
 }
 .footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
 .footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
@@ -486,20 +492,22 @@ ${(shots.length > 0 || hasTrailer) ? `
 
 <!-- FOOTER -->
 <footer class="site-footer">
-  <div class="footer-top">
-    <div class="domino-wrap">${domino}</div>
-    <div class="footer-brand">
-      <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect y="0.11145" width="3" height="20" fill="white"/>
-        <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
-        <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
-      </svg>
-      <span>Loading Archive</span>
+  <div class="footer-card">
+    <div class="footer-top">
+      <div class="domino-wrap">${domino}</div>
+      <div class="footer-brand">
+        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+        </svg>
+        <span>Loading Archive</span>
+      </div>
     </div>
-  </div>
-  <div class="footer-bottom">
-    <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
-    <div class="footer-links"><a href="/sitemap.xml">Sitemap</a></div>
+    <div class="footer-bottom">
+      <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
+      <div class="footer-links"><a href="/sitemap.xml">Sitemap</a></div>
+    </div>
   </div>
 </footer>
 
@@ -534,7 +542,7 @@ window.addEventListener('scroll', () => {
 (function () {
   const wrap = document.getElementById('dominoGrid');
   if (!wrap) return;
-  const GAP = 7, BAR = 3, ROWS = 3, ROW_H = 40;
+  const GAP = 7, BAR = 3, ROWS = 3, ROW_H = 22;
   const T_STEP = 20, T_FALL = 100, T_PAUSE = 700;
   const COLS = Math.max(1, Math.floor(((wrap.parentElement.offsetWidth || 980) + GAP) / (BAR + GAP)));
   const frag = document.createDocumentFragment();
