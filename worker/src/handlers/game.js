@@ -338,15 +338,42 @@ body {
 .req-body ul { padding-left: 18px; }
 .req-body strong { color: rgba(255,255,255,0.72); }
 
-/* ── FOOTER ───────────────────────────────────────── */
-.site-footer {
-  background: #09090e;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  padding-top: 36px;
+/* ── MEDIA STRIP ──────────────────────────────────── */
+.media-strip-wrap { background: #000; }
+.media-strip {
+  display: flex; gap: 10px;
+  overflow-x: auto; padding: 10px 20px;
+  cursor: grab; user-select: none;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
+.media-strip::-webkit-scrollbar { display: none; }
+.media-strip.dragging { cursor: grabbing; }
+.ms-item {
+  flex: 0 0 auto; height: 150px; aspect-ratio: 16/9;
+  object-fit: cover; border-radius: 3px; display: block; pointer-events: none;
+}
+.ms-play-btn {
+  flex: 0 0 auto; height: 150px; aspect-ratio: 16/9;
+  position: relative; cursor: pointer; border-radius: 3px;
+  overflow: hidden; border: none; padding: 0; background: #0a0a0a;
+}
+.ms-play-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.65; display: block; }
+.ms-play-icon {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; pointer-events: none;
+}
+.ms-play-circle {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+}
+.ms-play-circle svg { width: 14px; height: 14px; margin-left: 2px; }
+
+/* ── FOOTER ───────────────────────────────────────── */
+.site-footer { background: #09090e; }
 .footer-top {
   display: flex; align-items: flex-end; gap: 24px;
-  padding: 0 20px 20px;
+  padding: 20px 20px 0;
   max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
@@ -366,8 +393,7 @@ body {
 .footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 20px 24px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 20px 20px 24px;
   max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
@@ -410,6 +436,18 @@ body {
   </div>
   <div class="hero-side">${heroRight ? `<img src="${esc(heroRight)}" alt="" loading="lazy">` : ''}</div>
 </div>
+
+${(shots.length > 0 || hasTrailer) ? `
+<!-- MEDIA STRIP: drag-to-scroll screenshots -->
+<div class="media-strip-wrap">
+  <div class="media-strip" id="mediaStrip">
+    ${hasTrailer ? `<button class="ms-play-btn" onclick="playTrailer()">
+      ${heroCenter ? `<img src="${esc(heroCenter)}" alt="" draggable="false">` : ''}
+      <div class="ms-play-icon"><div class="ms-play-circle"><svg viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg></div></div>
+    </button>` : ''}
+    ${shots.map(s => `<img class="ms-item" src="${esc(s)}" alt="" loading="lazy" draggable="false">`).join('')}
+  </div>
+</div>` : ''}
 
 <!-- MAIN CONTENT — max-width 1020px -->
 <div class="main-grid">
@@ -469,6 +507,28 @@ body {
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
+
+// Media strip drag-to-scroll
+(function () {
+  const strip = document.getElementById('mediaStrip');
+  if (!strip) return;
+  let isDown = false, startX, sl;
+  strip.addEventListener('mousedown', e => {
+    isDown = true; startX = e.pageX; sl = strip.scrollLeft;
+    strip.classList.add('dragging'); e.preventDefault();
+  });
+  window.addEventListener('mouseup', () => { isDown = false; strip.classList.remove('dragging'); });
+  strip.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    strip.scrollLeft = sl - (e.pageX - startX);
+  });
+  let touchX, touchSl;
+  strip.addEventListener('touchstart', e => { touchX = e.touches[0].pageX; touchSl = strip.scrollLeft; }, { passive: true });
+  strip.addEventListener('touchmove', e => {
+    if (touchX == null) return;
+    strip.scrollLeft = touchSl - (e.touches[0].pageX - touchX);
+  }, { passive: true });
+})();
 
 // Domino footer — sequential one-by-one cascade
 (function () {
