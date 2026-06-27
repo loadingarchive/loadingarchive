@@ -403,25 +403,15 @@ button, select, input { font-family: inherit; }
 .footer-top {
   display: flex; align-items: flex-end; gap: 24px;
   padding: 0 20px 20px;
+  max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .footer-domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
-.footer-domino-grid {
-  display: grid;
-  gap: 5px 4px;
-  align-items: end;
-}
-@keyframes domino-fall {
-  0%, 100% { transform: scaleY(1);    opacity: 0.18; }
-  12%       { transform: scaleY(0.07); opacity: 0.5;  }
-  40%       { transform: scaleY(0.07); opacity: 0.4;  }
-  55%       { transform: scaleY(1);    opacity: 0.18; }
-}
 .d-bar {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.22);
   border-radius: 2px 2px 0 0;
   transform-origin: bottom center;
-  animation: domino-fall 7s linear infinite;
-  width: 100%; height: 100%;
+  width: 3px; height: 100%;
+  display: block;
 }
 .footer-brand {
   flex-shrink: 0;
@@ -434,6 +424,7 @@ button, select, input { font-family: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px 24px;
   border-top: 1px solid rgba(255,255,255,0.05);
+  max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
 .footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
@@ -1092,27 +1083,71 @@ loadGames(activeMonth);
   });
 }());
 
-// Build domino footer grid
+// Domino footer — sequential one-by-one cascade
 (function () {
-  const COLS = 68, ROWS = 3;
-  const step = 0.06, DUR = 7.0;
   const wrap = document.getElementById('footerDominoWrap');
   if (!wrap) return;
+
+  const GAP = 7, BAR = 3, ROWS = 3, ROW_H = 40;
+  const T_STEP = 20;   // ms between each bar falling
+  const T_FALL = 100;  // ms CSS transition per bar
+  const T_PAUSE = 700; // ms pause after all bars fallen
+
+  const COLS = Math.max(1, Math.floor((wrap.offsetWidth + GAP) / (BAR + GAP)));
+
+  // Build grid container
   const grid = document.createElement('div');
-  grid.className = 'footer-domino-grid';
-  grid.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
-  grid.style.gridTemplateRows    = `repeat(${ROWS},36px)`;
+  grid.style.cssText = `display:flex;flex-direction:column;gap:${GAP}px`;
+
+  // Build rows and bars
+  const barEls = [];
   for (let row = 0; row < ROWS; row++) {
+    const rowEl = document.createElement('div');
+    rowEl.style.cssText = `display:flex;gap:${GAP}px;align-items:flex-end;height:${ROW_H}px`;
     for (let col = 0; col < COLS; col++) {
-      const cascade = (ROWS - 1 - row) + (COLS - 1 - col);
-      const delay   = (cascade * step - DUR).toFixed(3);
-      const bar = document.createElement('div');
-      bar.className = 'd-bar';
-      bar.style.animationDelay = delay + 's';
-      grid.appendChild(bar);
+      const b = document.createElement('div');
+      b.className = 'd-bar';
+      b.style.height = ROW_H + 'px';
+      b.style.flexShrink = '0';
+      rowEl.appendChild(b);
+      barEls.push(b);
     }
+    grid.appendChild(rowEl);
   }
   wrap.appendChild(grid);
+
+  // Cascade order: bottom row right→left, then middle, then top
+  const order = [];
+  for (let row = ROWS - 1; row >= 0; row--)
+    for (let col = COLS - 1; col >= 0; col--)
+      order.push(barEls[row * COLS + col]);
+
+  let idx = 0, timer;
+
+  function fallNext() {
+    if (idx < order.length) {
+      const b = order[idx];
+      b.style.transition = `transform ${T_FALL}ms ease-in, opacity ${T_FALL}ms ease-in`;
+      b.style.transform = 'rotate(85deg)';
+      b.style.opacity = '0.05';
+      idx++;
+      timer = setTimeout(fallNext, T_STEP);
+    } else {
+      timer = setTimeout(resetAll, T_PAUSE);
+    }
+  }
+
+  function resetAll() {
+    for (const b of barEls) {
+      b.style.transition = 'none';
+      b.style.transform = '';
+      b.style.opacity = '';
+    }
+    idx = 0;
+    timer = setTimeout(fallNext, 80);
+  }
+
+  fallNext();
 })();
 
 // Lift month nav above footer when footer enters viewport

@@ -56,24 +56,9 @@ function notFound() {
   );
 }
 
-// Generates the domino bar grid HTML.
-// Wave direction: bottom-right starts first, cascades to top-left.
-// Seamless loop: delay(cascade) = cascade * step - DUR
-//   → bar 0 is at animation phase 0 at t=0 (about to fall)
-//   → bar max is at phase (max*step) into the cycle (mid-wave)
-//   → after DUR seconds bar 0 loops, wave is continuous
-function buildDominoGrid(COLS = 68, ROWS = 3) {
-  const step = 0.06;  // seconds between adjacent cascade positions
-  const DUR  = 7.0;   // full animation cycle (must be > ROWS+COLS-2 * step)
-  let bars = '';
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const cascade = (ROWS - 1 - row) + (COLS - 1 - col);
-      const delay   = (cascade * step - DUR).toFixed(3);
-      bars += `<div class="d-bar" style="animation-delay:${delay}s"></div>`;
-    }
-  }
-  return `<div class="domino-grid" style="grid-template-columns:repeat(${COLS},1fr);grid-template-rows:repeat(${ROWS},36px)">${bars}</div>`;
+// Generates placeholder domino grid HTML; animation is driven client-side by JS.
+function buildDominoGrid() {
+  return `<div id="dominoGrid"></div>`;
 }
 
 function renderPage(g) {
@@ -362,25 +347,15 @@ body {
 .footer-top {
   display: flex; align-items: flex-end; gap: 24px;
   padding: 0 20px 20px;
+  max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
-.domino-grid {
-  display: grid;
-  gap: 5px 4px;
-  align-items: end;
-}
-@keyframes domino-fall {
-  0%, 100% { transform: scaleY(1);    opacity: 0.18; }
-  12%       { transform: scaleY(0.07); opacity: 0.5;  }
-  40%       { transform: scaleY(0.07); opacity: 0.4;  }
-  55%       { transform: scaleY(1);    opacity: 0.18; }
-}
 .d-bar {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.22);
   border-radius: 2px 2px 0 0;
   transform-origin: bottom center;
-  animation: domino-fall 7s linear infinite;
-  width: 100%; height: 100%;
+  width: 3px; height: 100%;
+  display: block; flex-shrink: 0;
 }
 .footer-brand {
   flex-shrink: 0;
@@ -393,6 +368,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px 24px;
   border-top: 1px solid rgba(255,255,255,0.05);
+  max-width: 1020px; margin-left: auto; margin-right: auto;
 }
 .footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
 .footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
@@ -493,6 +469,53 @@ body {
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
+
+// Domino footer — sequential one-by-one cascade
+(function () {
+  const wrap = document.getElementById('dominoGrid');
+  if (!wrap) return;
+  const GAP = 7, BAR = 3, ROWS = 3, ROW_H = 40;
+  const T_STEP = 20, T_FALL = 100, T_PAUSE = 700;
+  const COLS = Math.max(1, Math.floor(((wrap.parentElement.offsetWidth || 980) + GAP) / (BAR + GAP)));
+  const frag = document.createDocumentFragment();
+  const barEls = [];
+  for (let row = 0; row < ROWS; row++) {
+    const rowEl = document.createElement('div');
+    rowEl.style.cssText = \`display:flex;gap:\${GAP}px;align-items:flex-end;height:\${ROW_H}px\`;
+    for (let col = 0; col < COLS; col++) {
+      const b = document.createElement('div');
+      b.className = 'd-bar';
+      b.style.height = ROW_H + 'px';
+      rowEl.appendChild(b);
+      barEls.push(b);
+    }
+    frag.appendChild(rowEl);
+  }
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:' + GAP + 'px';
+  wrap.appendChild(frag);
+  const order = [];
+  for (let row = ROWS - 1; row >= 0; row--)
+    for (let col = COLS - 1; col >= 0; col--)
+      order.push(barEls[row * COLS + col]);
+  let idx = 0, timer;
+  function fallNext() {
+    if (idx < order.length) {
+      const b = order[idx++];
+      b.style.transition = \`transform \${T_FALL}ms ease-in,opacity \${T_FALL}ms ease-in\`;
+      b.style.transform = 'rotate(85deg)';
+      b.style.opacity = '0.05';
+      timer = setTimeout(fallNext, T_STEP);
+    } else {
+      timer = setTimeout(reset, T_PAUSE);
+    }
+  }
+  function reset() {
+    for (const b of barEls) { b.style.transition = 'none'; b.style.transform = ''; b.style.opacity = ''; }
+    idx = 0;
+    timer = setTimeout(fallNext, 80);
+  }
+  fallNext();
+})();
 ${hasTrailer ? `
 async function playTrailer() {
   const trailer = ${JSON.stringify(g.trailer)};
