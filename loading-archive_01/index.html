@@ -393,6 +393,51 @@ button, select, input { font-family: inherit; }
 .mnav:hover { color: rgba(255,255,255,0.7); }
 .mnav.active { color: #fff; }
 .month-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; flex-shrink: 0; }
+
+/* ── FOOTER ──────────────────────────────────────── */
+.site-footer {
+  background: #09090e;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 36px;
+}
+.footer-top {
+  display: flex; align-items: flex-end; gap: 24px;
+  padding: 0 20px 20px;
+}
+.footer-domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
+.footer-domino-grid {
+  display: grid;
+  gap: 5px 4px;
+  align-items: end;
+}
+@keyframes domino-fall {
+  0%, 100% { transform: scaleY(1);    opacity: 0.18; }
+  12%       { transform: scaleY(0.07); opacity: 0.5;  }
+  40%       { transform: scaleY(0.07); opacity: 0.4;  }
+  55%       { transform: scaleY(1);    opacity: 0.18; }
+}
+.d-bar {
+  background: rgba(255,255,255,0.9);
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom center;
+  animation: domino-fall 7s linear infinite;
+  width: 100%; height: 100%;
+}
+.footer-brand {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 6px;
+}
+.footer-brand svg { width: 18px; height: 18px; opacity: 0.35; }
+.footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
+.footer-bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 24px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
+.footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
+.footer-links a:hover { color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
@@ -449,6 +494,24 @@ button, select, input { font-family: inherit; }
     </div>
   </div>
 </div>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-domino-wrap" id="footerDominoWrap"></div>
+    <div class="footer-brand">
+      <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect y="0.11145" width="3" height="20" fill="white"/>
+        <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+        <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+      </svg>
+      <span>Loading Archive</span>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
+    <div class="footer-links"><a href="/sitemap.xml">Sitemap</a></div>
+  </div>
+</footer>
 
 <div class="month-nav-wrap">
   <div class="month-nav-inner">
@@ -514,6 +577,7 @@ function mapGame(g, idx) {
     price: g.price || null,
     cover: g.cover || null,
     rerelease: g.rerelease || null,
+    slug: g.slug || null,
   };
 }
 
@@ -1027,6 +1091,40 @@ loadGames(activeMonth);
       tip.className = '';
   });
 }());
+
+// Build domino footer grid
+(function () {
+  const COLS = 68, ROWS = 3;
+  const step = 0.06, DUR = 7.0;
+  const wrap = document.getElementById('footerDominoWrap');
+  if (!wrap) return;
+  const grid = document.createElement('div');
+  grid.className = 'footer-domino-grid';
+  grid.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
+  grid.style.gridTemplateRows    = `repeat(${ROWS},36px)`;
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const cascade = (ROWS - 1 - row) + (COLS - 1 - col);
+      const delay   = (cascade * step - DUR).toFixed(3);
+      const bar = document.createElement('div');
+      bar.className = 'd-bar';
+      bar.style.animationDelay = delay + 's';
+      grid.appendChild(bar);
+    }
+  }
+  wrap.appendChild(grid);
+})();
+
+// Lift month nav above footer when footer enters viewport
+function updateMonthNavBottom() {
+  const footer = document.querySelector('.site-footer');
+  const nav    = document.querySelector('.month-nav-wrap');
+  if (!footer || !nav) return;
+  const gap = window.innerHeight - footer.getBoundingClientRect().top;
+  nav.style.bottom = gap > 0 ? gap + 'px' : '0';
+}
+window.addEventListener('scroll', updateMonthNavBottom, { passive: true });
+window.addEventListener('resize', updateMonthNavBottom);
 </script>
 </body>
 </html>

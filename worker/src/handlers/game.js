@@ -8,13 +8,9 @@ function esc(str) {
 }
 
 const PLATFORM_FULL = {
-  PC: 'PC',
-  PS4: 'PlayStation 4 / 5',
-  PS5: 'PlayStation 5',
-  XBO: 'Xbox One',
-  XSX: 'Xbox Series X / S',
-  NS: 'Nintendo Switch',
-  NS2: 'Nintendo Switch 2',
+  PC: 'PC', PS4: 'PlayStation 4', PS5: 'PlayStation 5',
+  XBO: 'Xbox One', XSX: 'Xbox Series X/S',
+  NS: 'Nintendo Switch', NS2: 'Nintendo Switch 2',
 };
 
 function fmtDate(str) {
@@ -34,10 +30,8 @@ function scoreClass(n) {
 export async function handleGamePage(slug, env) {
   const raw = await env.GAMES_KV.get(`game:${slug}`);
   if (!raw) return notFound();
-
   let game;
   try { game = JSON.parse(raw); } catch { return notFound(); }
-
   return new Response(renderPage(game), {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',
@@ -62,69 +56,84 @@ function notFound() {
   );
 }
 
+// Generates the domino bar grid HTML.
+// Wave direction: bottom-right starts first, cascades to top-left.
+// Seamless loop: delay(cascade) = cascade * step - DUR
+//   → bar 0 is at animation phase 0 at t=0 (about to fall)
+//   → bar max is at phase (max*step) into the cycle (mid-wave)
+//   → after DUR seconds bar 0 loops, wave is continuous
+function buildDominoGrid(COLS = 68, ROWS = 3) {
+  const step = 0.06;  // seconds between adjacent cascade positions
+  const DUR  = 7.0;   // full animation cycle (must be > ROWS+COLS-2 * step)
+  let bars = '';
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const cascade = (ROWS - 1 - row) + (COLS - 1 - col);
+      const delay   = (cascade * step - DUR).toFixed(3);
+      bars += `<div class="d-bar" style="animation-delay:${delay}s"></div>`;
+    }
+  }
+  return `<div class="domino-grid" style="grid-template-columns:repeat(${COLS},1fr);grid-template-rows:repeat(${ROWS},36px)">${bars}</div>`;
+}
+
 function renderPage(g) {
-  const title   = esc(g.title);
-  const slug    = esc(g.slug || '');
-  const date    = fmtDate(g.date);
-  const genres  = g.genre || [];
-  const plats   = (g.platforms || []).map(p => PLATFORM_FULL[p] || p);
+  const title  = esc(g.title);
+  const slug   = esc(g.slug || '');
+  const date   = fmtDate(g.date);
+  const shots  = (g.screenshots || []).filter(Boolean);
+  const genres = g.genre || [];
+  const plats  = (g.platforms || []).map(p => PLATFORM_FULL[p] || p);
 
-  // deduplicate (PS4 + PS5 both map to different labels, keep unique)
-  const platsUniq = [...new Set(plats)];
+  const heroCenter = shots[0] || g.cover || '';
+  const heroLeft   = shots[1] || g.cover || '';
+  const heroRight  = shots[2] || shots[1] || g.cover || '';
 
-  const platStr = platsUniq.join(', ');
-  const shots   = (g.screenshots || []).filter(Boolean);
-  const ogImg   = g.cover || shots[0] || '';
-
-  // Hero: up to 2 screenshots side-by-side; fall back to cover
-  const heroMain = shots[0] || g.cover || '';
-  const heroSide = shots[1] || '';
-  const shot3    = shots[2] || '';
-
-  const rawDesc = g.short_description
+  const ogImg    = g.cover || shots[0] || '';
+  const rawDesc  = g.short_description
     ? g.short_description.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    : `${g.title} releases ${g.date ? 'on ' + date : '(TBA)'}${platStr ? ' for ' + platStr : ''}.`;
+    : `${g.title} releases ${g.date ? 'on ' + date : '(TBA)'}${plats.length ? ' for ' + plats.join(', ') : ''}.`;
   const metaDesc = esc(rawDesc.slice(0, 160));
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
-    '@type': 'VideoGame',
-    name: g.title,
-    ...(g.date        ? { datePublished: g.date }                                         : {}),
-    ...(platsUniq.length ? { gamePlatform: platsUniq }                                   : {}),
-    ...(genres.length ? { genre: genres }                                                 : {}),
-    ...(ogImg         ? { image: ogImg }                                                  : {}),
-    ...(g.dev         ? { author: { '@type': 'Organization', name: g.dev } }              : {}),
-    ...(g.steam       ? { url: `https://store.steampowered.com/app/${g.steam}` }          : {}),
+    '@type':    'VideoGame',
+    name:       g.title,
+    ...(g.date        ? { datePublished: g.date }                                                                    : {}),
+    ...(plats.length  ? { gamePlatform: plats }                                                                      : {}),
+    ...(genres.length ? { genre: genres }                                                                             : {}),
+    ...(ogImg         ? { image: ogImg }                                                                              : {}),
+    ...(g.dev         ? { author: { '@type': 'Organization', name: g.dev } }                                         : {}),
+    ...(g.steam       ? { url: `https://store.steampowered.com/app/${g.steam}` }                                     : {}),
     ...(g.metacritic  ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: g.metacritic.score, bestRating: 100, ratingCount: 1 } } : {}),
     ...(g.price && g.price !== 'TBA' ? {
-      offers: { '@type': 'Offer', priceCurrency: 'USD', price: g.price === 'Free' ? '0.00' : g.price.replace(/[^0-9.]/g, ''), availability: 'https://schema.org/PreOrder' }
+      offers: { '@type': 'Offer', priceCurrency: 'USD',
+                price: g.price === 'Free' ? '0.00' : g.price.replace(/[^0-9.]/g, ''),
+                availability: 'https://schema.org/PreOrder' }
     } : {}),
   });
 
-  // System requirements
-  const hasReqs = g.pc_requirements?.minimum || g.pc_requirements?.recommended;
+  const hasTrailer = !!g.trailer;
+  const hasReqs    = g.pc_requirements?.minimum || g.pc_requirements?.recommended;
+
+  const ptagsHtml = (g.platforms || [])
+    .map(p => `<span class="ptag">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
+    .join('');
+
+  const metaBadges = [
+    g.anticipated ? `<span class="badge badge-anticipated">✦ Anticipated</span>` : '',
+    g.rerelease   ? `<span class="badge badge-rerelease">↺ Re-release · orig. ${fmtDate(g.rerelease.date)}</span>` : '',
+  ].filter(Boolean).join('');
+
   const reqsHtml = hasReqs ? `
-    <div class="content-section">
-      <div class="content-section-title">System Requirements</div>
-      <div class="reqs-grid">
-        ${g.pc_requirements.minimum     ? `<div class="req-col"><div class="req-label">Minimum</div><div class="req-body">${g.pc_requirements.minimum}</div></div>`     : ''}
-        ${g.pc_requirements.recommended ? `<div class="req-col"><div class="req-label">Recommended</div><div class="req-body">${g.pc_requirements.recommended}</div></div>` : ''}
-      </div>
-    </div>` : '';
+  <div class="section">
+    <div class="section-title">System requirements</div>
+    <div class="reqs-grid">
+      ${g.pc_requirements?.minimum     ? `<div class="req-col"><div class="req-label">Minimum</div><div class="req-body">${g.pc_requirements.minimum}</div></div>`     : ''}
+      ${g.pc_requirements?.recommended ? `<div class="req-col"><div class="req-label">Recommended</div><div class="req-body">${g.pc_requirements.recommended}</div></div>` : ''}
+    </div>
+  </div>` : '';
 
-  // Third screenshot (shown in center column below description)
-  const shot3Html = shot3
-    ? `<img class="extra-shot" src="${esc(shot3)}" alt="${title} screenshot" loading="lazy">`
-    : '';
-
-  // Metacritic badge
-  const metaHtml = g.metacritic
-    ? `<div class="sb-row">
-        <span class="sb-label">Metacritic</span>
-        <a class="meta-score meta-${scoreClass(g.metacritic.score)}" href="${esc(g.metacritic.url)}" target="_blank" rel="noopener">${g.metacritic.score}</a>
-       </div>`
-    : '';
+  const domino = buildDominoGrid();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -146,173 +155,393 @@ ${ogImg ? `<meta name="twitter:image" content="${esc(ogImg)}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+${hasTrailer ? '<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>' : ''}
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;background:#0a0c10;color:#fff;min-height:100vh;-webkit-font-smoothing:antialiased}
-
-/* ── HERO SCREENSHOTS ─────────────────────────────── */
-.hero-shots{display:grid;grid-template-columns:${heroSide ? '2fr 1fr' : '1fr'};height:460px;gap:5px;background:#000}
-.hero-shots img{width:100%;height:100%;object-fit:cover;display:block}
-@media(max-width:768px){
-  .hero-shots{height:220px;grid-template-columns:1fr}
-  .hero-shots .shot-side{display:none}
+:root {
+  --bg:      #0E1015;
+  --surface: #13151B;
+  --border:  #1F2127;
+  --blue:    #66A8E0;
+  --blue-hv: #8FC4F5;
+  --gold:    #CFAF5A;
+  --dim:     rgba(255,255,255,0.35);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: #fff;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ── PAGE GRID ────────────────────────────────────── */
-.page-grid{
-  display:grid;
-  grid-template-columns:160px 1fr 220px;
-  gap:0 48px;
-  padding:52px 48px 80px;
-  max-width:1160px;
-  margin:0 auto;
+/* ── NAV ──────────────────────────────────────────── */
+.nav-wrap {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  max-width: 1060px; margin: 0 auto;
+  padding: 16px 20px 0;
+  pointer-events: none;
 }
-@media(max-width:1000px){
-  .page-grid{grid-template-columns:1fr 220px;padding:40px 32px 60px}
-  .col-left{display:none}
+.nav-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px; padding: 11px 20px;
+  pointer-events: all;
+  transition: box-shadow 0.3s ease;
+  overflow: hidden;
 }
-@media(max-width:640px){
-  .page-grid{grid-template-columns:1fr;padding:28px 20px 60px;gap:0}
-  .col-right{margin-top:40px}
+.nav-card.scrolled { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3); }
+.nav-top { display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 22px; height: 22px; flex-shrink: 0; }
+.logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
+.nav-right a:hover { color: #fff; }
+
+/* ── HERO STRIP ───────────────────────────────────── */
+.hero-strip {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+}
+.hero-side {
+  flex: 1; min-width: 0;
+  overflow: hidden; position: relative;
+}
+.hero-side img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  opacity: 0.5;
+}
+.hero-center {
+  flex: 0 0 min(1020px, 100%);
+  aspect-ratio: 16 / 9;
+  position: relative; overflow: hidden;
+  background: #0a0b10;
+}
+.hero-center > img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.hero-play {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.2);
+  border: none; cursor: pointer;
+  transition: background 0.2s;
+}
+.hero-play:hover { background: rgba(0,0,0,0.05); }
+.play-circle {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s, background 0.2s;
+}
+.hero-play:hover .play-circle { transform: scale(1.08); background: rgba(0,0,0,0.72); }
+.play-circle svg { width: 26px; height: 26px; margin-left: 4px; }
+@media (max-width: 900px) {
+  .hero-side { display: none; }
+  .hero-center { flex: 0 0 100%; }
 }
 
-/* ── LEFT COLUMN ──────────────────────────────────── */
-.col-left{padding-top:2px}
-.back-link{
-  display:inline-flex;align-items:center;gap:6px;
-  color:rgba(255,255,255,0.35);font-size:11px;font-weight:600;letter-spacing:0.08em;
-  text-transform:uppercase;text-decoration:none;
-  transition:color 0.15s;margin-bottom:44px;
-}
-.back-link:hover{color:#fff}
-.genre-label{
-  font-size:11px;font-weight:600;color:rgba(255,255,255,0.35);
-  letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px
-}
-.left-title{font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-0.03em}
-@media(max-width:1000px){
-  /* on 2-col layout show mobile title above center */
-  .mobile-header{display:block !important}
-}
-.mobile-header{display:none;margin-bottom:32px}
-.mobile-header .genre-label{margin-bottom:8px}
-.mobile-header .left-title{font-size:26px}
-
-/* ── CENTER COLUMN ────────────────────────────────── */
-.col-main{}
-.desc-lead{
-  font-size:20px;font-weight:400;line-height:1.55;
-  color:rgba(255,255,255,0.82);margin-bottom:36px;
-}
-.content-section{margin-bottom:28px}
-.content-section-title{
-  font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);
-  letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px
-}
-.content-section-body,.req-body{
-  font-size:12.5px;color:rgba(255,255,255,0.45);line-height:1.75
-}
-.req-body ul{padding-left:16px}
-.req-body strong{color:rgba(255,255,255,0.75)}
-.reqs-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
-@media(max-width:640px){.reqs-grid{grid-template-columns:1fr}}
-.req-col{border-top:1px solid rgba(255,255,255,0.08);padding-top:12px}
-.req-label{font-size:11px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
-.extra-shot{
-  width:100%;aspect-ratio:16/9;object-fit:cover;display:block;
-  margin-top:36px;border-radius:2px;
+/* ── MAIN GRID ────────────────────────────────────── */
+.main-grid {
+  max-width: 1020px; margin: 0 auto;
+  padding: 28px 20px 80px;
 }
 
-/* ── RIGHT SIDEBAR ────────────────────────────────── */
-.col-right{padding-top:2px}
-.sb-game-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
-.sb-price{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px}
-.steam-btn{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  background:#B71C1C;color:#fff;text-decoration:none;
-  font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
-  padding:11px 16px;margin-bottom:32px;border-radius:2px;
-  transition:background 0.15s;
+/* Meta row */
+.meta-row {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 18px; flex-wrap: wrap;
 }
-.steam-btn:hover{background:#D32F2F}
-.sb-block{margin-bottom:24px}
-.sb-label{
-  font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);
-  letter-spacing:0.04em;display:block;margin-bottom:6px
+.back-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.38); text-decoration: none;
+  transition: color 0.15s; flex-shrink: 0;
 }
-.sb-bigdate{font-size:21px;font-weight:700;letter-spacing:-0.025em;line-height:1.1}
-.sb-platforms{font-size:16px;font-weight:700;line-height:1.5;letter-spacing:-0.02em}
-.sb-row{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:6px}
-.sb-row a{color:rgba(255,255,255,0.35);text-decoration:none}
-.sb-row a:hover{color:#fff}
-.sb-dev-block{margin-top:28px;display:flex;flex-direction:column;gap:6px}
-.meta-score{
-  display:inline-block;font-size:12px;font-weight:700;
-  padding:2px 8px;border-radius:3px;text-decoration:none
+.back-link:hover { color: #fff; }
+.meta-sep { color: rgba(255,255,255,0.12); user-select: none; }
+.meta-date {
+  font-size: 10px; color: var(--dim); font-weight: 500;
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
 }
-.meta-green{background:#1a4a14;color:#7ed47e}
-.meta-yellow{background:#4a3f14;color:#d4c46e}
-.meta-red{background:#4a1414;color:#d47e7e}
+.meta-date strong { color: rgba(255,255,255,0.82); font-weight: 600; }
+.meta-badges { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px; border: 1px solid;
+  white-space: nowrap;
+}
+.badge-anticipated { color: var(--gold); border-color: rgba(207,175,90,0.35); background: rgba(207,175,90,0.08); }
+.badge-rerelease   { color: var(--blue); border-color: rgba(102,168,224,0.35); background: rgba(102,168,224,0.08); }
+
+/* Title + desc */
+.game-title {
+  font-size: clamp(24px, 3.5vw, 38px);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  margin-bottom: 14px;
+}
+.game-desc {
+  font-size: 15px; line-height: 1.7;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 18px;
+}
+.ptags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 28px; }
+.ptag {
+  font-size: 9px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; color: rgba(255,255,255,0.72);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  letter-spacing: 0.05em;
+}
+
+/* Price card */
+.price-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 22px;
+  margin-bottom: 16px; gap: 16px;
+}
+.price-label { font-size: 10px; color: var(--dim); font-weight: 500; margin-bottom: 5px; }
+.price-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.steam-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue); color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  text-decoration: none; padding: 10px 20px; border-radius: 8px;
+  transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.steam-cta:hover { background: var(--blue-hv); }
+
+/* Dev / metacritic */
+.game-info-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 11px; color: rgba(255,255,255,0.3);
+  margin-bottom: 32px;
+}
+.game-info-row strong { color: rgba(255,255,255,0.6); }
+.meta-score {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px; text-decoration: none;
+}
+.meta-green  { background: #1a4a14; color: #7ed47e; }
+.meta-yellow { background: #4a3f14; color: #d4c46e; }
+.meta-red    { background: #4a1414; color: #d47e7e; }
+
+/* System requirements */
+.section { margin-bottom: 36px; }
+.section-title {
+  font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9);
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.reqs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 600px) { .reqs-grid { grid-template-columns: 1fr; } }
+.req-label {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.28);
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+}
+.req-body { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.8; }
+.req-body ul { padding-left: 18px; }
+.req-body strong { color: rgba(255,255,255,0.72); }
+
+/* ── FOOTER ───────────────────────────────────────── */
+.site-footer {
+  background: #09090e;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 36px;
+}
+.footer-top {
+  display: flex; align-items: flex-end; gap: 24px;
+  padding: 0 20px 20px;
+}
+.domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
+.domino-grid {
+  display: grid;
+  gap: 5px 4px;
+  align-items: end;
+}
+@keyframes domino-fall {
+  0%, 100% { transform: scaleY(1);    opacity: 0.18; }
+  12%       { transform: scaleY(0.07); opacity: 0.5;  }
+  40%       { transform: scaleY(0.07); opacity: 0.4;  }
+  55%       { transform: scaleY(1);    opacity: 0.18; }
+}
+.d-bar {
+  background: rgba(255,255,255,0.9);
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom center;
+  animation: domino-fall 7s linear infinite;
+  width: 100%; height: 100%;
+}
+.footer-brand {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 6px;
+}
+.footer-brand svg { width: 18px; height: 18px; opacity: 0.35; }
+.footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
+.footer-bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 24px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
+.footer-links a { font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none; }
+.footer-links a:hover { color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
 
-<!-- SCREENSHOTS HERO -->
-<div class="hero-shots">
-  ${heroMain ? `<img class="shot-main" src="${esc(heroMain)}" alt="${title}" loading="eager">` : '<div class="shot-main" style="background:#111"></div>'}
-  ${heroSide ? `<img class="shot-side" src="${esc(heroSide)}" alt="${title} screenshot" loading="eager">` : ''}
+<!-- NAV -->
+<div class="nav-wrap">
+  <div class="nav-card" id="navCard">
+    <div class="nav-top">
+      <a class="logo" href="/">
+        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+        </svg>
+        <span>Loading Archive</span>
+      </a>
+      <div class="nav-right">
+        <a href="/">2026</a>
+        <a href="mailto:loadingarchive@outlook.com">Contact</a>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- PAGE GRID -->
-<div class="page-grid">
+<!-- HERO STRIP: left screenshot | center 16:9 media | right screenshot -->
+<div class="hero-strip">
+  <div class="hero-side">${heroLeft ? `<img src="${esc(heroLeft)}" alt="" loading="eager">` : ''}</div>
+  <div class="hero-center" id="heroCenter">
+    ${heroCenter ? `<img id="heroImg" src="${esc(heroCenter)}" alt="${title}" loading="eager">` : ''}
+    ${hasTrailer ? `<button class="hero-play" id="heroPlay" onclick="playTrailer()" aria-label="Play trailer">
+      <div class="play-circle">
+        <svg viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg>
+      </div>
+    </button>` : ''}
+  </div>
+  <div class="hero-side">${heroRight ? `<img src="${esc(heroRight)}" alt="" loading="lazy">` : ''}</div>
+</div>
 
-  <!-- LEFT COLUMN: back link + genre + title -->
-  <div class="col-left">
-    <a href="/" class="back-link">← Go back</a>
-    ${genres.length ? `<div class="genre-label">${esc(genres[0])}</div>` : ''}
-    <h1 class="left-title">${title}</h1>
+<!-- MAIN CONTENT — max-width 1020px -->
+<div class="main-grid">
+
+  <div class="meta-row">
+    <a href="/" class="back-link">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 2 4 6 8 10"/></svg>
+      Back to games
+    </a>
+    <span class="meta-sep">|</span>
+    <div class="meta-date">Release date / <strong>${date}</strong></div>
+    ${metaBadges ? `<div class="meta-badges">${metaBadges}</div>` : ''}
   </div>
 
-  <!-- CENTER: mobile title, description, requirements, extra shot -->
-  <div class="col-main">
-    <!-- mobile-only title (hidden on desktop via col-left) -->
-    <div class="mobile-header">
-      ${genres.length ? `<div class="genre-label">${esc(genres[0])}</div>` : ''}
-      <h1 class="left-title">${title}</h1>
+  <h1 class="game-title">${title}</h1>
+  ${rawDesc ? `<p class="game-desc">${esc(rawDesc)}</p>` : ''}
+  ${ptagsHtml ? `<div class="ptags">${ptagsHtml}</div>` : ''}
+
+  ${(g.price || g.steam) ? `
+  <div class="price-card">
+    <div>
+      ${g.price ? `<div class="price-label">Base price</div><div class="price-value">${esc(g.price)}</div>` : ''}
     </div>
+    ${g.steam ? `<a class="steam-cta" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>` : ''}
+  </div>` : ''}
 
-    ${rawDesc ? `<p class="desc-lead">${esc(rawDesc)}</p>` : ''}
-    ${reqsHtml}
-    ${shot3Html}
-  </div>
+  ${(g.dev || g.metacritic) ? `
+  <div class="game-info-row">
+    ${g.dev ? `<span>Developer &nbsp;<strong>${esc(g.dev)}</strong></span>` : ''}
+    ${g.metacritic ? `<a class="meta-score meta-${scoreClass(g.metacritic.score)}" href="${esc(g.metacritic.url)}" target="_blank" rel="noopener">MC ${g.metacritic.score}</a>` : ''}
+  </div>` : ''}
 
-  <!-- RIGHT SIDEBAR -->
-  <aside class="col-right">
-    <div class="sb-game-name">${title}</div>
-    ${g.price ? `<div class="sb-price">${esc(g.price)}</div>` : ''}
-
-    ${g.steam ? `<a class="steam-btn" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>` : ''}
-
-    <div class="sb-block">
-      <span class="sb-label">Release date</span>
-      <div class="sb-bigdate">${date}</div>
-    </div>
-
-    ${platsUniq.length ? `
-    <div class="sb-block">
-      <span class="sb-label">Available on</span>
-      <div class="sb-platforms">${platsUniq.map(p => esc(p)).join('<br>')}</div>
-    </div>` : ''}
-
-    <div class="sb-dev-block">
-      ${g.dev ? `<div class="sb-row"><span>Developer: ${esc(g.dev)}</span></div>` : ''}
-      ${metaHtml}
-    </div>
-  </aside>
+  ${reqsHtml}
 
 </div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="domino-wrap">${domino}</div>
+    <div class="footer-brand">
+      <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect y="0.11145" width="3" height="20" fill="white"/>
+        <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+        <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+      </svg>
+      <span>Loading Archive</span>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
+    <div class="footer-links"><a href="/sitemap.xml">Sitemap</a></div>
+  </div>
+</footer>
+
+<script>
+window.addEventListener('scroll', () => {
+  document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
+}, { passive: true });
+${hasTrailer ? `
+async function playTrailer() {
+  const trailer = ${JSON.stringify(g.trailer)};
+  const center  = document.getElementById('heroCenter');
+  const play    = document.getElementById('heroPlay');
+  const img     = document.getElementById('heroImg');
+  if (play) play.style.display = 'none';
+
+  function showMedia(el) {
+    el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;display:block';
+    center.appendChild(el);
+    if (img) img.style.display = 'none';
+  }
+
+  if (trailer.startsWith('steam:')) {
+    const appid = trailer.slice(6);
+    try {
+      const res  = await fetch('/api/trailer?appid=' + appid);
+      const data = await res.json();
+      if (data.mp4 || data.hls) {
+        const v = document.createElement('video');
+        v.controls = v.autoplay = v.playsInline = true;
+        showMedia(v);
+        if (data.mp4) {
+          v.src = data.mp4;
+        } else {
+          if (v.canPlayType('application/vnd.apple.mpegurl')) {
+            v.src = data.hls;
+          } else if (window.Hls && Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(data.hls);
+            hls.attachMedia(v);
+          }
+        }
+      } else {
+        if (play) play.style.display = '';
+      }
+    } catch {
+      if (play) play.style.display = '';
+    }
+  } else {
+    const frame = document.createElement('iframe');
+    frame.src = 'https://www.youtube.com/embed/' + trailer + '?autoplay=1';
+    frame.allow = 'autoplay; encrypted-media';
+    frame.allowFullscreen = true;
+    showMedia(frame);
+  }
+}` : ''}
+</script>
 </body>
 </html>`;
 }
