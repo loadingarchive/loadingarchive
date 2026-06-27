@@ -56,10 +56,6 @@ function notFound() {
   );
 }
 
-// Generates placeholder domino grid HTML; animation is driven client-side by JS.
-function buildDominoGrid() {
-  return `<div id="dominoGrid"></div>`;
-}
 
 function renderPage(g) {
   const title  = esc(g.title);
@@ -117,8 +113,6 @@ function renderPage(g) {
       ${g.pc_requirements?.recommended ? `<div class="req-col"><div class="req-label">Recommended</div><div class="req-body">${g.pc_requirements.recommended}</div></div>` : ''}
     </div>
   </div>` : '';
-
-  const domino = buildDominoGrid();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -380,9 +374,10 @@ body {
   margin: 0 auto;
 }
 .footer-top {
-  display: flex; align-items: flex-end; gap: 24px;
+  display: flex; flex-direction: column; gap: 7px;
   padding: 20px 20px 0;
 }
+.footer-brand-row { display: flex; align-items: flex-end; gap: 24px; }
 .domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
 .d-bar {
   background: rgba(255,255,255,0.22);
@@ -399,7 +394,7 @@ body {
 .footer-brand svg { width: 18px; height: 18px; opacity: 0.35; }
 .footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: flex-end;
   padding: 20px 20px 20px;
 }
 .footer-copy { font-size: 10px; color: rgba(255,255,255,0.2); }
@@ -494,19 +489,21 @@ ${(shots.length > 0 || hasTrailer) ? `
 <footer class="site-footer">
   <div class="footer-card">
     <div class="footer-top">
-      <div class="domino-wrap">${domino}</div>
-      <div class="footer-brand">
-        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect y="0.11145" width="3" height="20" fill="white"/>
-          <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
-          <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
-        </svg>
-        <span>Loading Archive</span>
+      <div id="dominoRows12"></div>
+      <div class="footer-brand-row">
+        <div class="domino-wrap" id="dominoRow3"></div>
+        <div class="footer-brand">
+          <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect y="0.11145" width="3" height="20" fill="white"/>
+            <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+            <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+          </svg>
+          <span>Loading Archive</span>
+        </div>
       </div>
     </div>
     <div class="footer-bottom">
       <span class="footer-copy">&copy; Loading Archive 2026 &nbsp; All rights reserved</span>
-      <div class="footer-links"><a href="/sitemap.xml">Sitemap</a></div>
     </div>
   </div>
 </footer>
@@ -538,49 +535,53 @@ window.addEventListener('scroll', () => {
   }, { passive: true });
 })();
 
-// Domino footer — sequential one-by-one cascade
+// Domino footer — rows 1 & 2 full-width, row 3 next to brand
 (function () {
-  const wrap = document.getElementById('dominoGrid');
-  if (!wrap) return;
-  const GAP = 7, BAR = 3, ROWS = 3, ROW_H = 22;
+  const rows12El = document.getElementById('dominoRows12');
+  const row3El   = document.getElementById('dominoRow3');
+  if (!rows12El || !row3El) return;
+  const GAP = 7, BAR = 3, ROW_H = 22;
   const T_STEP = 20, T_FALL = 100, T_PAUSE = 700;
-  const COLS = Math.max(1, Math.floor(((wrap.parentElement.offsetWidth || 980) + GAP) / (BAR + GAP)));
-  const frag = document.createDocumentFragment();
-  const barEls = [];
-  for (let row = 0; row < ROWS; row++) {
+  const FULL_W  = rows12El.offsetWidth || 960;
+  const R3_W    = row3El.offsetWidth   || FULL_W - 160;
+  const FCOLS   = Math.max(1, Math.floor((FULL_W  + GAP) / (BAR + GAP)));
+  const R3COLS  = Math.max(1, Math.floor((R3_W    + GAP) / (BAR + GAP)));
+
+  function makeRow(cols, parent) {
     const rowEl = document.createElement('div');
     rowEl.style.cssText = \`display:flex;gap:\${GAP}px;align-items:flex-end;height:\${ROW_H}px\`;
-    for (let col = 0; col < COLS; col++) {
+    const bars = [];
+    for (let col = 0; col < cols; col++) {
       const b = document.createElement('div');
-      b.className = 'd-bar';
-      b.style.height = ROW_H + 'px';
-      rowEl.appendChild(b);
-      barEls.push(b);
+      b.className = 'd-bar'; b.style.height = ROW_H + 'px';
+      rowEl.appendChild(b); bars.push(b);
     }
-    frag.appendChild(rowEl);
+    parent.appendChild(rowEl);
+    return bars;
   }
-  wrap.style.cssText = 'display:flex;flex-direction:column;gap:' + GAP + 'px';
-  wrap.appendChild(frag);
-  const order = [];
-  for (let row = ROWS - 1; row >= 0; row--)
-    for (let col = COLS - 1; col >= 0; col--)
-      order.push(barEls[row * COLS + col]);
-  let idx = 0, timer;
+
+  rows12El.style.cssText = \`display:flex;flex-direction:column;gap:\${GAP}px\`;
+  const r1 = makeRow(FCOLS,  rows12El);
+  const r2 = makeRow(FCOLS,  rows12El);
+  const r3 = makeRow(R3COLS, row3El);
+  const barEls = [...r1, ...r2, ...r3];
+  const order  = [...r3.slice().reverse(), ...r2.slice().reverse(), ...r1.slice().reverse()];
+
+  let idx = 0;
   function fallNext() {
     if (idx < order.length) {
       const b = order[idx++];
       b.style.transition = \`transform \${T_FALL}ms ease-in,opacity \${T_FALL}ms ease-in\`;
       b.style.transform = 'rotate(85deg)';
       b.style.opacity = '0.05';
-      timer = setTimeout(fallNext, T_STEP);
+      setTimeout(fallNext, T_STEP);
     } else {
-      timer = setTimeout(reset, T_PAUSE);
+      setTimeout(reset, T_PAUSE);
     }
   }
   function reset() {
     for (const b of barEls) { b.style.transition = 'none'; b.style.transform = ''; b.style.opacity = ''; }
-    idx = 0;
-    timer = setTimeout(fallNext, 80);
+    idx = 0; setTimeout(fallNext, 80);
   }
   fallNext();
 })();
