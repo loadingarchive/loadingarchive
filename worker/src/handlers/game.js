@@ -225,29 +225,37 @@ body {
   pointer-events: none; letter-spacing: 0.04em;
 }
 
-/* ── MAIN GRID ────────────────────────────────────── */
-.main-grid {
-  max-width: 1020px; margin: 0 auto;
+/* ── BACK WRAP + MAIN GRID ────────────────────────── */
+.back-wrap {
+  display: flex; gap: 10px; align-items: flex-start;
+  max-width: calc(1020px + 36px + 10px + 40px);
+  margin: 0 auto;
   padding: 36px 20px 80px;
 }
-.main-grid.no-carousel { padding-top: 100px; }
+.back-wrap.no-carousel { padding-top: 100px; }
+
+.back-btn {
+  flex-shrink: 0; margin-top: 3px;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+@media (max-width: 600px) { .back-btn { display: none; } }
+
+.main-grid { flex: 1; min-width: 0; }
 
 /* Meta row */
 .meta-row {
   display: flex; align-items: center; gap: 14px;
   margin-bottom: 18px; flex-wrap: wrap;
 }
-.back-link {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.38); text-decoration: none;
-  transition: color 0.15s; flex-shrink: 0;
-  padding: 10px; border-radius: 8px;
-}
-.back-link:hover { color: #fff; }
-.meta-sep { color: rgba(255,255,255,0.12); user-select: none; }
 .meta-date {
-  font-size: 10px; color: var(--dim); font-weight: 500;
+  font-size: 12px; color: var(--dim); font-weight: 500;
   display: flex; align-items: center; gap: 5px; flex-shrink: 0;
 }
 .meta-date strong { color: rgba(255,255,255,0.82); font-weight: 600; }
@@ -365,7 +373,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
 }
-.footer-copy { font-size: 10px; color: rgba(255,255,255,0.22); }
+.footer-copy { font-size: 10px; color: rgba(255,255,255,0.45); }
 </style>
 </head>
 <body>
@@ -406,15 +414,14 @@ ${totalSlides > 0 ? `
   <div class="car-counter" id="carCounter">1 / ${totalSlides}</div>` : ''}
 </div>` : ''}
 
-<!-- MAIN CONTENT — max-width 1020px -->
-<div class="main-grid${totalSlides === 0 ? ' no-carousel' : ''}">
+<!-- MAIN CONTENT -->
+<div class="back-wrap${totalSlides === 0 ? ' no-carousel' : ''}">
+  <a href="/" class="back-btn" aria-label="Back to games">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 2 4 6 8 10"/></svg>
+  </a>
 
+  <div class="main-grid">
   <div class="meta-row">
-    <a href="/" class="back-link">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 2 4 6 8 10"/></svg>
-      Back to games
-    </a>
-    <span class="meta-sep">|</span>
     <div class="meta-date">Release date / <strong>${date}</strong></div>
     ${metaBadges ? `<div class="meta-badges">${metaBadges}</div>` : ''}
   </div>
@@ -449,7 +456,8 @@ ${totalSlides > 0 ? `
 
   ${reqsHtml}
 
-</div>
+  </div><!-- /main-grid -->
+</div><!-- /back-wrap -->
 
 <!-- FOOTER -->
 <footer class="site-footer">
