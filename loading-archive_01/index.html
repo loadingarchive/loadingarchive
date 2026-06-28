@@ -72,11 +72,17 @@ button, select, input { font-family: inherit; }
 
 /* HERO */
 .hero {
-  background: url('assets/header-bg.jpg') center center / cover no-repeat;
+  background: var(--bg);
   height: 600px;
   display: flex; flex-direction: column;
   position: relative;
   padding-top: 68px;
+  overflow: hidden;
+}
+#darkVeil {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
 }
 .tagline {
   text-align: center;
@@ -389,6 +395,7 @@ button, select, input { font-family: inherit; }
 <body>
 
 <div class="hero">
+  <canvas id="darkVeil" aria-hidden="true"></canvas>
   <div class="nav-wrap">
     <div class="nav-card" id="navCard">
       <div class="nav-top">
@@ -985,6 +992,94 @@ loadGames(activeMonth);
 
   tick();
 })();
+
+// Dark Veil hero animation
+(function () {
+  const canvas = document.getElementById('darkVeil');
+  const ctx    = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width  = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize, { passive: true });
+  resize();
+
+  // Each layer: a dark flowing "curtain" shape
+  const layers = [
+    { speed: 0.00014, phase: 0.0, yBase: 0.92, amp: 0.07, opacity: 0.95 },
+    { speed: 0.00019, phase: 1.8, yBase: 0.76, amp: 0.10, opacity: 0.80 },
+    { speed: 0.00016, phase: 3.5, yBase: 0.62, amp: 0.12, opacity: 0.65 },
+    { speed: 0.00023, phase: 0.9, yBase: 0.48, amp: 0.11, opacity: 0.50 },
+    { speed: 0.00011, phase: 2.6, yBase: 0.33, amp: 0.09, opacity: 0.35 },
+    { speed: 0.00027, phase: 4.2, yBase: 0.18, amp: 0.08, opacity: 0.20 },
+  ];
+
+  // Smooth organic wave using multiple sine harmonics
+  function yAt(x, t, layer) {
+    const p = layer.phase;
+    const a = layer.amp;
+    return layer.yBase
+      + Math.sin(t + p + x * 2.8) * a * 0.55
+      + Math.sin(t * 1.4 + p * 1.2 + x * 4.9) * a * 0.30
+      + Math.sin(t * 0.6 + p * 0.5 + x * 1.6) * a * 0.15;
+  }
+
+  function drawLayer(layer, t) {
+    const W = canvas.width, H = canvas.height;
+    const segs = 10;
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    // Build wave points
+    const pts = Array.from({ length: segs + 1 }, (_, i) => ({
+      x: (i / segs) * W,
+      y: H * yAt(i / segs, t * layer.speed * 1000, layer),
+    }));
+
+    // Smooth curve through points using midpoint quadratics
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i + 1].x) / 2;
+      const my = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    // Gradient from transparent at wave-top to dark at bottom
+    const topY = H * (layer.yBase - layer.amp - 0.05);
+    const grad = ctx.createLinearGradient(0, topY, 0, H);
+    grad.addColorStop(0,   `rgba(14,16,21,0)`);
+    grad.addColorStop(0.3, `rgba(12,13,19,${layer.opacity * 0.5})`);
+    grad.addColorStop(1,   `rgba(10,11,17,${layer.opacity})`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  function render(ts) {
+    const W = canvas.width, H = canvas.height;
+
+    // Base fill
+    ctx.fillStyle = '#0E1015';
+    ctx.fillRect(0, 0, W, H);
+
+    // Paint layers — lightest first so darker ones sit on top
+    for (let i = layers.length - 1; i >= 0; i--) drawLayer(layers[i], ts);
+
+    // Edge vignette for depth
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.4, H * 0.1, W * 0.5, H * 0.4, W * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+}());
 
 // Lift month nav above footer when footer enters viewport
 function updateMonthNavBottom() {
