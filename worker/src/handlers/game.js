@@ -102,9 +102,12 @@ function renderPage(g) {
     .map(p => `<span class="ptag">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
     .join('');
 
+  const antSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg>`;
+  const portSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.53554 8.53554C7.59783 9.47321 6.32608 10 5 10C3.68031 10 2.70383 9.63463 1.94478 9.07575C1.68555 8.88488 1.45603 8.67437 1.25 8.45562V9.16667H0L2.72917e-08 6.875L8.295e-07 6.25H0.625H0.823867H2.91667V7.5H2.06945C2.25562 7.70913 2.45748 7.90096 2.6859 8.06913C3.21946 8.462 3.93333 8.75 5 8.75C5.99454 8.75 6.94837 8.35492 7.65167 7.65167C8.35492 6.94837 8.75 5.99454 8.75 5H10C10 6.32608 9.47321 7.59783 8.53554 8.53554ZM8.75 1.54438V0.833333H10V3.125V3.75H9.375H9.17612H7.08333V2.5H7.93054C7.74437 2.29087 7.5425 2.09903 7.31408 1.93085C6.78054 1.53802 6.06667 1.25 5 1.25C4.00544 1.25 3.05161 1.64509 2.34835 2.34835C1.64509 3.05161 1.25 4.00544 1.25 5H4.96667e-08C6.55e-08 3.67392 0.526783 2.40215 1.46447 1.46447C2.40215 0.526783 3.67392 -1.57917e-08 5 0C6.31971 1.575e-08 7.29617 0.365393 8.05521 0.924258C8.31446 1.11512 8.54396 1.32561 8.75 1.54438Z" fill="currentColor"/></svg>`;
+
   const metaBadges = [
-    g.anticipated ? `<span class="badge badge-anticipated">✦ Anticipated</span>` : '',
-    g.rerelease   ? `<span class="badge badge-rerelease">↺ Re-release · orig. ${fmtDate(g.rerelease.date)}</span>` : '',
+    g.anticipated ? `<span class="badge badge-anticipated">${antSvg} Anticipated</span>` : '',
+    g.rerelease   ? `<span class="badge badge-rerelease">${portSvg} Port · orig. ${fmtDate(g.rerelease.date)}</span>` : '',
   ].filter(Boolean).join('');
 
   const reqsHtml = hasReqs ? `
@@ -183,10 +186,10 @@ body {
 .nav-right a:hover { color: #fff; }
 
 /* ── CAROUSEL ─────────────────────────────────────── */
-.carousel { position: relative; width: 100%; background: #000; overflow: hidden; user-select: none; }
-.car-track { display: flex; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
+.carousel { position: relative; width: 100%; overflow: hidden; user-select: none; }
+.car-track { display: flex; gap: 10px; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
 .car-slide {
-  flex: 0 0 100%; aspect-ratio: 16/9;
+  flex: 0 0 min(1020px, 100vw); width: min(1020px, 100vw); aspect-ratio: 16/9;
   position: relative; overflow: hidden; background: #0a0b10;
 }
 .car-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
@@ -213,10 +216,10 @@ body {
   transition: background 0.15s;
 }
 .car-btn:hover { background: rgba(0,0,0,0.82); }
-.car-prev { left: 14px; }
-.car-next { right: 14px; }
+.car-prev { left: max(14px, calc(50% - 496px)); }
+.car-next { right: max(14px, calc(50% - 496px)); }
 .car-counter {
-  position: absolute; bottom: 12px; right: 14px;
+  position: absolute; bottom: 12px; right: max(14px, calc(50% - 496px));
   font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.5);
   background: rgba(0,0,0,0.45); padding: 3px 8px; border-radius: 10px;
   pointer-events: none; letter-spacing: 0.04em;
@@ -225,7 +228,7 @@ body {
 /* ── MAIN GRID ────────────────────────────────────── */
 .main-grid {
   max-width: 1020px; margin: 0 auto;
-  padding: 28px 20px 80px;
+  padding: 36px 20px 80px;
 }
 
 /* Meta row */
@@ -238,6 +241,7 @@ body {
   font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
   color: rgba(255,255,255,0.38); text-decoration: none;
   transition: color 0.15s; flex-shrink: 0;
+  padding: 10px; border-radius: 8px;
 }
 .back-link:hover { color: #fff; }
 .meta-sep { color: rgba(255,255,255,0.12); user-select: none; }
@@ -248,10 +252,10 @@ body {
 .meta-date strong { color: rgba(255,255,255,0.82); font-weight: 600; }
 .meta-badges { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 .badge {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 6px;
   font-size: 10px; font-weight: 600;
-  padding: 4px 10px; border-radius: 20px; border: 1px solid;
-  white-space: nowrap;
+  padding: 6px 10px; border-radius: 20px; border: 1px solid;
+  white-space: nowrap; height: 22px;
 }
 .badge-anticipated { color: var(--gold); border-color: rgba(207,175,90,0.35); background: rgba(207,175,90,0.08); }
 .badge-rerelease   { color: var(--blue); border-color: rgba(102,168,224,0.35); background: rgba(102,168,224,0.08); }
@@ -332,34 +336,17 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  overflow: hidden;
+  overflow: visible;
   max-width: 1020px;
   margin: 0 auto;
 }
-.footer-top {
-  display: flex; flex-direction: column; gap: 7px;
-  padding: 20px 20px 0;
-}
-.footer-brand-row { display: flex; align-items: flex-end; gap: 7px; }
-.domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
+.footer-top { padding: 20px 20px 0; overflow: visible; }
 .d-bar {
   background: rgba(255,255,255,0.22);
-  border-radius: 2px 2px 0 0;
   transform-origin: bottom center;
   width: 3px; height: 100%;
   display: block; flex-shrink: 0;
 }
-.footer-brand {
-  flex-shrink: 0;
-  display: flex; align-items: center; gap: 14px;
-  padding-bottom: 4px;
-}
-.footer-logo-bars { display: flex; align-items: flex-end; gap: 7px; }
-.footer-logo-b {
-  width: 3px; background: rgba(255,255,255,0.35);
-  border-radius: 2px 2px 0 0; transform-origin: bottom center; flex-shrink: 0;
-}
-.footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
@@ -444,18 +431,7 @@ ${totalSlides > 0 ? `
 <footer class="site-footer">
   <div class="footer-card">
     <div class="footer-top">
-      <div id="dominoRows12"></div>
-      <div class="footer-brand-row">
-        <div class="domino-wrap" id="dominoRow3"></div>
-        <div class="footer-brand">
-          <div class="footer-logo-bars" id="footerLogoBars">
-            <div class="footer-logo-b" style="height:22px"></div>
-            <div class="footer-logo-b" style="height:22px"></div>
-            <div class="footer-logo-b" style="height:22px;transform:rotate(-8deg)"></div>
-          </div>
-          <span>Loading Archive</span>
-        </div>
-      </div>
+      <div id="dominoRow"></div>
     </div>
     <div class="footer-bottom">
       <span class="footer-copy">&copy; Loading Archive 2026</span>
@@ -469,120 +445,145 @@ window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
 
-// Carousel — click arrows or drag to navigate
+// Carousel — infinite peek carousel (adjacent slides visible on sides)
 (function () {
   const track   = document.getElementById('carTrack');
   if (!track) return;
   const btnPrev = document.getElementById('carPrev');
   const btnNext = document.getElementById('carNext');
   const counter = document.getElementById('carCounter');
-  const total   = track.children.length;
-  if (total <= 1) return;
-  let cur = 0;
 
-  function goTo(n) {
-    cur = ((n % total) + total) % total;
-    track.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
-    track.style.transform  = 'translateX(' + (-cur * 100) + '%)';
-    if (counter) counter.textContent = (cur + 1) + ' / ' + total;
+  const real  = [...track.children];
+  const total = real.length;
+  if (total === 0) return;
+
+  if (total > 1) {
+    const cloneLast  = real[total - 1].cloneNode(true);
+    const cloneFirst = real[0].cloneNode(true);
+    [cloneLast, cloneFirst].forEach(cl => {
+      cl.removeAttribute('id');
+      cl.querySelectorAll('[id]').forEach(c => c.removeAttribute('id'));
+    });
+    track.insertBefore(cloneLast, track.firstChild);
+    track.appendChild(cloneFirst);
+  }
+  // DOM: [cloneLast?, slide0..slideN-1, cloneFirst?]
+  // cur=1 points to slide0 when total>1, cur=0 when total===1
+
+  let cur  = total > 1 ? 1 : 0;
+  let busy = false;
+
+  const SLIDE_GAP = 10;
+  function sw() { return track.children[0] ? track.children[0].offsetWidth : Math.min(1020, window.innerWidth); }
+  function xFor(i) { return (window.innerWidth / 2) - i * (sw() + SLIDE_GAP) - sw() / 2; }
+  function realIdx(i) {
+    if (total === 1) return 0;
+    if (i === 0) return total - 1;
+    if (i === total + 1) return 0;
+    return i - 1;
   }
 
-  if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); goTo(cur - 1); });
-  if (btnNext) btnNext.addEventListener('click', e => { e.stopPropagation(); goTo(cur + 1); });
+  function setPos(i, animate) {
+    track.style.transition = animate ? 'transform 0.38s cubic-bezier(0.4,0,0.2,1)' : 'none';
+    track.style.transform  = 'translateX(' + xFor(i) + 'px)';
+    cur = i;
+    if (counter) counter.textContent = (realIdx(i) + 1) + ' / ' + total;
+    if (animate) busy = true;
+  }
 
-  let startX = null, didDrag = false;
+  track.addEventListener('transitionend', () => {
+    busy = false;
+    if (total > 1) {
+      if (cur === 0)           setPos(total, false);
+      else if (cur === total + 1) setPos(1, false);
+    }
+  });
+
+  setPos(cur, false);
+  window.addEventListener('resize', () => setPos(cur, false));
+
+  function prev() { if (!busy) setPos(cur - 1, true); }
+  function next() { if (!busy) setPos(cur + 1, true); }
+
+  if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); prev(); });
+  if (btnNext) btnNext.addEventListener('click', e => { e.stopPropagation(); next(); });
+
+  let startX = null, dragged = false;
   track.addEventListener('mousedown', e => {
-    startX = e.clientX; didDrag = false;
+    startX = e.clientX; dragged = false;
     track.style.transition = 'none'; e.preventDefault();
   });
   window.addEventListener('mouseup', e => {
     if (startX === null) return;
     const dx = e.clientX - startX;
-    if (Math.abs(dx) > 50) goTo(dx < 0 ? cur + 1 : cur - 1); else goTo(cur);
+    if (Math.abs(dx) > 50) { if (dx < 0) next(); else prev(); }
+    else { setPos(cur, false); }
     startX = null;
   });
   track.addEventListener('mousemove', e => {
     if (startX === null) return;
-    didDrag = true;
-    track.style.transform = 'translateX(' + (-cur * track.parentElement.offsetWidth + (e.clientX - startX)) + 'px)';
+    dragged = true;
+    track.style.transform = 'translateX(' + (xFor(cur) + e.clientX - startX) + 'px)';
   });
-  track.addEventListener('click', e => { if (didDrag) { e.stopPropagation(); e.preventDefault(); } });
-  let touchStart = null;
-  track.addEventListener('touchstart', e => { touchStart = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('click', e => { if (dragged) { dragged = false; e.stopPropagation(); e.preventDefault(); } });
+
+  let touchX = null;
+  track.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
   track.addEventListener('touchend', e => {
-    if (touchStart === null) return;
-    const dx = e.changedTouches[0].clientX - touchStart;
-    if (Math.abs(dx) > 50) goTo(dx < 0 ? cur + 1 : cur - 1);
-    touchStart = null;
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) { if (dx < 0) next(); else prev(); }
+    touchX = null;
   }, { passive: true });
 })();
 
-// Domino footer — logo bars start cascade; sequential rise back up
+// Domino footer — continuous wave right→left, single row
 (function () {
-  const rows12El = document.getElementById('dominoRows12');
-  const row3El   = document.getElementById('dominoRow3');
-  if (!rows12El || !row3El) return;
+  const rowEl = document.getElementById('dominoRow');
+  if (!rowEl) return;
+
   const GAP = 7, BAR = 3, ROW_H = 22;
-  const T_FALL = 100, T_RISE = 80, T_STEP = 20, T_STEP_R = 14, T_PAUSE = 700;
-  const FULL_W  = rows12El.offsetWidth || 960;
-  const R3_W    = row3El.offsetWidth   || FULL_W - 160;
-  const FCOLS   = Math.max(1, Math.floor((FULL_W  + GAP) / (BAR + GAP)));
-  const R3COLS  = Math.max(1, Math.floor((R3_W    + GAP) / (BAR + GAP)));
+  const STEP   = 40;
+  const TRAIL  = 15;
+  const T_FALL = 120;
+  const T_RISE = 100;
+  const PAUSE  = 800;
 
-  function makeRow(cols, parent) {
-    const rowEl = document.createElement('div');
-    rowEl.style.cssText = \`display:flex;gap:\${GAP}px;align-items:flex-end;height:\${ROW_H}px\`;
-    const bars = [];
-    for (let col = 0; col < cols; col++) {
-      const b = document.createElement('div');
-      b.className = 'd-bar'; b.style.height = ROW_H + 'px';
-      rowEl.appendChild(b); bars.push(b);
+  const FULL_W = rowEl.offsetWidth || 960;
+  const NCOLS  = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
+
+  const rowDiv = document.createElement('div');
+  rowDiv.style.cssText = \`display:flex;gap:\${GAP}px;align-items:flex-end;height:\${ROW_H}px;overflow:visible\`;
+  const bars = [];
+  for (let i = 0; i < NCOLS; i++) {
+    const b = document.createElement('div');
+    b.className = 'd-bar'; b.style.height = ROW_H + 'px';
+    rowDiv.appendChild(b); bars.push(b);
+  }
+  rowEl.appendChild(rowDiv);
+  rowEl.style.overflow = 'visible';
+
+  const TOTAL = NCOLS + TRAIL;
+  let p = 0;
+
+  function tick() {
+    const ci = NCOLS - 1 - p;
+    if (p < NCOLS) {
+      bars[ci].style.transition = \`transform \${T_FALL}ms ease-in\`;
+      bars[ci].style.transform  = 'rotateZ(-70deg)';
     }
-    parent.appendChild(rowEl);
-    return bars;
+    const rp = p - TRAIL;
+    const rc = NCOLS - 1 - rp;
+    if (rp >= 0 && rp < NCOLS) {
+      bars[rc].style.transition = \`transform \${T_RISE}ms ease-out\`;
+      bars[rc].style.transform  = '';
+    }
+    p++;
+    if (p >= TOTAL) { p = 0; setTimeout(tick, PAUSE); }
+    else             { setTimeout(tick, STEP); }
   }
 
-  rows12El.style.cssText = \`display:flex;flex-direction:column;gap:\${GAP}px\`;
-  const r1 = makeRow(FCOLS,  rows12El);
-  const r2 = makeRow(FCOLS,  rows12El);
-  const r3 = makeRow(R3COLS, row3El);
-
-  const logoEl   = document.getElementById('footerLogoBars');
-  const logoEls  = logoEl ? [...logoEl.children] : [];
-  const logoInit = new Map(logoEls.map(b => [b, b.style.transform || '']));
-
-  // Logo bars (bottom-right) fall first, then r3→r2→r1 right-to-left each
-  const fallOrd = [...logoEls.slice().reverse(), ...r3.slice().reverse(), ...r2.slice().reverse(), ...r1.slice().reverse()];
-  const riseOrd = [...fallOrd].reverse();
-
-  let idx = 0, rIdx = 0;
-
-  function fallNext() {
-    if (idx < fallOrd.length) {
-      const b = fallOrd[idx++];
-      b.style.transition = \`transform \${T_FALL}ms ease-in,opacity \${T_FALL}ms ease-in\`;
-      b.style.transform = 'rotate(85deg)';
-      b.style.opacity = '0.05';
-      setTimeout(fallNext, T_STEP);
-    } else {
-      setTimeout(riseNext, T_PAUSE);
-    }
-  }
-
-  function riseNext() {
-    if (rIdx < riseOrd.length) {
-      const b = riseOrd[rIdx++];
-      b.style.transition = \`transform \${T_RISE}ms ease-out,opacity \${T_RISE}ms ease-out\`;
-      b.style.transform = logoInit.has(b) ? logoInit.get(b) : '';
-      b.style.opacity = '';
-      setTimeout(riseNext, T_STEP_R);
-    } else {
-      rIdx = 0; idx = 0;
-      setTimeout(fallNext, T_PAUSE);
-    }
-  }
-
-  fallNext();
+  tick();
 })();
 ${hasTrailer ? `
 async function playTrailer() {

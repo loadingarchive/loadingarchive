@@ -1,6 +1,7 @@
 import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug } from './utils.js';
 import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails } from './steam.js';
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
+import { upsertGameToD1 } from './d1.js';
 
 const RERELEASE_GAP_DAYS = 60;
 
@@ -40,7 +41,7 @@ async function backfillFromExistingSteamPage(game) {
 
 // Genereert unieke slugs voor een lijst games. Bij botsing: voeg jaar toe, dan jaar-maand.
 function assignSlugs(games) {
-  const used = new Map(); // slug → index van eerste gebruiker
+  const used = new Map();
   return games.map(g => {
     const base = generateSlug(g.title);
     const year = g.date ? g.date.slice(0, 4) : "tba";
@@ -56,32 +57,34 @@ function assignSlugs(games) {
   });
 }
 
-// Haalt Steam-details op en schrijft game:{slug} naar KV.
-async function saveGameToKV(game, env) {
+/**
+ * Haalt Steam-details op, bouwt de volledige entry en upsert naar D1.
+ * Schrijft niet direct naar KV; dat doet build-cache.js vanuit D1.
+ */
+async function saveGameToD1(game, env) {
   const detail = game.steam ? await fetchSteamGameDetails(game.steam) : null;
   const entry = {
-    id:          game.id,
-    slug:        game.slug,
-    title:       game.title,
-    date:        game.date,
-    platforms:   game.platforms,
-    genre:       game.genre,
-    dev:         game.dev,
-    anticipated: game.anticipated,
-    rerelease:   game.rerelease || null,
-    trailer:     game.trailer,
-    steam:       game.steam,
-    price:       game.price,
-    cover:       game.cover,
-    // Steam-detailvelden (null als geen Steam-link)
+    id:                   game.id,
+    slug:                 game.slug,
+    title:                game.title,
+    date:                 game.date,
+    platforms:            game.platforms,
+    genre:                game.genre,
+    dev:                  game.dev,
+    anticipated:          game.anticipated,
+    rerelease:            game.rerelease || null,
+    trailer:              game.trailer,
+    steam:                game.steam,
+    price:                game.price,
+    cover:                game.cover,
     short_description:    detail?.short_description    || null,
     detailed_description: detail?.detailed_description || null,
     pc_requirements:      detail?.pc_requirements      || null,
-    metacritic:           detail?.metacritic           || null,
-    screenshots:          detail?.screenshots          || [],
-    categories:           detail?.categories           || [],
+    metacritic:           detail?.metacritic            || null,
+    screenshots:          detail?.screenshots           || [],
+    categories:           detail?.categories            || [],
   };
-  await env.GAMES_KV.put(`game:${game.slug}`, JSON.stringify(entry));
+  await upsertGameToD1(entry, env);
 }
 
 // RAWG is de enige bron voor game-releases. Steam voegt alleen cover, prijs en trailer toe.
@@ -96,12 +99,10 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
   const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
   const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
 
-  // Slugs toewijzen en game-detailpagina's opslaan in KV
+  // Slugs toewijzen en upserten naar D1
   const withSlugs = assignSlugs(withCovers);
-  await mapWithConcurrency(withSlugs, 5, g => saveGameToKV(g, env));
-  console.log(`  ${dateFrom}–${dateTo}: ${withSlugs.length} game-slugs opgeslagen in KV`);
-
-  return withSlugs;
+  await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
+  console.log(`  ${dateFrom}–${dateTo}: ${withSlugs.length} games → D1`);
 }
 
 export async function runTbaPipeline(rawgKey, extraGames, env) {
@@ -114,7 +115,6 @@ export async function runTbaPipeline(rawgKey, extraGames, env) {
   const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
 
   const withSlugs = assignSlugs(withCovers);
-  await mapWithConcurrency(withSlugs, 5, g => saveGameToKV(g, env));
-
-  return withSlugs;
+  await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
+  console.log(`  TBA: ${withSlugs.length} games → D1`);
 }

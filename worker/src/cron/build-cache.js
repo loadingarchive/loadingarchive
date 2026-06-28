@@ -1,5 +1,12 @@
 import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
+import {
+  queryActiveMonthGames,
+  queryActiveTbaGames,
+  rebuildGamePagesKv,
+  rebuildTbaGamePagesKv,
+  softDeleteStaleGames,
+} from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
 
 // ---- helpers ----
@@ -37,10 +44,29 @@ async function loadExtraGames(env) {
   return extraGamesBundle.games ?? [];
 }
 
+/**
+ * Verwerkt één maand:
+ * 1. Pipeline → upsert naar D1 (nieuwe + bijgewerkte games)
+ * 2. Lees alle actieve games voor deze maand uit D1
+ * 3. Schrijf maand-KV + individuele game:{slug} KV vanuit D1
+ *
+ * Dankzij stap 2 verdwijnen games die RAWG deze run niet teruggaf nooit
+ * uit de publieke site, zolang ze in D1 staan met status='active'.
+ */
 async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo, label }) {
-  const results = await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env);
+  // Stap 1: pipeline upsert → D1
+  await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env);
+
+  // Stap 2: lees alle actieve games voor deze maand uit D1
+  const results = await queryActiveMonthGames(env, dateFrom, dateTo);
+
+  // Stap 3a: maand-KV (gebruikt door /api/games?month=YYYY-MM)
   await env.GAMES_KV.put(kvKey, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
-  console.log(`  ${label}: ${results.length} games → KV`);
+
+  // Stap 3b: individuele game:{slug} KV (gebruikt door /game/:slug)
+  const pageCount = await rebuildGamePagesKv(env, dateFrom, dateTo);
+
+  console.log(`  ${label}: ${results.length} games in KV (${pageCount} pagina's bijgewerkt)`);
 }
 
 // ---- daily: monthly pipeline ----
@@ -51,7 +77,7 @@ export async function runDailyCron(env) {
   const active     = activeMonths();
   const activeKeys = new Set(active.map(m => m.kvKey));
 
-  // Find months of this year not yet cached — seed up to 4 extra per run
+  // Vind maanden van dit jaar die nog niet in KV staan — seed maximaal 4 per run
   const missing = [];
   for (const m of allYearMonths()) {
     if (activeKeys.has(m.kvKey)) continue;
@@ -60,24 +86,36 @@ export async function runDailyCron(env) {
   }
   const toProcess = [...active, ...missing.slice(0, 4)];
 
-  console.log(`Daily cron: refreshing ${active.map(m => m.label).join(', ')}${missing.length ? `, seeding ${missing.slice(0, 4).map(m => m.label).join(', ')}` : ''}`);
+  console.log(`Daily cron: verwerk ${active.map(m => m.label).join(', ')}${missing.length ? `, seed ${missing.slice(0, 4).map(m => m.label).join(', ')}` : ''}`);
 
   for (const month of toProcess) {
     try {
       await processMonth(rawgKey, extraGames, env, month);
     } catch (e) {
-      console.error(`  ${month.label}: pipeline failed —`, e.message);
+      console.error(`  ${month.label}: pipeline mislukt —`, e.message);
     }
   }
 
+  // TBA-pipeline → D1 + KV
   try {
-    const tbaResults = await runTbaPipeline(rawgKey, extraGames, env);
+    await runTbaPipeline(rawgKey, extraGames, env);
+    const tbaResults = await queryActiveTbaGames(env);
     await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
-    console.log(`  TBA: ${tbaResults.length} games → KV`);
+    await rebuildTbaGamePagesKv(env);
+    console.log(`  TBA: ${tbaResults.length} games in KV`);
   } catch (e) {
-    console.error('  TBA: pipeline failed —', e.message);
+    console.error('  TBA: pipeline mislukt —', e.message);
   }
 
+  // Soft-delete: games die 7+ dagen niet meer in de pipeline voorkwamen → 'hidden'
+  try {
+    const hidden = await softDeleteStaleGames(env, 7);
+    if (hidden > 0) console.log(`  Soft-delete: ${hidden} game(s) op 'hidden' gezet`);
+  } catch (e) {
+    console.error('  Soft-delete mislukt —', e.message);
+  }
+
+  // Sitemap opnieuw opbouwen vanuit maand-KV
   try {
     await generateSitemap(env);
   } catch (e) {
@@ -123,11 +161,10 @@ export async function seedMonths(env, months) {
     try {
       await processMonth(rawgKey, extraGames, env, month);
     } catch (e) {
-      console.error(`  ${month.label}: seed failed —`, e.message);
+      console.error(`  ${month.label}: seed mislukt —`, e.message);
     }
   }
 }
-
 
 export { makeMonthEntry };
 
@@ -138,5 +175,5 @@ export async function runWeeklyWikipediaCron(env) {
   const existing = await loadExtraGames(env);
   const updated  = await scrapeWikipedia(existing);
   await env.GAMES_KV.put('config:extra-games', JSON.stringify({ games: updated, updatedAt: new Date().toISOString() }));
-  console.log(`Wikipedia cron done: ${updated.length} games in KV`);
+  console.log(`Wikipedia cron klaar: ${updated.length} games in KV`);
 }

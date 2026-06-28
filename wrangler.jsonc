@@ -30,6 +30,15 @@
 			"0 4 * * 7"
 		]
 	},
+	// D1 database: duurzame bron van waarheid voor alle games.
+	// KV blijft de snelle leescache voor publiek verkeer.
+	"d1_databases": [
+		{
+			"binding": "GAMES_D1",
+			"database_name": "loadingarchive_games",
+			"database_id": "70fde97b-0c21-40e5-87e6-abf655aa2772"
+		}
+	],
 	"workers_dev": true,
 	"routes": [
 		{ "pattern": "www.loadingarchive.com", "custom_domain": true },

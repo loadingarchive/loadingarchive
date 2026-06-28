@@ -20,8 +20,6 @@
 
   gtag('config', 'G-BL25QH6B7L');
 </script>
-<!-- HLS playback for Steam trailers (their CDN no longer serves plain mp4 for newer movies) -->
-<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
 :root {
   --bg:         #0E1015;
@@ -266,64 +264,24 @@ button, select, input { font-family: inherit; }
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
 }
 
-.card-genre {
-  font-size: var(--xs); color: rgba(255,255,255,0.45);
-  display: flex; align-items: center; gap: 4px;
-}
-.card-genre .mlabel { color: rgba(255,255,255,0.25); }
-
 .card-footer {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: auto; gap: 6px;
 }
-.card-price { font-size: var(--xs); color: rgba(255,255,255,0.7); font-weight: 600; }
-.card-links { display: flex; align-items: center; gap: 8px; }
-.steam-link {
-  font-size: var(--xs); color: var(--blue); text-decoration: none;
-  font-weight: 500; transition: color 0.15s; white-space: nowrap;
+.card-genre {
+  font-size: var(--xs); color: rgba(255,255,255,0.45);
+  display: flex; align-items: center; gap: 4px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.steam-link:hover { color: var(--blue-hover); }
-.trailer-link {
-  flex-shrink: 0; font-size: var(--xs); color: rgba(255,255,255,0.65); font-weight: 500;
-  background: none; border: none; cursor: pointer;
-  white-space: nowrap; transition: color 0.15s; padding: 0;
+.card-genre .mlabel { color: rgba(255,255,255,0.25); }
+.bekijk-btn {
+  flex-shrink: 0; font-size: var(--xs); font-weight: 500;
+  color: rgba(255,255,255,0.75); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  white-space: nowrap; transition: color 0.15s;
 }
-.trailer-link:hover { color: #fff; }
+.bekijk-btn:hover { color: #fff; }
 
-/* TRAILER MODAL */
-.trailer-modal {
-  display: none;
-  position: fixed; inset: 0; z-index: 1000;
-  align-items: center; justify-content: center;
-  padding: 48px 20px;
-}
-.trailer-modal.open { display: flex; }
-.trailer-modal-backdrop { position: absolute; inset: 0; background: rgba(5,6,9,0.85); }
-.trailer-modal-content {
-  position: relative; width: 100%; max-width: 860px;
-  background: #000; border-radius: 12px; overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
-}
-.trailer-modal-close {
-  position: absolute; top: -36px; right: 0;
-  background: transparent; border: none; color: #fff;
-  font-size: 22px; line-height: 1; cursor: pointer; padding: 6px 10px;
-  transition: color 0.15s;
-}
-.trailer-modal-close:hover { color: rgba(255,255,255,0.6); }
-.trailer-modal-quality {
-  position: absolute; top: -36px; left: 0; display: none;
-  background: var(--surface); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-  color: #fff; font-size: 11px; font-weight: 500;
-  padding: 5px 8px; cursor: pointer; outline: none;
-}
-.trailer-modal-quality.show { display: block; }
-.trailer-modal-body iframe,
-.trailer-modal-body video { width: 100%; aspect-ratio: 16/9; display: block; border: none; background: #000; }
-.trailer-modal-loading {
-  padding: 80px 24px; text-align: center; color: rgba(255,255,255,0.5);
-  font-size: 12px; font-weight: 500;
-}
 
 /* AD CARD */
 .ad-card {
@@ -400,34 +358,17 @@ button, select, input { font-family: inherit; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  overflow: hidden;
+  overflow: visible;
   max-width: 1020px;
   margin: 0 auto;
 }
-.footer-top {
-  display: flex; flex-direction: column; gap: 7px;
-  padding: 20px 20px 0;
-}
-.footer-brand-row { display: flex; align-items: flex-end; gap: 7px; }
-.footer-domino-wrap { flex: 1; min-width: 0; overflow: hidden; }
+.footer-top { padding: 20px 20px 0; overflow: visible; }
 .d-bar {
   background: rgba(255,255,255,0.22);
-  border-radius: 2px 2px 0 0;
   transform-origin: bottom center;
   width: 3px; height: 100%;
   display: block;
 }
-.footer-brand {
-  flex-shrink: 0;
-  display: flex; align-items: center; gap: 14px;
-  padding-bottom: 4px;
-}
-.footer-logo-bars { display: flex; align-items: flex-end; gap: 7px; }
-.footer-logo-b {
-  width: 3px; background: rgba(255,255,255,0.35);
-  border-radius: 2px 2px 0 0; transform-origin: bottom center; flex-shrink: 0;
-}
-.footer-brand span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .footer-bottom {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
@@ -493,18 +434,7 @@ button, select, input { font-family: inherit; }
 <footer class="site-footer">
   <div class="footer-card">
     <div class="footer-top">
-      <div id="footerRows12"></div>
-      <div class="footer-brand-row">
-        <div class="footer-domino-wrap" id="footerRow3"></div>
-        <div class="footer-brand">
-          <div class="footer-logo-bars" id="footerLogoBars">
-            <div class="footer-logo-b" style="height:22px"></div>
-            <div class="footer-logo-b" style="height:22px"></div>
-            <div class="footer-logo-b" style="height:22px;transform:rotate(-8deg)"></div>
-          </div>
-          <span>Loading Archive</span>
-        </div>
-      </div>
+      <div id="footerDominoRow"></div>
     </div>
     <div class="footer-bottom">
       <span class="footer-copy">&copy; Loading Archive 2026</span>
@@ -520,14 +450,7 @@ button, select, input { font-family: inherit; }
   </div>
 </div>
 
-<div class="trailer-modal" id="trailerModal">
-  <div class="trailer-modal-backdrop" onclick="closeTrailerModal()"></div>
-  <div class="trailer-modal-content">
-    <select class="trailer-modal-quality" id="trailerQuality" onchange="setTrailerQuality(this.value)" aria-label="Video quality"></select>
-    <button class="trailer-modal-close" onclick="closeTrailerModal()" aria-label="Close">&times;</button>
-    <div class="trailer-modal-body" id="trailerModalBody"></div>
-  </div>
-</div>
+
 
 <div id="site-tooltip"></div>
 <script>
@@ -800,7 +723,6 @@ function setupMonthSwipe() {
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
-    if (!tbaMode && getMonth(g.date) !== activeMonth) return false;
     if (q && !matchesSearch(g.title, q)) return false;
     if (activeFilters.size > 0) {
       if (activeFilters.has('anticipated') && !g.anticipated) return false;
@@ -850,7 +772,7 @@ function renderGames() {
   [...gameGrid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
   emptyState.classList.remove('show');
 
-  const games = getFiltered().sort((a, b) => tbaMode ? 0 : a.date.localeCompare(b.date));
+  const games = getFiltered().sort((a, b) => tbaMode ? 0 : (a.date || '').localeCompare(b.date || ''));
   if (!games.length) { emptyState.classList.add('show'); return; }
 
   const adPositions = [5, 11];
@@ -890,22 +812,17 @@ function buildCard(g) {
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       <span class="card-actions">
-        ${g.rerelease  ? `<button class="card-action-btn card-action-rerelease"   data-tooltip="Re-release · orig. ${formatDateShort(g.rerelease.date)}">↺</button>` : ''}
+        ${g.rerelease  ? `<button class="card-action-btn card-action-rerelease"   data-tooltip="Port · orig. ${formatDateShort(g.rerelease.date)}">↺</button>` : ''}
         ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" data-tooltip="Anticipated">✦</button>` : ''}
-        <button class="card-action-btn" data-tooltip="More">⋮</button>
       </span>
     </div>
     ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
     <div class="card-body">
       <div class="card-title">${g.slug ? `<a href="/game/${g.slug}">${g.title}</a>` : g.title}</div>
       <div class="ptags">${ptagsHtml}</div>
-      <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
       <div class="card-footer">
-        <div class="card-links">
-          ${g.price ? `<span class="card-price">${g.price}</span>` : ''}
-          ${g.steam ? `<a class="steam-link" href="https://store.steampowered.com/app/${g.steam}" target="_blank">Steam page ›</a>` : ''}
-        </div>
-        ${g.trailer ? `<button class="trailer-link" onclick="openTrailerModal('${g.trailer}')">Trailer ›</button>` : ''}
+        <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
+        ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">Bekijk game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
       </div>
     </div>
   `;
@@ -918,89 +835,6 @@ function buildCard(g) {
   return card;
 }
 
-async function openTrailerModal(trailerId) {
-  const modal = document.getElementById('trailerModal');
-  const body = document.getElementById('trailerModalBody');
-
-  body.innerHTML = '<div class="trailer-modal-loading">Loading trailer...</div>';
-  modal.classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  if (trailerId.startsWith('steam:')) {
-    const appid = trailerId.slice('steam:'.length);
-    try {
-      const res = await fetch(`/api/trailer?appid=${appid}`);
-      const data = await res.json();
-      if (!modal.classList.contains('open')) return; // user closed it while we were loading
-
-      if (data.mp4) {
-        body.innerHTML = `<video controls autoplay playsinline src="${data.mp4}"></video>`;
-      } else if (data.hls) {
-        body.innerHTML = '<video controls autoplay playsinline></video>';
-        attachHls(body.querySelector('video'), data.hls);
-      } else {
-        body.innerHTML = '<div class="trailer-modal-loading">No trailer found.</div>';
-      }
-    } catch (e) {
-      if (modal.classList.contains('open')) body.innerHTML = '<div class="trailer-modal-loading">Could not load trailer.</div>';
-    }
-    return;
-  }
-
-  body.innerHTML = `<iframe src="https://www.youtube.com/embed/${trailerId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
-}
-
-function attachHls(video, url) {
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url; // Safari/Chrome with native HLS support already pick quality adaptively
-    return;
-  }
-  if (window.Hls && window.Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    video._hls = hls;
-    hls.on(Hls.Events.MANIFEST_PARSED, () => buildQualityMenu(hls));
-  }
-}
-
-function buildQualityMenu(hls) {
-  const select = document.getElementById('trailerQuality');
-  const levels = hls.levels
-    .map((lvl, i) => ({ i, height: lvl.height }))
-    .sort((a, b) => b.height - a.height);
-
-  select.innerHTML = '<option value="-1">Auto</option>' +
-    levels.map(l => `<option value="${l.i}">${l.height}p</option>`).join('');
-  select.value = '-1';
-  select.classList.add('show');
-}
-
-function setTrailerQuality(value) {
-  const video = document.querySelector('#trailerModalBody video');
-  if (video && video._hls) video._hls.currentLevel = parseInt(value, 10);
-}
-
-function closeTrailerModal() {
-  const modal = document.getElementById('trailerModal');
-  const body = document.getElementById('trailerModalBody');
-  modal.classList.remove('open');
-  document.body.style.overflow = '';
-  const video = body.querySelector('video');
-  if (video) {
-    video.pause();
-    if (video._hls) video._hls.destroy();
-  }
-  body.innerHTML = '';
-
-  const quality = document.getElementById('trailerQuality');
-  quality.classList.remove('show');
-  quality.innerHTML = '';
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeTrailerModal();
-});
 
 function buildSideNav() {
   const inner = document.getElementById('sideNavInner');
@@ -1092,74 +926,53 @@ loadGames(activeMonth);
   });
 }());
 
-// Domino footer — logo bars start cascade; sequential rise back up
+// Domino footer — continuous wave right→left, single row
 (function () {
-  const rows12El = document.getElementById('footerRows12');
-  const row3El   = document.getElementById('footerRow3');
-  if (!rows12El || !row3El) return;
+  const rowEl = document.getElementById('footerDominoRow');
+  if (!rowEl) return;
 
   const GAP = 7, BAR = 3, ROW_H = 22;
-  const T_FALL = 100, T_RISE = 80, T_STEP = 20, T_STEP_R = 14, T_PAUSE = 700;
+  const STEP   = 40;
+  const TRAIL  = 15;
+  const T_FALL = 120;
+  const T_RISE = 100;
+  const PAUSE  = 800;
 
-  const FULL_W = rows12El.offsetWidth || 960;
-  const R3_W   = row3El.offsetWidth   || FULL_W - 160;
-  const FCOLS  = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
-  const R3COLS = Math.max(1, Math.floor((R3_W   + GAP) / (BAR + GAP)));
+  const FULL_W = rowEl.offsetWidth || 960;
+  const NCOLS  = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
 
-  function makeRow(cols, parent) {
-    const rowEl = document.createElement('div');
-    rowEl.style.cssText = `display:flex;gap:${GAP}px;align-items:flex-end;height:${ROW_H}px`;
-    const bars = [];
-    for (let col = 0; col < cols; col++) {
-      const b = document.createElement('div');
-      b.className = 'd-bar'; b.style.height = ROW_H + 'px';
-      rowEl.appendChild(b); bars.push(b);
+  const rowDiv = document.createElement('div');
+  rowDiv.style.cssText = `display:flex;gap:${GAP}px;align-items:flex-end;height:${ROW_H}px;overflow:visible`;
+  const bars = [];
+  for (let i = 0; i < NCOLS; i++) {
+    const b = document.createElement('div');
+    b.className = 'd-bar'; b.style.height = ROW_H + 'px';
+    rowDiv.appendChild(b); bars.push(b);
+  }
+  rowEl.appendChild(rowDiv);
+  rowEl.style.overflow = 'visible';
+
+  const TOTAL = NCOLS + TRAIL;
+  let p = 0;
+
+  function tick() {
+    const ci = NCOLS - 1 - p;
+    if (p < NCOLS) {
+      bars[ci].style.transition = `transform ${T_FALL}ms ease-in`;
+      bars[ci].style.transform  = 'rotateZ(-70deg)';
     }
-    parent.appendChild(rowEl);
-    return bars;
+    const rp = p - TRAIL;
+    const rc = NCOLS - 1 - rp;
+    if (rp >= 0 && rp < NCOLS) {
+      bars[rc].style.transition = `transform ${T_RISE}ms ease-out`;
+      bars[rc].style.transform  = '';
+    }
+    p++;
+    if (p >= TOTAL) { p = 0; setTimeout(tick, PAUSE); }
+    else             { setTimeout(tick, STEP); }
   }
 
-  rows12El.style.cssText = `display:flex;flex-direction:column;gap:${GAP}px`;
-  const r1 = makeRow(FCOLS,  rows12El);
-  const r2 = makeRow(FCOLS,  rows12El);
-  const r3 = makeRow(R3COLS, row3El);
-
-  const logoEl   = document.getElementById('footerLogoBars');
-  const logoEls  = logoEl ? [...logoEl.children] : [];
-  const logoInit = new Map(logoEls.map(b => [b, b.style.transform || '']));
-
-  // Logo bars (bottom-right) fall first, then r3→r2→r1 right-to-left each
-  const fallOrd = [...logoEls.slice().reverse(), ...r3.slice().reverse(), ...r2.slice().reverse(), ...r1.slice().reverse()];
-  const riseOrd = [...fallOrd].reverse();
-
-  let idx = 0, rIdx = 0;
-
-  function fallNext() {
-    if (idx < fallOrd.length) {
-      const b = fallOrd[idx++];
-      b.style.transition = `transform ${T_FALL}ms ease-in, opacity ${T_FALL}ms ease-in`;
-      b.style.transform = 'rotate(85deg)';
-      b.style.opacity = '0.05';
-      setTimeout(fallNext, T_STEP);
-    } else {
-      setTimeout(riseNext, T_PAUSE);
-    }
-  }
-
-  function riseNext() {
-    if (rIdx < riseOrd.length) {
-      const b = riseOrd[rIdx++];
-      b.style.transition = `transform ${T_RISE}ms ease-out, opacity ${T_RISE}ms ease-out`;
-      b.style.transform = logoInit.has(b) ? logoInit.get(b) : '';
-      b.style.opacity = '';
-      setTimeout(riseNext, T_STEP_R);
-    } else {
-      rIdx = 0; idx = 0;
-      setTimeout(fallNext, T_PAUSE);
-    }
-  }
-
-  fallNext();
+  tick();
 })();
 
 // Lift month nav above footer when footer enters viewport

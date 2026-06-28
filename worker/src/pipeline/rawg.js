@@ -52,7 +52,6 @@ async function enrichRawgGameWithSteam(rg) {
 
   return {
     ...rg,
-    date:       steamDate || rg.date,
     platforms:  [...new Set([...rg.platforms, "PC"])],
     genre:      steamGenre.length ? steamGenre : rg.genre,
     dev:        (app.developers || [])[0] || rg.dev,
