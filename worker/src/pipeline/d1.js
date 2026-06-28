@@ -114,6 +114,19 @@ export async function rebuildTbaGamePagesKv(env) {
 }
 
 /**
+ * Schrijft game:{slug} KV-records voor ALLE actieve D1-games in één keer.
+ * Gebruik dit na elke volledige cron-run zodat elke game altijd een detailpagina heeft.
+ * Retourneert het aantal bijgewerkte records.
+ */
+export async function rebuildAllGamePagesKv(env) {
+  const { results } = await env.GAMES_D1
+    .prepare(`SELECT slug, raw_json FROM games WHERE status = 'active'`)
+    .all();
+  await Promise.all(results.map(r => env.GAMES_KV.put(`game:${r.slug}`, r.raw_json)));
+  return results.length;
+}
+
+/**
  * Markeert games als 'hidden' als ze `olderThanDays` dagen niet meer zijn
  * teruggekomen in de pipeline. Verwijdert geen rijen.
  * Retourneert het aantal verborgen games.

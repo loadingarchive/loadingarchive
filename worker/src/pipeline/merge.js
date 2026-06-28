@@ -40,12 +40,14 @@ async function backfillFromExistingSteamPage(game) {
 }
 
 // Genereert unieke slugs voor een lijst games. Bij botsing: voeg jaar toe, dan jaar-maand.
+// Titels in niet-Latijns schrift (Japans, Chinees) leveren een lege base op → val terug op rawg-id.
 function assignSlugs(games) {
   const used = new Map();
   return games.map(g => {
-    const base = generateSlug(g.title);
+    const raw  = generateSlug(g.title);
+    const base = raw || String(g.id || "game"); // lege slug → gebruik rawg-id als anker
     const year = g.date ? g.date.slice(0, 4) : "tba";
-    const mon  = g.date ? g.date.slice(0, 7).replace("-", "-") : "tba";
+    const mon  = g.date ? g.date.slice(0, 7) : "tba";
 
     let slug = base;
     if (used.has(slug)) slug = `${base}-${year}`;

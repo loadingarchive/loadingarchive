@@ -5,6 +5,7 @@ import {
   queryActiveTbaGames,
   rebuildGamePagesKv,
   rebuildTbaGamePagesKv,
+  rebuildAllGamePagesKv,
   softDeleteStaleGames,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
@@ -74,19 +75,13 @@ async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo,
 export async function runDailyCron(env) {
   const rawgKey    = env.RAWG_API_KEY;
   const extraGames = await loadExtraGames(env);
-  const active     = activeMonths();
-  const activeKeys = new Set(active.map(m => m.kvKey));
 
-  // Vind maanden van dit jaar die nog niet in KV staan — seed maximaal 4 per run
-  const missing = [];
-  for (const m of allYearMonths()) {
-    if (activeKeys.has(m.kvKey)) continue;
-    const hit = await env.GAMES_KV.get(m.kvKey);
-    if (hit === null) missing.push(m);
-  }
-  const toProcess = [...active, ...missing.slice(0, 4)];
-
-  console.log(`Daily cron: verwerk ${active.map(m => m.label).join(', ')}${missing.length ? `, seed ${missing.slice(0, 4).map(m => m.label).join(', ')}` : ''}`);
+  // Verwerk alle 12 maanden van het jaar zodat elke maand verse data en slugs heeft.
+  // Actieve maanden (vorige, huidige, volgende, daarna) krijgen altijd een volledige
+  // RAWG-pipeline. Voor de overige maanden haalt RAWG weinig nieuws op, maar D1
+  // blijft als bron zodat de KV-cache compleet en up-to-date is.
+  const toProcess = allYearMonths();
+  console.log(`Daily cron: verwerk alle 12 maanden`);
 
   for (const month of toProcess) {
     try {
@@ -113,6 +108,14 @@ export async function runDailyCron(env) {
     if (hidden > 0) console.log(`  Soft-delete: ${hidden} game(s) op 'hidden' gezet`);
   } catch (e) {
     console.error('  Soft-delete mislukt —', e.message);
+  }
+
+  // Herbouw game:{slug} KV voor ALLE actieve D1-records zodat elke game een detailpagina heeft.
+  try {
+    const pageCount = await rebuildAllGamePagesKv(env);
+    console.log(`  Detailpagina's: ${pageCount} game:{slug} records naar KV geschreven`);
+  } catch (e) {
+    console.error('  Rebuild game-pagina\'s mislukt —', e.message);
   }
 
   // Sitemap opnieuw opbouwen vanuit maand-KV
