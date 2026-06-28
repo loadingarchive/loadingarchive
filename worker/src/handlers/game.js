@@ -728,17 +728,17 @@ async function playTrailer() {
     }
   }
 }` : ''}
-(function(){
-  const titleEl=document.querySelector('.game-title');
-  const btnEl=document.querySelector('.back-btn');
-  if(!titleEl||!btnEl)return;
-  function align(){
-    btnEl.style.marginTop='0';
-    const diff=titleEl.getBoundingClientRect().top-btnEl.getBoundingClientRect().top;
-    btnEl.style.marginTop=Math.max(0,diff)+'px';
+(function () {
+  const titleEl = document.querySelector('.game-title');
+  const btnEl   = document.querySelector('.back-btn');
+  if (!titleEl || !btnEl) return;
+  function align() {
+    btnEl.style.marginTop = '0';
+    const diff = titleEl.getBoundingClientRect().top - btnEl.getBoundingClientRect().top;
+    btnEl.style.marginTop = Math.max(0, diff) + 'px';
   }
   requestAnimationFrame(align);
-  window.addEventListener('resize',align);
+  window.addEventListener('resize', align);
 }());
 </script>
 </body>

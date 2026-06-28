@@ -12,10 +12,8 @@ function fmtPlayers(n) {
 }
 
 function fmtOwners(ownersStr) {
-  if (!ownersStr) return '';
-  const m = ownersStr.match(/^([\d,]+)/);
-  if (!m) return '';
-  const n = parseInt(m[1].replace(/,/g, ''), 10);
+  const n = parseOwnersMin(ownersStr);
+  if (!n) return '';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + 'M+ owners';
   if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K+ owners';
   return '';

@@ -306,7 +306,8 @@ button, select, input { font-family: inherit; }
 .empty-state span { font-size: var(--xs); color: rgba(153,156,163,0.55); }
 
 /* CATEGORY DROPDOWN */
-.cat-wrap { position: relative; }
+.cat-wrap { position: relative; margin-left: auto; }
+.loading-row { grid-column: 1/-1; padding: 48px 24px; text-align: center; font-size: 10px; color: #999CA3; font-weight: 500; }
 .cat-dropdown {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   background: var(--surface); border: 1px solid var(--border);
@@ -420,7 +421,7 @@ button, select, input { font-family: inherit; }
 
   <div class="content-area">
     <div class="list-toolbar">
-      <input class="list-search" id="searchInput" type="text" placeholder="Search game..." oninput="onSearchInput()">
+      <input class="list-search" id="searchInput" type="text" placeholder="Search game...">
     </div>
 
     <div class="platform-bar" id="platformBar">
@@ -553,8 +554,6 @@ function toggleSet(set, key) {
   buildPlatformBar();
   renderGames();
 }
-function toggleCat(cat) { toggleSet(activeCats, cat); }
-function toggleFilterKey(key) { toggleSet(activeFilters, key); }
 
 async function fetchAndRenderGames(url, loadingText) {
   const mySeq = ++loadSeq;
@@ -563,7 +562,6 @@ async function fetchAndRenderGames(url, loadingText) {
 
   const loader = document.createElement('div');
   loader.className = 'loading-row';
-  loader.style.cssText = 'grid-column:1/-1;padding:48px 24px;text-align:center;font-size:10px;color:#999CA3;font-weight:500;';
   loader.textContent = loadingText;
   gameGrid.appendChild(loader);
 
@@ -600,7 +598,7 @@ function buildPlatformBar() {
     const btn = document.createElement('button');
     btn.className = `pbar-chip ${p.cls}` + (activeFilters.has(p.key) ? ' active' : '');
     btn.innerHTML = `<span class="dot"></span>${p.label}`;
-    btn.onclick = () => toggleFilterKey(p.key);
+    btn.onclick = () => toggleSet(activeFilters, p.key);
     bar.appendChild(btn);
   });
 
@@ -612,13 +610,11 @@ function buildPlatformBar() {
   const anticipatedBtn = document.createElement('button');
   anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (activeFilters.has('anticipated') ? ' active' : '');
   anticipatedBtn.innerHTML = `<span class="dot"></span>Anticipated`;
-  anticipatedBtn.onclick = () => toggleFilterKey('anticipated');
+  anticipatedBtn.onclick = () => toggleSet(activeFilters, 'anticipated');
   bar.appendChild(anticipatedBtn);
 
   const catWrap = document.createElement('div');
   catWrap.className = 'cat-wrap';
-  catWrap.style.marginLeft = 'auto';
-
   const catBtn = document.createElement('button');
   catBtn.className = 'pbar-chip cat' + (activeCats.size > 0 ? ' active' : '');
   catBtn.id = 'catBtn';
@@ -635,7 +631,7 @@ function buildPlatformBar() {
     const chip = document.createElement('button');
     chip.className = 'cat-chip' + (activeCats.has(cat) ? ' active' : '');
     chip.textContent = cat;
-    chip.onclick = (e) => { e.stopPropagation(); toggleCat(cat); };
+    chip.onclick = (e) => { e.stopPropagation(); toggleSet(activeCats, cat); };
     catGrid.appendChild(chip);
   });
 
@@ -864,18 +860,18 @@ function buildSideNav() {
   label.textContent = 'W1/D1';
   inner.appendChild(label);
 
+  function resetTick(i) {
+    const el = document.getElementById('sn-tick-' + i);
+    if (el) { el.style.width = (i % 7 === 0 ? 18 : 10) + 'px'; el.style.height = '1.5px'; el.style.background = '#292B31'; }
+  }
   function setActiveDay(idx) {
     idx = Math.max(0, Math.min(totalDays - 1, idx));
-    if (currentIdx >= 0) {
-      const old = document.getElementById('sn-tick-' + currentIdx);
-      if (old) { const w = currentIdx % 7 === 0; old.style.width = (w ? 18 : 10) + 'px'; old.style.height = '1.5px'; old.style.background = '#292B31'; }
-    }
+    if (currentIdx >= 0) resetTick(currentIdx);
     currentIdx = idx;
     const tick = document.getElementById('sn-tick-' + idx);
     if (tick) { tick.style.width = '28px'; tick.style.height = '2.5px'; tick.style.background = '#ffffff'; }
-    const week = Math.floor(idx / 7) + 1;
     label.style.top = (idx * tickSpacing) + 'px';
-    label.textContent = `W${week}/D${idx + 1}`;
+    label.textContent = `W${Math.floor(idx / 7) + 1}/D${idx + 1}`;
   }
 
   setActiveDay(0);
@@ -903,6 +899,7 @@ function buildSideNav() {
 
 // Init
 document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' 2026';
+document.getElementById('searchInput').addEventListener('input', onSearchInput);
 buildPlatformBar();
 buildMonthNav();
 setupMonthSwipe();
