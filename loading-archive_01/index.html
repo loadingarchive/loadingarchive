@@ -82,6 +82,7 @@ button, select, input { font-family: inherit; }
 #darkVeil {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
+  display: block;
   pointer-events: none;
 }
 .tagline {
@@ -999,46 +1000,41 @@ loadGames(activeMonth);
   const ctx    = canvas.getContext('2d');
 
   function resize() {
-    canvas.width  = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const W = canvas.parentElement.offsetWidth  || window.innerWidth;
+    const H = canvas.parentElement.offsetHeight || 600;
+    canvas.width  = W;
+    canvas.height = H;
   }
   window.addEventListener('resize', resize, { passive: true });
-  resize();
 
-  // Each layer: a dark flowing "curtain" shape
+  // Each layer: speed, phase offset, vertical center (0–1), wave amplitude, colors
   const layers = [
-    { speed: 0.00014, phase: 0.0, yBase: 0.92, amp: 0.07, opacity: 0.95 },
-    { speed: 0.00019, phase: 1.8, yBase: 0.76, amp: 0.10, opacity: 0.80 },
-    { speed: 0.00016, phase: 3.5, yBase: 0.62, amp: 0.12, opacity: 0.65 },
-    { speed: 0.00023, phase: 0.9, yBase: 0.48, amp: 0.11, opacity: 0.50 },
-    { speed: 0.00011, phase: 2.6, yBase: 0.33, amp: 0.09, opacity: 0.35 },
-    { speed: 0.00027, phase: 4.2, yBase: 0.18, amp: 0.08, opacity: 0.20 },
+    { speed: 0.00014, phase: 0.0, yBase: 0.95, amp: 0.06, r: 30, g: 28, b: 50 },
+    { speed: 0.00020, phase: 1.8, yBase: 0.80, amp: 0.10, r: 25, g: 22, b: 44 },
+    { speed: 0.00016, phase: 3.5, yBase: 0.65, amp: 0.12, r: 20, g: 18, b: 38 },
+    { speed: 0.00024, phase: 0.9, yBase: 0.50, amp: 0.11, r: 16, g: 14, b: 32 },
+    { speed: 0.00012, phase: 2.6, yBase: 0.35, amp: 0.10, r: 13, g: 12, b: 26 },
+    { speed: 0.00028, phase: 4.2, yBase: 0.18, amp: 0.08, r: 10, g: 10, b: 22 },
   ];
 
-  // Smooth organic wave using multiple sine harmonics
   function yAt(x, t, layer) {
-    const p = layer.phase;
-    const a = layer.amp;
+    const p = layer.phase, a = layer.amp;
     return layer.yBase
-      + Math.sin(t + p + x * 2.8) * a * 0.55
+      + Math.sin(t + p + x * 2.8)         * a * 0.55
       + Math.sin(t * 1.4 + p * 1.2 + x * 4.9) * a * 0.30
       + Math.sin(t * 0.6 + p * 0.5 + x * 1.6) * a * 0.15;
   }
 
   function drawLayer(layer, t) {
     const W = canvas.width, H = canvas.height;
-    const segs = 10;
+    const segs = 12;
+    const pts  = Array.from({ length: segs + 1 }, (_, i) => ({
+      x: (i / segs) * W,
+      y: H * yAt(i / segs, t, layer),
+    }));
 
     ctx.beginPath();
     ctx.moveTo(0, H);
-
-    // Build wave points
-    const pts = Array.from({ length: segs + 1 }, (_, i) => ({
-      x: (i / segs) * W,
-      y: H * yAt(i / segs, t * layer.speed * 1000, layer),
-    }));
-
-    // Smooth curve through points using midpoint quadratics
     ctx.lineTo(pts[0].x, pts[0].y);
     for (let i = 0; i < pts.length - 1; i++) {
       const mx = (pts[i].x + pts[i + 1].x) / 2;
@@ -1048,37 +1044,46 @@ loadGames(activeMonth);
     ctx.lineTo(W, H);
     ctx.closePath();
 
-    // Gradient from transparent at wave-top to dark at bottom
-    const topY = H * (layer.yBase - layer.amp - 0.05);
+    const { r, g, b } = layer;
+    const topY = H * (layer.yBase - layer.amp - 0.08);
     const grad = ctx.createLinearGradient(0, topY, 0, H);
-    grad.addColorStop(0,   `rgba(14,16,21,0)`);
-    grad.addColorStop(0.3, `rgba(12,13,19,${layer.opacity * 0.5})`);
-    grad.addColorStop(1,   `rgba(10,11,17,${layer.opacity})`);
+    grad.addColorStop(0,   `rgba(${r},${g},${b},0)`);
+    grad.addColorStop(0.4, `rgba(${r},${g},${b},0.55)`);
+    grad.addColorStop(1,   `rgba(${r},${g},${b},0.92)`);
     ctx.fillStyle = grad;
     ctx.fill();
   }
 
   function render(ts) {
     const W = canvas.width, H = canvas.height;
+    if (!W || !H) { requestAnimationFrame(render); return; }
 
-    // Base fill
     ctx.fillStyle = '#0E1015';
     ctx.fillRect(0, 0, W, H);
 
-    // Paint layers — lightest first so darker ones sit on top
-    for (let i = layers.length - 1; i >= 0; i--) drawLayer(layers[i], ts);
+    // Subtle blue-purple base glow from top
+    const baseGrad = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+    baseGrad.addColorStop(0, 'rgba(30,25,60,0.5)');
+    baseGrad.addColorStop(1, 'rgba(14,16,21,0)');
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, W, H);
 
-    // Edge vignette for depth
-    const vig = ctx.createRadialGradient(W * 0.5, H * 0.4, H * 0.1, W * 0.5, H * 0.4, W * 0.75);
+    // Scale timestamp so layers move at correct speed
+    const t = ts * 0.001;
+    for (let i = layers.length - 1; i >= 0; i--) drawLayer(layers[i], t * layers[i].speed * 1000);
+
+    // Vignette
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.3, H * 0.05, W * 0.5, H * 0.3, W * 0.8);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.6)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
 
     requestAnimationFrame(render);
   }
 
-  requestAnimationFrame(render);
+  // Defer start so layout is computed
+  requestAnimationFrame(() => { resize(); requestAnimationFrame(render); });
 }());
 
 // Lift month nav above footer when footer enters viewport
