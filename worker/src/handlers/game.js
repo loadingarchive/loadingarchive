@@ -186,7 +186,7 @@ body {
 .nav-right a:hover { color: #fff; }
 
 /* ── CAROUSEL ─────────────────────────────────────── */
-.carousel { position: relative; width: 100%; overflow: hidden; user-select: none; }
+.carousel { position: relative; width: 100%; overflow: hidden; user-select: none; margin-top: 82px; }
 .car-track { display: flex; gap: 10px; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
 .car-slide {
   flex: 0 0 min(1020px, 100vw); width: min(1020px, 100vw); aspect-ratio: 16/9;
@@ -230,6 +230,7 @@ body {
   max-width: 1020px; margin: 0 auto;
   padding: 36px 20px 80px;
 }
+.main-grid.no-carousel { padding-top: 100px; }
 
 /* Meta row */
 .meta-row {
@@ -287,7 +288,20 @@ body {
   margin-bottom: 16px; gap: 16px;
 }
 .price-label { font-size: 10px; color: var(--dim); font-weight: 500; margin-bottom: 5px; }
+.price-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .price-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.cur-toggle {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,0.06); border-radius: 8px; padding: 3px;
+}
+.cur-btn {
+  font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.35); background: none; border: none;
+  padding: 4px 9px; border-radius: 5px; cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.cur-btn:hover { color: rgba(255,255,255,0.7); }
+.cur-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
 .steam-cta {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--blue); color: #fff;
@@ -393,7 +407,7 @@ ${totalSlides > 0 ? `
 </div>` : ''}
 
 <!-- MAIN CONTENT — max-width 1020px -->
-<div class="main-grid">
+<div class="main-grid${totalSlides === 0 ? ' no-carousel' : ''}">
 
   <div class="meta-row">
     <a href="/" class="back-link">
@@ -412,7 +426,17 @@ ${totalSlides > 0 ? `
   ${(g.price || g.steam) ? `
   <div class="price-card">
     <div>
-      ${g.price ? `<div class="price-label">Base price</div><div class="price-value">${esc(g.price)}</div>` : ''}
+      ${g.price ? `
+      <div class="price-label">Base price</div>
+      <div class="price-row">
+        <div class="price-value" id="priceVal">${esc(g.price)}</div>
+        ${g.price !== 'Free' ? `
+        <div class="cur-toggle" role="group" aria-label="Currency">
+          <button class="cur-btn" data-cur="USD">USD</button>
+          <button class="cur-btn" data-cur="EUR">EUR</button>
+          <button class="cur-btn" data-cur="GBP">GBP</button>
+        </div>` : ''}
+      </div>` : ''}
     </div>
     ${g.steam ? `<a class="steam-cta" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>` : ''}
   </div>` : ''}
@@ -444,6 +468,36 @@ ${totalSlides > 0 ? `
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
+
+// Currency toggle
+(function () {
+  const priceRaw = ${JSON.stringify(g.price || null)};
+  const priceEl  = document.getElementById('priceVal');
+  const btns     = document.querySelectorAll('.cur-btn');
+  if (!priceEl || !btns.length) return;
+
+  // Parse USD amount from stored price string (e.g. "$19.99")
+  const usdAmount = priceRaw ? parseFloat(priceRaw.replace(/[^0-9.]/g, '')) : NaN;
+  if (isNaN(usdAmount)) return;
+
+  const RATES   = { USD: 1, EUR: 0.91, GBP: 0.78 };
+  const SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
+
+  function applyRate(cur) {
+    const amt = (usdAmount * RATES[cur]).toFixed(2);
+    priceEl.textContent = SYMBOLS[cur] + amt;
+    btns.forEach(b => b.classList.toggle('active', b.dataset.cur === cur));
+    try { localStorage.setItem('la_currency', cur); } catch {}
+  }
+
+  btns.forEach(btn => btn.addEventListener('click', () => applyRate(btn.dataset.cur)));
+
+  // Restore saved preference, fall back to USD
+  let saved = 'USD';
+  try { saved = localStorage.getItem('la_currency') || 'USD'; } catch {}
+  if (!RATES[saved]) saved = 'USD';
+  applyRate(saved);
+}());
 
 // Carousel — infinite peek carousel (adjacent slides visible on sides)
 (function () {
