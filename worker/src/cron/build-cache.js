@@ -2,6 +2,7 @@ import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
 import { fetchSteamAppDetails, findExistingSteamAppId } from '../pipeline/steam.js';
+import { mapWithConcurrency } from '../pipeline/utils.js';
 import {
   queryActiveMonthGames,
   queryActiveTbaGames,
@@ -141,6 +142,13 @@ export async function runDailyCron(env) {
   } catch (e) {
     console.error('  Backfill steam_appid mislukt —', e.message);
   }
+
+  // Dagelijkse prijsupdate: kortingen en actuele prijzen ophalen van Steam
+  try {
+    await updateDailyPrices(env);
+  } catch (e) {
+    console.error('  Prijsupdate mislukt —', e.message);
+  }
 }
 
 async function generateSitemap(env) {
@@ -270,6 +278,53 @@ async function backfillSteamAppids(rawgKey, env) {
   }
 
   if (fixed) console.log(`  Backfill: ${fixed} games bijgewerkt`);
+}
+
+/**
+ * Haalt dagelijks de actuele prijs + korting op van Steam voor alle actieve games.
+ * Slaat discount_percent en price_initial op in raw_json + KV.
+ */
+async function updateDailyPrices(env) {
+  const { results } = await env.GAMES_D1
+    .prepare(`SELECT slug, steam_appid, raw_json FROM games
+              WHERE status = 'active' AND steam_appid IS NOT NULL`)
+    .all();
+
+  if (!results.length) return;
+  console.log(`  Prijsupdate: ${results.length} games controleren`);
+
+  let updated = 0;
+  await mapWithConcurrency(results, 5, async (row) => {
+    const app = await fetchSteamAppDetails(row.steam_appid);
+    if (!app) return;
+
+    const po              = app.price_overview;
+    const discount        = po?.discount_percent ?? 0;
+    const priceInitial    = po?.initial_formatted ?? null;
+    const priceFinal      = app.is_free ? 'Free' : (po?.final_formatted ?? null);
+
+    const entry = JSON.parse(row.raw_json || '{}');
+    const changed =
+      entry.discount_percent !== discount ||
+      entry.price_initial    !== priceInitial ||
+      entry.price            !== priceFinal;
+
+    if (!changed) return;
+
+    entry.discount_percent = discount;
+    entry.price_initial    = priceInitial;
+    entry.price            = priceFinal;
+
+    const json = JSON.stringify(entry);
+    await env.GAMES_D1
+      .prepare(`UPDATE games SET price = ?1, raw_json = ?2, last_updated = ?3 WHERE slug = ?4`)
+      .bind(priceFinal ?? null, json, new Date().toISOString(), row.slug)
+      .run();
+    await env.GAMES_KV.put(`game:${row.slug}`, json);
+    updated++;
+  });
+
+  console.log(`  Prijsupdate: ${updated} games bijgewerkt`);
 }
 
 export { makeMonthEntry };

@@ -285,7 +285,12 @@ button, select, input { font-family: inherit; }
   white-space: nowrap; transition: color 0.15s;
 }
 .bekijk-btn:hover { color: #fff; }
-
+.discount-badge {
+  flex-shrink: 0; font-size: 9px; font-weight: 700;
+  background: rgba(76,175,80,0.18); color: #4CAF50;
+  border: 1px solid rgba(76,175,80,0.35);
+  border-radius: 4px; padding: 2px 5px;
+}
 
 /* AD CARD */
 .ad-card {
@@ -503,6 +508,8 @@ function mapGame(g, idx) {
     trailer: g.trailer || null,
     steam: g.steam || null,
     price: g.price || null,
+    price_initial: g.price_initial || null,
+    discount_percent: g.discount_percent || 0,
     cover: g.cover || null,
     rerelease: g.rerelease || null,
     slug: g.slug || null,
@@ -822,7 +829,10 @@ function buildCard(g) {
       <div class="ptags">${ptagsHtml}</div>
       <div class="card-footer">
         <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
-        ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${g.discount_percent > 0 ? `<span class="discount-badge">-${g.discount_percent}%</span>` : ''}
+          ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
+        </div>
       </div>
     </div>
   `;

@@ -303,6 +303,11 @@ body {
 .price-label { font-size: 10px; color: var(--dim); font-weight: 500; margin-bottom: 5px; }
 .price-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .price-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.price-original { font-size: 13px; color: var(--dim); text-decoration: line-through; margin-right: 2px; }
+.price-discount-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 5px;
+  background: rgba(76,175,80,0.18); color: #4CAF50; border: 1px solid rgba(76,175,80,0.35);
+}
 .cur-toggle {
   display: flex; align-items: center; gap: 2px;
   background: rgba(41,43,49,0.6); border-radius: 8px; padding: 3px;
@@ -440,9 +445,11 @@ ${totalSlides > 0 ? `
   <div class="price-card">
     <div>
       ${g.price ? `
-      <div class="price-label">Base price</div>
+      <div class="price-label">${g.discount_percent > 0 ? 'Sale price' : 'Base price'}</div>
       <div class="price-row">
+        ${g.discount_percent > 0 && g.price_initial ? `<span class="price-original">${esc(g.price_initial)}</span>` : ''}
         <div class="price-value" id="priceVal">${esc(g.price)}</div>
+        ${g.discount_percent > 0 ? `<span class="price-discount-badge">-${g.discount_percent}%</span>` : ''}
         ${g.price !== 'Free' ? `
         <div class="cur-toggle" role="group" aria-label="Currency">
           <button class="cur-btn" data-cur="USD">USD</button>
