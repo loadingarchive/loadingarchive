@@ -9,7 +9,8 @@
 	// route it doesn't handle itself.
 	"assets": {
 		"directory": "./loading-archive_01",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		"run_worker_first": true
 	},
 	// KV namespace for pre-built game data.
 	// Keys: "games:2026-01" … "games:2026-12", "games:tba", "config:extra-games"
