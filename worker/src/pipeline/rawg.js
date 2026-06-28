@@ -36,7 +36,25 @@ function mapRawgGame(g, idx, idPrefix) {
   };
 }
 
-async function enrichRawgGameWithSteam(rg) {
+async function enrichRawgGameWithSteam(rg, rawgKey) {
+  // If RAWG list didn't include a Steam URL, try the dedicated stores endpoint
+  if (!rg.steam && rawgKey) {
+    const rawgNumId = rg.id.replace(/^rawg(-tba)?-/, '');
+    if (rawgNumId && /^\d+$/.test(rawgNumId)) {
+      try {
+        const r = await fetch(
+          `https://api.rawg.io/api/games/${rawgNumId}/stores?key=${rawgKey}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const steamEntry = (data.results || []).find(s => s.store_id === 1);
+          const m = steamEntry?.url?.match(/\/app\/(\d+)/);
+          if (m) rg = { ...rg, steam: m[1], trailer: rg.trailer || `steam:${m[1]}` };
+        }
+      } catch { /* silently skip */ }
+    }
+  }
   if (!rg.steam) return rg;
   const app = await fetchSteamAppDetails(rg.steam);
   if (!app) return rg;
@@ -95,7 +113,7 @@ export async function fetchRawgGames(rawgKey, dateFrom, dateTo) {
     .map((g, idx) => mapRawgGame(g, idx, "rawg"))
     .filter(Boolean);
 
-  const enriched = await mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+  const enriched = await mapWithConcurrency(games, 8, rg => enrichRawgGameWithSteam(rg, rawgKey));
   return enriched.filter(Boolean); // null = gedropped door Steam 18+ check
 }
 
@@ -114,7 +132,7 @@ export async function fetchRawgTbaGames(rawgKey) {
     .map((g, idx) => mapRawgGame(g, idx, "rawg-tba"))
     .filter(Boolean);
 
-  const enriched = await mapWithConcurrency(games, 8, enrichRawgGameWithSteam);
+  const enriched = await mapWithConcurrency(games, 8, rg => enrichRawgGameWithSteam(rg, rawgKey));
   return enriched.filter(Boolean);
 }
 

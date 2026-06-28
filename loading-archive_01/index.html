@@ -5,7 +5,7 @@
 <link rel="canonical" href="https://www.loadingarchive.com/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loading Archive</title>
-<meta name="description" content="Bekijk releasedatums van alle grote aankomende games op elk platform — PC, PlayStation, Xbox en Switch.">
+<meta name="description" content="Browse release dates for all major upcoming games on every platform — PC, PlayStation, Xbox and Switch.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,13 +23,13 @@
 <style>
 :root {
   --bg:         #0E1015;
-  --surface:    #13151B;
-  --border:     #1F2127;
-  --blue:       #66A8E0;
-  --blue-hover: #8FC4F5;
-  --gold:       #CFAF5A;
-  --dim:        rgba(255,255,255,0.35);
-  --dimmer:     rgba(255,255,255,0.15);
+  --surface:    #181A20;
+  --border:     #292B31;
+  --blue:       #1A9FFF;
+  --blue-hover: #5BBFFF;
+  --gold:       #C89856;
+  --dim:        #999CA3;
+  --dimmer:     rgba(153,156,163,0.35);
   --pill:       20px;
   --xs:         10px;
 }
@@ -41,6 +41,8 @@ body {
   background: var(--bg);
   color: #fff;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   -webkit-font-smoothing: antialiased;
 }
 button, select, input { font-family: inherit; }
@@ -65,7 +67,7 @@ button, select, input { font-family: inherit; }
 .logo svg { width: 22px; height: 22px; flex-shrink: 0; }
 .logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
-.nav-right a { font-size: var(--xs); color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
+.nav-right a { font-size: var(--xs); color: #999CA3; text-decoration: none; font-weight: 500; }
 .nav-right a:hover { color: #fff; }
 
 /* HERO */
@@ -103,6 +105,8 @@ button, select, input { font-family: inherit; }
   position: relative;
   display: flex;
   gap: 24px;
+  flex: 1;
+  width: 100%;
 }
 
 /* SIDE NAV */
@@ -117,13 +121,13 @@ button, select, input { font-family: inherit; }
 .side-nav-inner:active { cursor: grabbing; }
 .sn-label {
   position: absolute; right: 36px;
-  font-size: var(--xs); color: rgba(255,255,255,0.9); font-weight: 500;
+  font-size: var(--xs); color: #fff; font-weight: 500;
   white-space: nowrap;
   display: flex; align-items: center; gap: 6px;
   transform: translateY(-50%); transition: top 0.08s ease;
   pointer-events: none;
 }
-.sn-label::after { content: ''; display: block; width: 10px; height: 1px; background: rgba(255,255,255,0.7); }
+.sn-label::after { content: ''; display: block; width: 10px; height: 1px; background: var(--border); }
 
 /* CONTENT AREA */
 .content-area { flex: 1; min-width: 0; }
@@ -139,22 +143,21 @@ button, select, input { font-family: inherit; }
   color: #fff; font-size: var(--xs); outline: none;
   transition: border-color 0.15s;
 }
-.list-search::placeholder { color: rgba(255,255,255,0.28); }
-.list-search:focus { border-color: rgba(255,255,255,0.2); }
+.list-search::placeholder { color: rgba(153,156,163,0.5); }
+.list-search:focus { border-color: var(--border); }
 
 .platform-bar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-bottom: 20px;
 }
-.pbar-label { font-size: var(--xs); color: var(--dim); font-weight: 500; margin-right: 4px; }
 .pbar-chip {
   font-size: var(--xs); font-weight: 600; padding: 4px 12px;
   border-radius: var(--pill); cursor: pointer; border: 1.5px solid transparent;
-  color: var(--dim); background: rgba(255,255,255,0.05);
+  color: var(--dim); background: rgba(41,43,49,0.3);
   transition: color 0.15s, background 0.15s, border-color 0.15s;
   user-select: none; display: flex; align-items: center; gap: 5px;
 }
-.pbar-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); transition: background 0.15s, border-color 0.15s; }
+.pbar-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid rgba(153,156,163,0.4); transition: background 0.15s, border-color 0.15s; }
 .pbar-chip.active { color: #fff; }
 .pbar-chip.active .dot { border-color: transparent; }
 .pbar-chip.active.PC  { background: rgba(90,93,100,0.3); border-color: #5A5D64; }
@@ -172,10 +175,10 @@ button, select, input { font-family: inherit; }
 .pbar-chip.active.XBO .dot,
 .pbar-chip.active.XSX .dot { background: #2CA243; }
 .pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
-.pbar-chip.active.ANTICIPATED { background: rgba(207,175,90,0.2); border-color: var(--gold); }
-.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #B98F1D, var(--gold)); }
-.pbar-chip.cat { color: var(--dim); border-color: rgba(255,255,255,0.12); }
-.pbar-chip.cat.active { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+.pbar-chip.active.ANTICIPATED { background: rgba(144,116,62,0.2); border-color: var(--gold); }
+.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #90743E, #C89856); }
+.pbar-chip.cat { color: var(--dim); border-color: var(--border); }
+.pbar-chip.cat.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
 /* GAME GRID */
 .game-grid { display: grid; grid-template-columns: repeat(3, 330px); gap: 15px; }
@@ -191,27 +194,27 @@ button, select, input { font-family: inherit; }
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
 .card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-date-text span { color: rgba(255,255,255,0.65); }
+.card-date-text span { color: #fff; }
 .card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .card-action-btn {
-  background: none; border: none; color: rgba(255,255,255,0.3);
+  background: none; border: none; color: #999CA3;
   cursor: pointer; padding: 0; font-size: 13px; line-height: 1;
   transition: color 0.15s;
   position: relative;
 }
-.card-action-btn:hover        { color: rgba(255,255,255,0.75); }
+.card-action-btn:hover        { color: #fff; }
 .card-action-anticipated      { color: var(--gold); }
-.card-action-anticipated:hover { color: #E8CC7A; }
+.card-action-anticipated:hover { color: #C89856; }
 .card-action-rerelease        { color: var(--blue); }
 .card-action-rerelease:hover  { color: var(--blue-hover); }
 
 /* Global fixed tooltip — rendered outside any overflow:hidden context */
 #site-tooltip {
   position: fixed;
-  background: #16181f;
+  background: #181A20;
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: rgba(255,255,255,0.75);
+  color: #999CA3;
   font-size: 10px; font-weight: 500; font-family: 'Inter', sans-serif;
   letter-spacing: 0.01em;
   padding: 4px 9px;
@@ -227,7 +230,7 @@ button, select, input { font-family: inherit; }
 /* GAME CARD */
 .game-card {
   background: var(--surface); border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(41,43,49,0.5);
   transition: border-color 0.15s;
   display: flex; flex-direction: column;
   padding: 15px; gap: 10px;
@@ -235,14 +238,14 @@ button, select, input { font-family: inherit; }
   overflow: hidden; position: relative;
   cursor: pointer;
 }
-.game-card:hover { border-color: #2c2f3a; z-index: 2; }
+.game-card:hover { border-color: var(--border); z-index: 2; }
 .card-title a { color: inherit; text-decoration: none; }
 .card-title a:hover { color: var(--blue); }
 
 .card-cover {
   width: 100%; aspect-ratio: 300/140;
   overflow: hidden; flex-shrink: 0; border-radius: 5px;
-  background: linear-gradient(135deg, #1a1d27 0%, #232630 100%);
+  background: var(--surface);
 }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -260,8 +263,8 @@ button, select, input { font-family: inherit; }
 .ptag {
   font-size: 8px; font-weight: 600; padding: 2px 8px;
   border-radius: var(--pill);
-  color: rgba(255,255,255,0.75);
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+  color: #999CA3;
+  background: rgba(153,156,163,0.08); border: 1px solid var(--border);
 }
 
 .card-footer {
@@ -269,14 +272,14 @@ button, select, input { font-family: inherit; }
   margin-top: auto; gap: 6px;
 }
 .card-genre {
-  font-size: var(--xs); color: rgba(255,255,255,0.45);
+  font-size: var(--xs); color: #999CA3;
   display: flex; align-items: center; gap: 4px;
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.card-genre .mlabel { color: rgba(255,255,255,0.25); }
+.card-genre .mlabel { color: rgba(153,156,163,0.5); }
 .bekijk-btn {
   flex-shrink: 0; font-size: var(--xs); font-weight: 500;
-  color: rgba(255,255,255,0.75); text-decoration: none;
+  color: #999CA3; text-decoration: none;
   display: inline-flex; align-items: center; gap: 4px;
   white-space: nowrap; transition: color 0.15s;
 }
@@ -295,11 +298,11 @@ button, select, input { font-family: inherit; }
 .empty-state {
   grid-column: 1 / -1;
   padding: 48px 24px; text-align: center;
-  border: 1px dashed rgba(255,255,255,0.1); border-radius: 18px; display: none;
+  border: 1px dashed var(--border); border-radius: 18px; display: none;
 }
 .empty-state.show { display: block; }
-.empty-state p    { font-size: var(--xs); color: rgba(255,255,255,0.4); font-weight: 500; margin-bottom: 4px; }
-.empty-state span { font-size: var(--xs); color: rgba(255,255,255,0.25); }
+.empty-state p    { font-size: var(--xs); color: #999CA3; font-weight: 500; margin-bottom: 4px; }
+.empty-state span { font-size: var(--xs); color: rgba(153,156,163,0.55); }
 
 /* CATEGORY DROPDOWN */
 .cat-wrap { position: relative; }
@@ -316,11 +319,11 @@ button, select, input { font-family: inherit; }
   font-size: var(--xs); font-weight: 500; padding: 4px 10px;
   border-radius: var(--pill); cursor: pointer;
   border: 1.5px solid var(--dimmer);
-  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);
+  background: rgba(41,43,49,0.3); color: #999CA3;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
   user-select: none;
 }
-.cat-chip.active { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.35); }
+.cat-chip.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
 /* MONTH NAV */
 .month-nav-wrap {
@@ -331,9 +334,9 @@ button, select, input { font-family: inherit; }
 .month-nav-inner {
   max-width: 1020px; margin: 0 auto;
   display: flex; align-items: center;
-  background: rgba(24,26,32,0.94); backdrop-filter: blur(12px);
+  background: rgba(24,26,32,0.96); backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(41,43,49,0.9);
   border-radius: 100px; padding: 15px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.4);
 }
@@ -344,11 +347,11 @@ button, select, input { font-family: inherit; }
 }
 .months::-webkit-scrollbar { display: none; }
 .mnav {
-  font-size: var(--xs); color: rgba(255,255,255,0.3); padding: 0;
+  font-size: var(--xs); color: #999CA3; padding: 0;
   border-radius: 0; cursor: pointer; border: none; background: transparent;
   transition: color 0.15s; font-weight: 500; line-height: 1; flex-shrink: 0;
 }
-.mnav:hover { color: rgba(255,255,255,0.7); }
+.mnav:hover { color: #fff; }
 .mnav.active { color: #fff; }
 .month-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; flex-shrink: 0; }
 
@@ -373,7 +376,7 @@ button, select, input { font-family: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
 }
-.footer-copy { font-size: 10px; color: rgba(255,255,255,0.22); }
+.footer-copy { font-size: 10px; color: #999CA3; }
 </style>
 </head>
 <body>
@@ -392,6 +395,7 @@ button, select, input { font-family: inherit; }
         </a>
         <div class="nav-right">
           <a href="#">2026</a>
+          <a href="/trending">Trending</a>
           <a href="mailto:loadingarchive@outlook.com">Contact</a>
         </div>
       </div>
@@ -403,7 +407,7 @@ button, select, input { font-family: inherit; }
     <h1>Discover the release dates for all the major upcoming video games across every platform</h1>
     <div class="month-pill" id="heroPill">June 2026</div>
     <div class="tagline-arrow">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999CA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </div>
   </div>
 </div>
@@ -419,7 +423,6 @@ button, select, input { font-family: inherit; }
     </div>
 
     <div class="platform-bar" id="platformBar">
-      <span class="pbar-label">Hardware</span>
     </div>
 
     <div class="game-grid" id="gameGrid">
@@ -559,7 +562,7 @@ async function fetchAndRenderGames(url, loadingText) {
 
   const loader = document.createElement('div');
   loader.className = 'loading-row';
-  loader.style.cssText = 'grid-column:1/-1;padding:48px 24px;text-align:center;font-size:10px;color:rgba(255,255,255,0.3);font-weight:500;';
+  loader.style.cssText = 'grid-column:1/-1;padding:48px 24px;text-align:center;font-size:10px;color:#999CA3;font-weight:500;';
   loader.textContent = loadingText;
   gameGrid.appendChild(loader);
 
@@ -590,7 +593,7 @@ async function loadTba() {
 
 function buildPlatformBar() {
   const bar = document.getElementById('platformBar');
-  bar.innerHTML = '<span class="pbar-label">Hardware</span>';
+  bar.innerHTML = '';
 
   PLATFORM_DEFS.forEach(p => {
     const btn = document.createElement('button');
@@ -822,7 +825,7 @@ function buildCard(g) {
       <div class="ptags">${ptagsHtml}</div>
       <div class="card-footer">
         <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
-        ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">Bekijk game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
+        ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
       </div>
     </div>
   `;
@@ -849,7 +852,7 @@ function buildSideNav() {
     const isWeekStart = i % 7 === 0;
     const tick = document.createElement('div');
     tick.id = 'sn-tick-' + i;
-    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:rgba(255,255,255,0.2);transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
+    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:#292B31;transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
     inner.appendChild(tick);
   }
 
@@ -864,7 +867,7 @@ function buildSideNav() {
     idx = Math.max(0, Math.min(totalDays - 1, idx));
     if (currentIdx >= 0) {
       const old = document.getElementById('sn-tick-' + currentIdx);
-      if (old) { const w = currentIdx % 7 === 0; old.style.width = (w ? 18 : 10) + 'px'; old.style.height = '1.5px'; old.style.background = 'rgba(255,255,255,0.2)'; }
+      if (old) { const w = currentIdx % 7 === 0; old.style.width = (w ? 18 : 10) + 'px'; old.style.height = '1.5px'; old.style.background = '#292B31'; }
     }
     currentIdx = idx;
     const tick = document.getElementById('sn-tick-' + idx);

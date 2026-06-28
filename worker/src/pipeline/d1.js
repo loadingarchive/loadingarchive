@@ -24,7 +24,7 @@ export async function upsertGameToD1(entry, env) {
       release_date      = excluded.release_date,
       platforms         = excluded.platforms,
       cover_image       = excluded.cover_image,
-      steam_appid       = excluded.steam_appid,
+      steam_appid       = COALESCE(excluded.steam_appid, steam_appid),
       short_description = excluded.short_description,
       price             = excluded.price,
       metacritic        = excluded.metacritic,

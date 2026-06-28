@@ -18,9 +18,10 @@ export async function handleTrailer(request) {
     }
 
     const movie = app.movies[0];
-    // Steam dropped flat mp4 for newer trailers; fall back to HLS when needed.
-    const mp4 = movie?.mp4?.max || movie?.mp4?.['480'] || null;
-    const hls = movie?.hls_h264 || null;
+    // Prefer highest-quality source: mp4.max > webm.max > fallback to 480p.
+    // For HLS prefer HEVC (H.265) over H.264 when available — better quality per bit.
+    const mp4 = movie?.mp4?.max || movie?.webm?.max || movie?.mp4?.['480'] || null;
+    const hls = movie?.hls_hevc || movie?.hls_h264 || null;
 
     if (!mp4 && !hls) {
       return Response.json({ error: 'No playable trailer source' }, { status: 404 });

@@ -1,5 +1,7 @@
 import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
+import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
+import { fetchSteamAppDetails, findExistingSteamAppId } from '../pipeline/steam.js';
 import {
   queryActiveMonthGames,
   queryActiveTbaGames,
@@ -124,6 +126,21 @@ export async function runDailyCron(env) {
   } catch (e) {
     console.error('  Sitemap: generatie mislukt —', e.message);
   }
+
+  // Trending: dagelijkse SteamSpy + Steam real-time CCU snapshot
+  try {
+    const { total, steam, fallback } = await fetchAndStoreTrending(env);
+    console.log(`  Trending: ${total} games — ${steam} via Steam API, ${fallback} via SteamSpy fallback`);
+  } catch (e) {
+    console.error('  Trending mislukt —', e.message);
+  }
+
+  // Backfill: geef games zonder Steam appid nog een kans (max 15 per dag)
+  try {
+    await backfillSteamAppids(rawgKey, env);
+  } catch (e) {
+    console.error('  Backfill steam_appid mislukt —', e.message);
+  }
 }
 
 async function generateSitemap(env) {
@@ -167,6 +184,92 @@ export async function seedMonths(env, months) {
       console.error(`  ${month.label}: seed mislukt —`, e.message);
     }
   }
+}
+
+/**
+ * Backfill: zoek Steam appid voor actieve games die er nog geen hebben.
+ * Probeert RAWG /stores endpoint eerst, daarna Steam zoekfunctie op naam.
+ * Max 15 per run zodat de cron niet te lang loopt.
+ */
+async function backfillSteamAppids(rawgKey, env) {
+  const { results } = await env.GAMES_D1
+    .prepare(`SELECT slug, name, rawg_id, raw_json FROM games
+              WHERE status='active' AND steam_appid IS NULL AND rawg_id IS NOT NULL
+              ORDER BY last_seen DESC LIMIT 15`)
+    .all();
+
+  if (!results.length) return;
+  console.log(`  Backfill steam_appid: ${results.length} candidates`);
+
+  let fixed = 0;
+  for (const row of results) {
+    const rawgNumId = row.rawg_id?.replace(/^rawg(-tba)?-/, '');
+    let steamAppid  = null;
+
+    // Stap 1: RAWG stores endpoint
+    if (rawgNumId && /^\d+$/.test(rawgNumId)) {
+      try {
+        const r = await fetch(
+          `https://api.rawg.io/api/games/${rawgNumId}/stores?key=${rawgKey}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const steamEntry = (data.results || []).find(s => s.store_id === 1);
+          const m = steamEntry?.url?.match(/\/app\/(\d+)/);
+          if (m) steamAppid = m[1];
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Stap 2: Steam store search op naam als fallback
+    if (!steamAppid) {
+      steamAppid = await findExistingSteamAppId(row.name);
+    }
+
+    if (!steamAppid) continue;
+
+    // Steam details ophalen voor cover, screenshots, etc.
+    const entry = JSON.parse(row.raw_json || '{}');
+    entry.steam   = steamAppid;
+    entry.trailer = entry.trailer || `steam:${steamAppid}`;
+
+    const app = await fetchSteamAppDetails(steamAppid);
+    if (app) {
+      entry.cover        = app.header_image || entry.cover;
+      entry.screenshots  = (app.screenshots || []).slice(0, 3).map(s => s.path_full);
+      if (!entry.short_description) entry.short_description = app.short_description || null;
+      if (!entry.dev) entry.dev = app.developers?.[0] || null;
+      if (!entry.price) entry.price = app.is_free ? 'Free' : (app.price_overview?.final_formatted || null);
+    }
+
+    const now  = new Date().toISOString();
+    const json = JSON.stringify(entry);
+    await env.GAMES_D1.prepare(`
+      UPDATE games SET
+        steam_appid       = ?1,
+        cover_image       = ?2,
+        screenshots       = ?3,
+        short_description = COALESCE(?4, short_description),
+        raw_json          = ?5,
+        last_updated      = ?6
+      WHERE slug = ?7
+    `).bind(
+      steamAppid,
+      entry.cover ?? null,
+      JSON.stringify(entry.screenshots || []),
+      entry.short_description ?? null,
+      json,
+      now,
+      row.slug,
+    ).run();
+
+    await env.GAMES_KV.put(`game:${row.slug}`, json);
+    console.log(`    → "${row.name}" appid ${steamAppid}`);
+    fixed++;
+  }
+
+  if (fixed) console.log(`  Backfill: ${fixed} games bijgewerkt`);
 }
 
 export { makeMonthEntry };

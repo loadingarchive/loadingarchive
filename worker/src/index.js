@@ -1,14 +1,21 @@
-import { handleGames }    from './handlers/games.js';
-import { handleTrailer }  from './handlers/trailer.js';
-import { handleGamePage } from './handlers/game.js';
+import { handleGames }        from './handlers/games.js';
+import { handleTrailer }      from './handlers/trailer.js';
+import { handleGamePage }     from './handlers/game.js';
+import { handleTrendingPage } from './handlers/trending.js';
 import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
 
 export default {
   async fetch(request, env, ctx) {
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    if (url.hostname === 'loadingarchive.com') {
+      url.hostname = 'www.loadingarchive.com';
+      return Response.redirect(url.toString(), 301);
+    }
+    const { pathname } = url;
 
     if (pathname === '/api/games')   return handleGames(request, env);
     if (pathname === '/api/trailer') return handleTrailer(request, env);
+    if (pathname === '/trending')    return handleTrendingPage(env);
 
     if (pathname.startsWith('/game/')) {
       const slug = pathname.slice(6).replace(/\/$/, '');

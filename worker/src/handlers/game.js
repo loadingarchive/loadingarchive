@@ -46,11 +46,11 @@ function notFound() {
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
     `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">` +
-    `<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',sans-serif;background:#0a0c10;color:#fff;` +
+    `<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',sans-serif;background:#0E1015;color:#fff;` +
     `display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}` +
     `h1{font-size:64px;font-weight:700;color:rgba(255,255,255,0.1);margin-bottom:16px}` +
-    `p{color:rgba(255,255,255,0.35);margin-bottom:24px}` +
-    `a{color:#66A8E0;text-decoration:none;font-weight:600}a:hover{color:#8FC4F5}</style></head>` +
+    `p{color:#999CA3;margin-bottom:24px}` +
+    `a{color:#1A9FFF;text-decoration:none;font-weight:600}a:hover{color:#5BBFFF}</style></head>` +
     `<body><div><h1>404</h1><p>This game page doesn't exist yet.</p><a href="/">← Back to releases</a></div></body></html>`,
     { status: 404, headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
   );
@@ -144,12 +144,12 @@ ${hasTrailer ? '<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hl
 <style>
 :root {
   --bg:      #0E1015;
-  --surface: #13151B;
-  --border:  #1F2127;
-  --blue:    #66A8E0;
-  --blue-hv: #8FC4F5;
-  --gold:    #CFAF5A;
-  --dim:     rgba(255,255,255,0.35);
+  --surface: #181A20;
+  --border:  #292B31;
+  --blue:    #1A9FFF;
+  --blue-hv: #5BBFFF;
+  --gold:    #C89856;
+  --dim:     #999CA3;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -158,6 +158,8 @@ body {
   background: var(--bg);
   color: #fff;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -182,7 +184,7 @@ body {
 .logo svg { width: 22px; height: 22px; flex-shrink: 0; }
 .logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
-.nav-right a { font-size: 10px; color: rgba(255,255,255,0.55); text-decoration: none; font-weight: 500; }
+.nav-right a { font-size: 10px; color: #999CA3; text-decoration: none; font-weight: 500; }
 .nav-right a:hover { color: #fff; }
 
 /* ── CAROUSEL ─────────────────────────────────────── */
@@ -190,7 +192,7 @@ body {
 .car-track { display: flex; gap: 10px; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
 .car-slide {
   flex: 0 0 min(1020px, 100vw); width: min(1020px, 100vw); aspect-ratio: 16/9;
-  position: relative; overflow: hidden; background: #0a0b10;
+  position: relative; overflow: hidden; background: #0E1015;
 }
 .car-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .car-play {
@@ -220,31 +222,34 @@ body {
 .car-next { right: max(14px, calc(50% - 496px)); }
 .car-counter {
   position: absolute; bottom: 12px; right: max(14px, calc(50% - 496px));
-  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.5);
-  background: rgba(0,0,0,0.45); padding: 3px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; color: #999CA3;
+  background: rgba(0,0,0,0.55); padding: 3px 8px; border-radius: 10px;
   pointer-events: none; letter-spacing: 0.04em;
 }
 
 /* ── BACK WRAP + MAIN GRID ────────────────────────── */
 .back-wrap {
   display: flex; gap: 10px; align-items: flex-start;
-  max-width: calc(1020px + 36px + 10px + 40px);
+  max-width: 1060px;
+  width: 100%;
   margin: 0 auto;
   padding: 36px 20px 80px;
+  overflow: visible;
+  flex: 1;
 }
 .back-wrap.no-carousel { padding-top: 100px; }
 
 .back-btn {
-  flex-shrink: 0; margin-top: 3px;
+  flex-shrink: 0; margin-left: -46px;
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: #999CA3;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
-.back-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.back-btn:hover { background: var(--border); color: #fff; }
 @media (max-width: 600px) { .back-btn { display: none; } }
 
 .main-grid { flex: 1; min-width: 0; }
@@ -258,7 +263,7 @@ body {
   font-size: 12px; color: var(--dim); font-weight: 500;
   display: flex; align-items: center; gap: 5px; flex-shrink: 0;
 }
-.meta-date strong { color: rgba(255,255,255,0.82); font-weight: 600; }
+.meta-date strong { color: #fff; font-weight: 600; }
 .meta-badges { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -266,8 +271,8 @@ body {
   padding: 6px 10px; border-radius: 20px; border: 1px solid;
   white-space: nowrap; height: 22px;
 }
-.badge-anticipated { color: var(--gold); border-color: rgba(207,175,90,0.35); background: rgba(207,175,90,0.08); }
-.badge-rerelease   { color: var(--blue); border-color: rgba(102,168,224,0.35); background: rgba(102,168,224,0.08); }
+.badge-anticipated { color: var(--gold); border-color: rgba(200,152,86,0.35); background: rgba(144,116,62,0.1); }
+.badge-rerelease   { color: var(--blue); border-color: rgba(26,159,255,0.35); background: rgba(26,159,255,0.08); }
 
 /* Title + desc */
 .game-title {
@@ -277,14 +282,14 @@ body {
 }
 .game-desc {
   font-size: 15px; line-height: 1.7;
-  color: rgba(255,255,255,0.65);
+  color: #999CA3;
   margin-bottom: 18px;
 }
 .ptags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 28px; }
 .ptag {
   font-size: 9px; font-weight: 700; padding: 3px 10px;
-  border-radius: 20px; color: rgba(255,255,255,0.72);
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px; color: #999CA3;
+  background: rgba(153,156,163,0.08); border: 1px solid var(--border);
   letter-spacing: 0.05em;
 }
 
@@ -300,16 +305,16 @@ body {
 .price-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
 .cur-toggle {
   display: flex; align-items: center; gap: 2px;
-  background: rgba(255,255,255,0.06); border-radius: 8px; padding: 3px;
+  background: rgba(41,43,49,0.6); border-radius: 8px; padding: 3px;
 }
 .cur-btn {
   font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.35); background: none; border: none;
+  color: #999CA3; background: none; border: none;
   padding: 4px 9px; border-radius: 5px; cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
-.cur-btn:hover { color: rgba(255,255,255,0.7); }
-.cur-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
+.cur-btn:hover { color: #fff; }
+.cur-btn.active { background: var(--border); color: #fff; }
 .steam-cta {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--blue); color: #fff;
@@ -322,10 +327,10 @@ body {
 /* Dev / metacritic */
 .game-info-row {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  font-size: 11px; color: rgba(255,255,255,0.3);
+  font-size: 11px; color: #999CA3;
   margin-bottom: 32px;
 }
-.game-info-row strong { color: rgba(255,255,255,0.6); }
+.game-info-row strong { color: #fff; }
 .meta-score {
   display: inline-flex; align-items: center;
   font-size: 11px; font-weight: 700;
@@ -338,19 +343,19 @@ body {
 /* System requirements */
 .section { margin-bottom: 36px; }
 .section-title {
-  font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9);
+  font-size: 13px; font-weight: 700; color: #fff;
   margin-bottom: 18px; padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
 .reqs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 @media (max-width: 600px) { .reqs-grid { grid-template-columns: 1fr; } }
 .req-label {
-  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.28);
+  font-size: 10px; font-weight: 700; color: #999CA3;
   letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
 }
-.req-body { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.8; }
+.req-body { font-size: 12px; color: #999CA3; line-height: 1.8; }
 .req-body ul { padding-left: 18px; }
-.req-body strong { color: rgba(255,255,255,0.72); }
+.req-body strong { color: #fff; }
 
 /* ── FOOTER ───────────────────────────────────────── */
 .site-footer { padding: 0 20px 24px; }
@@ -373,7 +378,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 20px 20px;
 }
-.footer-copy { font-size: 10px; color: rgba(255,255,255,0.45); }
+.footer-copy { font-size: 10px; color: #999CA3; }
 </style>
 </head>
 <body>
@@ -392,6 +397,7 @@ body {
       </a>
       <div class="nav-right">
         <a href="/">2026</a>
+        <a href="/trending">Trending</a>
         <a href="mailto:loadingarchive@outlook.com">Contact</a>
       </div>
     </div>
@@ -671,6 +677,7 @@ async function playTrailer() {
       if (data.mp4 || data.hls) {
         const v = document.createElement('video');
         v.controls = v.autoplay = v.playsInline = true;
+        v.volume = 0.25;
         showMedia(v);
         if (data.mp4) {
           v.src = data.mp4;
@@ -678,7 +685,10 @@ async function playTrailer() {
           if (v.canPlayType('application/vnd.apple.mpegurl')) {
             v.src = data.hls;
           } else if (window.Hls && Hls.isSupported()) {
-            const hls = new Hls();
+            const hls = new Hls({ startLevel: -1 });
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              hls.currentLevel = hls.levels.length - 1;
+            });
             hls.loadSource(data.hls);
             hls.attachMedia(v);
           }
@@ -690,13 +700,46 @@ async function playTrailer() {
       if (play) play.style.display = '';
     }
   } else {
-    const frame = document.createElement('iframe');
-    frame.src = 'https://www.youtube.com/embed/' + trailer + '?autoplay=1';
-    frame.allow = 'autoplay; encrypted-media';
-    frame.allowFullscreen = true;
-    showMedia(frame);
+    const ytId  = 'yt_' + Date.now();
+    const wrap  = document.createElement('div');
+    const inner = document.createElement('div');
+    inner.id = ytId;
+    inner.style.cssText = 'width:100%;height:100%';
+    wrap.appendChild(inner);
+    showMedia(wrap);
+
+    function initYT() {
+      new YT.Player(ytId, {
+        videoId: trailer,
+        width: '100%', height: '100%',
+        playerVars: { autoplay: 1, rel: 0 },
+        events: {
+          onReady: function(e) { e.target.setVolume(25); e.target.playVideo(); }
+        }
+      });
+    }
+    if (window.YT && window.YT.Player) {
+      initYT();
+    } else {
+      window.onYouTubeIframeAPIReady = initYT;
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
+    }
   }
 }` : ''}
+(function(){
+  const titleEl=document.querySelector('.game-title');
+  const btnEl=document.querySelector('.back-btn');
+  if(!titleEl||!btnEl)return;
+  function align(){
+    btnEl.style.marginTop='0';
+    const diff=titleEl.getBoundingClientRect().top-btnEl.getBoundingClientRect().top;
+    btnEl.style.marginTop=Math.max(0,diff)+'px';
+  }
+  requestAnimationFrame(align);
+  window.addEventListener('resize',align);
+}());
 </script>
 </body>
 </html>`;
