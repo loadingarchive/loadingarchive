@@ -1,12 +1,10 @@
 /**
- * Herhaalt de Steam-screenshots-fetch voor alle actieve games die
- * een steam_appid hebben maar nog geen screenshots in D1.
+ * Herhaalt de Steam-screenshots-fetch voor actieve games zonder screenshots.
  *
- * Reden: games uit de repair-script kregen geen nieuwe Steam-enrichment.
- * Dit script haalt ALLEEN screenshots + short_description + requirements op
- * (geen nieuwe RAWG-calls), zodat het snel en goedkoop is.
- *
- * Gebruik: node scripts/refetch-screenshots.mjs
+ * Gebruik:
+ *   node scripts/refetch-screenshots.mjs              → alle maanden
+ *   node scripts/refetch-screenshots.mjs 2026-03      → alleen maart 2026
+ *   node scripts/refetch-screenshots.mjs tba          → alleen TBA-games
  */
 
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync } from 'fs';
@@ -61,13 +59,29 @@ async function fetchSteamDetails(appid) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// Haal alle games op met Steam maar zonder screenshots
+// Maand-filter via CLI-argument (bijv. "2026-03" of "tba")
+const monthArg = process.argv[2]?.toLowerCase() ?? null;
+
+let whereExtra = '';
+if (monthArg === 'tba') {
+  whereExtra = `AND release_date IS NULL`;
+} else if (monthArg) {
+  // bijv. "2026-03" → release_date BETWEEN '2026-03-01' AND '2026-03-31'
+  const [y, m] = monthArg.split('-');
+  const lastDay = new Date(Number(y), Number(m), 0).getDate();
+  whereExtra = `AND release_date >= '${monthArg}-01' AND release_date <= '${monthArg}-${lastDay}'`;
+}
+
+if (monthArg) console.log(`Maand-filter: ${monthArg}\n`);
+
+// Haal games op met Steam maar zonder screenshots (optioneel gefilterd op maand)
 const rows = await d1(`
-  SELECT slug, name, steam_appid, raw_json
+  SELECT slug, name, release_date, steam_appid, raw_json
   FROM games
   WHERE status='active'
     AND steam_appid IS NOT NULL
     AND (screenshots IS NULL OR screenshots = '[]')
+    ${whereExtra}
   ORDER BY release_date
 `);
 
