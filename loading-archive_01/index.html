@@ -807,6 +807,32 @@ function platformTag(p) {
   return `<span class="ptag ${cls}">${label}</span>`;
 }
 
+function makeInitials(title) {
+  let result = '';
+  for (const word of (title || '').split(/\s+/).filter(Boolean)) {
+    const ch = word.match(/[A-Za-z0-9]/)?.[0]?.toUpperCase() || '';
+    if (!ch) continue;
+    result += ch;
+    if (word.includes(':')) result += ':';
+    if (result.replace(/:/g, '').length >= 4) break;
+  }
+  return result || '?';
+}
+
+function coverPlaceholder(title) {
+  let h = 0;
+  for (let i = 0; i < (title || '').length; i++) h = (h * 31 + title.charCodeAt(i)) & 0xffff;
+  const hue = h % 360;
+  const bg  = `hsl(${hue},22%,13%)`;
+  const fg  = `hsl(${hue},50%,62%)`;
+  const initials = makeInitials(title);
+  const fs  = initials.replace(/:/g, '').length > 4 ? '20px' : '26px';
+  const ls  = initials.replace(/:/g, '').length > 4 ? '2px'  : '3px';
+  return `<div class="card-cover" style="background:${bg};display:flex;align-items:center;justify-content:center">` +
+    `<span style="font-family:Inter,sans-serif;font-weight:700;font-size:${fs};letter-spacing:${ls};color:${fg};user-select:none">${initials}</span>` +
+    `</div>`;
+}
+
 function buildCard(g) {
   const card = document.createElement('div');
   card.className = 'game-card';
@@ -823,7 +849,7 @@ function buildCard(g) {
         ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" data-tooltip="Anticipated"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg></button>` : ''}
       </span>
     </div>
-    ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : ''}
+    ${g.cover ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy"></div>` : coverPlaceholder(g.title)}
     <div class="card-body">
       <div class="card-title">${g.slug ? `<a href="/game/${g.slug}">${g.title}</a>` : g.title}</div>
       <div class="ptags">${ptagsHtml}</div>

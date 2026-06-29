@@ -1,4 +1,4 @@
-import { isoDate, decodeHtmlEntities, normalizeTitle, titlesAreCloseEnough, mapWithConcurrency, parseSteamDate } from './utils.js';
+import { isoDate, decodeHtmlEntities, normalizeTitle, titlesAreCloseEnough, mapWithConcurrency, parseSteamDate, isJapanOnly } from './utils.js';
 import { fetchSteamAppDetails } from './steam.js';
 
 const RAW_URL = "https://en.wikipedia.org/w/index.php?title=List_of_video_games_released_in_2026&action=raw";
@@ -139,7 +139,7 @@ async function enrichWithSteam(entry) {
       cover       = app.header_image || null;
       trailer     = app.movies?.length ? `steam:${appid}` : null;
       steam       = appid;
-      anticipated = app.release_date?.coming_soon === true;
+      anticipated = false; // coming_soon zegt niets over hype — anticipated alleen via RAWG added-count
       date        = steamDate || date;
       const steamGenre = (app.genres || []).map(g => g.description).slice(0, 2);
       if (steamGenre.length) genre = steamGenre;
@@ -186,9 +186,10 @@ export async function scrapeWikipedia(existingGames = []) {
   const rawEntries = collectRawEntries(wikitext);
   console.log(`Wikipedia: parsed ${rawEntries.length} raw entries`);
 
-  // Deduplicate raw entries
+  // Deduplicate raw entries + verwijder Japan-only releases
   const seen   = new Set();
   const deduped = rawEntries.filter(e => {
+    if (isJapanOnly(e.title)) return false;
     const key = `${e.date || "tba"}:${normalizeTitle(e.title)}`;
     if (seen.has(key)) return false;
     seen.add(key);

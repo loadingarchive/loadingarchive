@@ -47,6 +47,12 @@ export function normalizeTitle(t) {
   return (t || "").toLowerCase().replace(/[®™©]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Vangt titels als "Foo (JP)", "Foo (JP/AS)", "Foo (JP/KR)" — Japan-only releases.
+// Nintendo-worldwide releases (zonder regio-tag) worden niet geraakt.
+export function isJapanOnly(title) {
+  return /\(JP\b/.test(title || "");
+}
+
 export function daysBetween(a, b) {
   if (!a || !b) return Infinity;
   return Math.abs((new Date(a) - new Date(b)) / 86400000);

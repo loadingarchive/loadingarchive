@@ -1,4 +1,4 @@
-import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug } from './utils.js';
+import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug, isJapanOnly } from './utils.js';
 import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails } from './steam.js';
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
 import { upsertGameToD1 } from './d1.js';
@@ -14,8 +14,7 @@ function withoutAlreadyCovered(extraGames, existingResults) {
 }
 
 async function backfillFromExistingSteamPage(game) {
-  if (game.steam) return game;
-  const appid = await findExistingSteamAppId(game.title);
+  const appid = game.steam ?? await findExistingSteamAppId(game.title);
   if (!appid) return game;
   const app   = await fetchSteamAppDetails(appid);
   if (!app)   return game;
@@ -27,14 +26,19 @@ async function backfillFromExistingSteamPage(game) {
   const isRerelease  = originalDate && game.date && originalDate < game.date
     && daysBetween(originalDate, game.date) >= RERELEASE_GAP_DAYS;
 
+  // Als het een re-release/port is: geen prijs of korting tonen van de oude PC versie.
+  // De Steam-prijs hoort bij de originele PC release, niet bij de nieuwe console port.
+  const price = isRerelease ? null : (game.price || (app.is_free ? "Free" : (app.price_overview?.final_formatted || null)));
+
   return {
     ...game,
     steam:     String(appid),
     cover:     game.cover  || app.header_image || null,
-    price:     game.price  || (app.is_free ? "Free" : (app.price_overview?.final_formatted || null)),
+    price,
     genre:     game.genre.length ? game.genre : (app.genres || []).map(g => g.description).slice(0, 2),
     trailer:   game.trailer || (app.movies?.length ? `steam:${appid}` : null),
-    platforms: [...new Set([...game.platforms, "PC"])],
+    // Voeg PC alleen toe als het GEEN re-release is (bij port is de PC versie al lang uit)
+    platforms: isRerelease ? game.platforms : [...new Set([...game.platforms, "PC"])],
     rerelease: isRerelease ? { date: originalDate } : game.rerelease || null,
   };
 }
@@ -96,7 +100,7 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
 
   const filtered  = extraGames.filter(g => g.date && g.date >= dateFrom && g.date <= dateTo);
   const newExtras = withoutAlreadyCovered(filtered, rawgGames);
-  const all       = [...rawgGames, ...newExtras];
+  const all       = [...rawgGames, ...newExtras].filter(g => !isJapanOnly(g.title));
 
   const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
   const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
@@ -111,7 +115,7 @@ export async function runTbaPipeline(rawgKey, extraGames, env) {
   const rawgResults = await fetchRawgTbaGames(rawgKey);
   const extraTba    = extraGames.filter(g => !g.date);
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
-  const all         = [...rawgResults, ...newExtras];
+  const all         = [...rawgResults, ...newExtras].filter(g => !isJapanOnly(g.title));
 
   const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
   const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));

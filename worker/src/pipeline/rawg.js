@@ -28,7 +28,7 @@ function mapRawgGame(g, idx, idPrefix) {
     platforms,
     genre:      (g.genres || []).map(genre => genre.name).slice(0, 2),
     dev:        "",
-    anticipated: (g.added || 0) > 200,
+    anticipated: (g.added || 0) > 1000,
     trailer:    steamId ? `steam:${steamId}` : null,
     steam:      steamId,
     price:      null,
@@ -73,7 +73,7 @@ async function enrichRawgGameWithSteam(rg, rawgKey) {
     platforms:  [...new Set([...rg.platforms, "PC"])],
     genre:      steamGenre.length ? steamGenre : rg.genre,
     dev:        (app.developers || [])[0] || rg.dev,
-    anticipated: rg.anticipated || app.release_date?.coming_soon === true,
+    anticipated: rg.anticipated,
     price:      app.is_free ? "Free" : (app.price_overview?.final_formatted || rg.price),
     cover:      app.header_image || rg.cover,
   };
