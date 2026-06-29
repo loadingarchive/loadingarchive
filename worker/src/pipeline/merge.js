@@ -1,6 +1,7 @@
 import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug, isJapanOnly } from './utils.js';
 import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails } from './steam.js';
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
+import { fetchNintendoCover } from './nintendo.js';
 import { upsertGameToD1 } from './d1.js';
 
 const RERELEASE_GAP_DAYS = 60;
@@ -93,6 +94,13 @@ async function saveGameToD1(game, env) {
   await upsertGameToD1(entry, env);
 }
 
+async function enrichWithNintendoCover(game) {
+  if (game.cover) return game;
+  if (!game.platforms.some(p => p === "NS" || p === "NS2")) return game;
+  const cover = await fetchNintendoCover(game.title);
+  return cover ? { ...game, cover } : game;
+}
+
 // RAWG is de enige bron voor game-releases. Steam voegt alleen cover, prijs en trailer toe.
 export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env) {
   const rawgGames = await fetchRawgGames(rawgKey, dateFrom, dateTo);
@@ -102,11 +110,12 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
   const newExtras = withoutAlreadyCovered(filtered, rawgGames);
   const all       = [...rawgGames, ...newExtras].filter(g => !isJapanOnly(g.title));
 
-  const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
-  const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  const backfilled  = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
+  const withCovers  = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 
   // Slugs toewijzen en upserten naar D1
-  const withSlugs = assignSlugs(withCovers);
+  const withSlugs = assignSlugs(withNintendo);
   await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
   console.log(`  ${dateFrom}–${dateTo}: ${withSlugs.length} games → D1`);
 }
@@ -117,10 +126,11 @@ export async function runTbaPipeline(rawgKey, extraGames, env) {
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
   const all         = [...rawgResults, ...newExtras].filter(g => !isJapanOnly(g.title));
 
-  const backfilled = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
-  const withCovers = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  const backfilled   = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
+  const withCovers   = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
+  const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 
-  const withSlugs = assignSlugs(withCovers);
+  const withSlugs = assignSlugs(withNintendo);
   await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
   console.log(`  TBA: ${withSlugs.length} games → D1`);
 }
