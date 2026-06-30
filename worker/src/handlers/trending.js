@@ -1,71 +1,44 @@
-function parseOwnersMin(ownersStr) {
-  if (!ownersStr) return 0;
-  const m = ownersStr.match(/^([\d,]+)/);
-  return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0;
-}
-
 function fmtPlayers(n) {
   if (!n) return '0';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1_000)     return Math.round(n / 1_000) + 'K';
-  return n.toLocaleString('en-US');
-}
-
-function fmtOwners(ownersStr) {
-  const n = parseOwnersMin(ownersStr);
-  if (!n) return '';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + 'M+ owners';
-  if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K+ owners';
-  return '';
+  if (n >= 1_000)     return n.toLocaleString('en-US');
+  return String(n);
 }
 
 function renderRow(g, rank) {
-  const link  = g.slug ? `/game/${g.slug}` : `https://store.steampowered.com/app/${g.appid}`;
-  const isExt = !g.slug;
-  const owners = fmtOwners(g.owners);
-
-  return `<a class="trend-row" href="${link}"${isExt ? ' target="_blank" rel="noopener"' : ''}>
+  const isExt = g.link.startsWith('http');
+  return `<a class="trend-row" href="${g.link}"${isExt ? ' target="_blank" rel="noopener"' : ''}>
     <div class="trend-left">
       <div class="trend-rank">${rank}</div>
       <div class="trend-cover-wrap">
-        <img class="trend-cover" src="${g.cover}" alt="" loading="${rank <= 5 ? 'eager' : 'lazy'}" onerror="this.style.opacity='0'">
+        <img class="trend-cover" src="${g.image}" alt="" loading="${rank <= 5 ? 'eager' : 'lazy'}" onerror="this.style.opacity='0'">
       </div>
       <div class="trend-info">
         <div class="trend-name">${g.name}</div>
-        ${g.developer ? `<div class="trend-dev">${g.developer}${owners ? ` · ${owners}` : ''}</div>` : (owners ? `<div class="trend-dev">${owners}</div>` : '')}
+        ${g.developer ? `<div class="trend-dev">${g.developer}</div>` : ''}
       </div>
     </div>
-    <div class="trend-spark" data-appid="${g.appid}"></div>
     <div class="trend-stats">
-      <div class="trend-stat-main">${fmtPlayers(g.ccu)}</div>
-      <div class="trend-stat-sub">peak concurrent</div>
+      <div class="trend-stat-main">${fmtPlayers(g.players_now)}</div>
+      <div class="trend-stat-sub">playing right now</div>
     </div>
   </a>`;
 }
 
-function renderPage(top20, histByCcu, updatedAt) {
-  const top10  = top20.slice(0, 10);
-  const updStr = updatedAt
-    ? new Date(updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+function renderPage(games, generatedAt) {
+  const updStr = generatedAt
+    ? new Date(generatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
     : '';
 
-  const rows = top10.map((g, i) => renderRow(g, i + 1)).join('');
-
-  // Serialiseer history als compacte JSON voor client-side sparklines
-  // { "730": [{ d: "2026-06-28", c: 1435957 }, ...], ... }
-  const histJson = JSON.stringify(
-    Object.fromEntries(
-      Object.entries(histByCcu).map(([appid, pts]) => [appid, pts])
-    )
-  );
+  const rows = games.map((g, i) => renderRow(g, i + 1)).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trending Games | Loading Archive</title>
-<meta name="description" content="Top 10 trending games on Steam right now, sorted by peak concurrent players.">
+<title>Most Played on Steam | Loading Archive</title>
+<meta name="description" content="Top 10 most played games on Steam right now, by current player count.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -97,12 +70,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 .page-title{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:5px}
 .page-meta{font-size:11px;color:#999CA3}
 
-/* RANGE FILTER */
-.range-bar{display:flex;gap:3px;background:rgba(41,43,49,0.5);border-radius:10px;padding:3px}
-.range-btn{font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0.02em;color:#999CA3;background:none;border:none;padding:5px 13px;border-radius:7px;cursor:pointer;transition:color 0.15s,background 0.15s}
-.range-btn:hover{color:#fff}
-.range-btn.active{background:var(--border);color:#fff}
-
 /* ROWS */
 .trend-list{display:flex;flex-direction:column;gap:8px}
 .trend-row{
@@ -111,7 +78,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
   padding:12px 16px;text-decoration:none;color:inherit;
   transition:border-color 0.15s,background 0.15s;overflow:hidden;
 }
-.trend-row:hover{border-color:var(--border);background:var(--surface)}
+.trend-row:hover{border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)}
 
 /* LEFT */
 .trend-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
@@ -125,20 +92,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 .trend-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .trend-dev{font-size:11px;color:#999CA3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* SPARKLINE */
-.trend-spark{flex-shrink:0;width:220px;height:52px;position:relative;transition:opacity 0.18s}
-.trend-spark svg{width:100%;height:100%;display:block;overflow:visible}
-.spark-label{position:absolute;bottom:2px;left:4px;font-size:9px;font-weight:600;letter-spacing:0.06em;color:rgba(153,156,163,0.4);pointer-events:none;font-family:inherit}
-
 /* STATS */
 .trend-stats{flex-shrink:0;text-align:right;min-width:100px}
 .trend-stat-main{font-size:16px;font-weight:700;letter-spacing:-0.01em}
 .trend-stat-sub{font-size:10px;color:#999CA3;margin-top:3px}
 
 /* RESPONSIVE */
-@media(max-width:860px){.trend-spark{width:160px}}
 @media(max-width:660px){
-  .trend-spark{display:none}
   .trend-cover-wrap{width:64px;height:36px}
   .trend-stat-main{font-size:14px}
 }
@@ -180,14 +140,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 <div class="page-wrap">
   <div class="page-header">
     <div class="page-title-group">
-      <h1 class="page-title">Trending on Steam</h1>
-      ${updStr ? `<div class="page-meta">Updated ${updStr} · Source: Steam API</div>` : '<div class="page-meta">Source: Steam API</div>'}
-    </div>
-    <div class="range-bar" id="rangeBar" role="group" aria-label="Time range">
-      <button class="range-btn active" data-days="7">7D</button>
-      <button class="range-btn" data-days="30">1M</button>
-      <button class="range-btn" data-days="90">3M</button>
-      <button class="range-btn" data-days="365">1Y</button>
+      <h1 class="page-title">Most Played on Steam</h1>
+      ${updStr ? `<div class="page-meta">Updated ${updStr} · Source: Steam</div>` : '<div class="page-meta">Source: Steam</div>'}
     </div>
   </div>
 
@@ -210,91 +164,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 </footer>
 
 <script>
-// History data van server: { appid: [{ d: "YYYY-MM-DD", c: number }, ...] }
-const HISTORY = ${histJson};
-
-// --- Sparkline ---
-function buildSpark(ccus, W, H) {
-  if (!ccus.length) {
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '"><text x="' + (W/2) + '" y="' + (H/2+4) + '" text-anchor="middle" fill="#292B31" font-size="9" font-family="Inter,sans-serif">Collecting data…</text></svg>';
-  }
-  if (ccus.length === 1) {
-    const cy = H / 2;
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '"><line x1="0" y1="' + cy + '" x2="' + W + '" y2="' + cy + '" stroke="rgba(26,159,255,0.15)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="' + (W/2) + '" cy="' + cy + '" r="3.5" fill="#1A9FFF" stroke="#0E1015" stroke-width="1.5"/></svg>';
-  }
-
-  const PAD = 6;
-  const max = Math.max(...ccus), min = Math.min(...ccus);
-  const range = max - min || 1;
-  const pts = ccus.map((v, i) => ({
-    x: PAD + (i / (ccus.length - 1)) * (W - PAD * 2),
-    y: PAD + (1 - (v - min) / range) * (H - PAD * 2),
-  }));
-
-  let line = 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
-  for (let i = 1; i < pts.length; i++) {
-    const p = pts[i-1], c = pts[i];
-    const cpx = ((p.x + c.x) / 2).toFixed(1);
-    line += ' C ' + cpx + ',' + p.y.toFixed(1) + ' ' + cpx + ',' + c.y.toFixed(1) + ' ' + c.x.toFixed(1) + ',' + c.y.toFixed(1);
-  }
-  const last = pts[pts.length - 1];
-  const area = line + ' L ' + last.x.toFixed(1) + ',' + H + ' L ' + pts[0].x.toFixed(1) + ',' + H + ' Z';
-  const gid  = 'sg' + Math.random().toString(36).slice(2, 7);
-
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
-    '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0%" stop-color="#1A9FFF" stop-opacity="0.25"/>' +
-    '<stop offset="100%" stop-color="#1A9FFF" stop-opacity="0.02"/>' +
-    '</linearGradient></defs>' +
-    '<path d="' + area + '" fill="url(#' + gid + ')"/>' +
-    '<path d="' + line + '" fill="none" stroke="#1A9FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<circle cx="' + last.x.toFixed(1) + '" cy="' + last.y.toFixed(1) + '" r="3" fill="#1A9FFF" stroke="#0E1015" stroke-width="1.5"/>' +
-    '</svg>';
-}
-
-const RANGE_LABELS = { 7: '7D', 30: '1M', 90: '3M', 365: '1Y' };
-
-function renderSparks(days) {
-  const cutoff = days
-    ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
-    : '0000-00-00';
-  const label = RANGE_LABELS[days] || '';
-
-  document.querySelectorAll('.trend-spark[data-appid]').forEach(el => {
-    const appid   = el.dataset.appid;
-    const allPts  = HISTORY[appid] || [];
-    const filtered = allPts.filter(p => p.d >= cutoff);
-    const ccus    = filtered.map(p => p.c);
-    const W       = el.offsetWidth || 220;
-    el.innerHTML  = buildSpark(ccus, W, 52)
-      + (label ? '<span class="spark-label">' + label + '</span>' : '');
-  });
-}
-
-// Range filter — fade out → update → fade in
-let activeDays = 7;
-document.getElementById('rangeBar').addEventListener('click', e => {
-  const btn = e.target.closest('.range-btn');
-  if (!btn || btn.classList.contains('active')) return;
-  activeDays = Number(btn.dataset.days);
-  document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b === btn));
-  const sparks = document.querySelectorAll('.trend-spark[data-appid]');
-  sparks.forEach(el => { el.style.opacity = '0'; });
-  setTimeout(() => {
-    renderSparks(activeDays);
-    sparks.forEach(el => { el.style.opacity = ''; });
-  }, 180);
-});
-
 // Nav scroll shadow
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', scrollY > 10);
 }, { passive: true });
 
-// Initial render — wait for layout so offsetWidth is correct
-requestAnimationFrame(() => requestAnimationFrame(() => renderSparks(activeDays)));
-
-// Domino footer — identical to main page
+// Domino footer
 (function () {
   const rowEl = document.getElementById('footerDominoRow');
   if (!rowEl) return;
@@ -330,53 +205,46 @@ requestAnimationFrame(() => requestAnimationFrame(() => renderSparks(activeDays)
 }
 
 export async function handleTrendingPage(env) {
-  const raw = await env.GAMES_KV.get('trending:top20');
+  // Lees KV — probeer nieuwe sleutel eerst, val terug op oude
+  let raw = await env.GAMES_KV.get('trending_steam');
+  let isLegacy = false;
+  if (!raw) {
+    raw = await env.GAMES_KV.get('trending:top20');
+    isLegacy = true;
+  }
   if (!raw) return renderEmpty();
 
   let payload;
   try { payload = JSON.parse(raw); } catch { return renderEmpty(); }
 
-  const top20 = payload.games || [];
-  if (!top20.length) return renderEmpty();
-
-  // Historische CCU-data uit D1 (max 365 dagen voor het 1Y filter)
-  const appids  = top20.map(g => g.appid);
-  const holders = appids.map((_, i) => `?${i + 1}`).join(',');
-  const cutoff  = new Date(Date.now() - 365 * 86400_000).toISOString().slice(0, 10);
-
-  let histRows = [];
-  try {
-    const { results } = await env.GAMES_D1
-      .prepare(
-        `SELECT appid, recorded_at, ccu FROM trending_history
-         WHERE appid IN (${holders}) AND recorded_at >= ?${appids.length + 1}
-         ORDER BY appid, recorded_at`
-      )
-      .bind(...appids, cutoff)
-      .all();
-    histRows = results;
-  } catch (e) {
-    console.error('trending_history query mislukt:', e.message);
+  // Normaliseer legacy formaat (heeft ccu/cover/slug ipv players_now/image/link)
+  let games = payload.games || [];
+  if (isLegacy && games.length) {
+    games = games.map(g => ({
+      appid:       g.appid,
+      name:        g.name,
+      developer:   g.developer || '',
+      image:       g.cover || `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/header.jpg`,
+      players_now: g.ccu || 0,
+      link:        g.slug ? `/game/${g.slug}` : `https://store.steampowered.com/app/${g.appid}/`,
+    }));
   }
 
-  // Groepeer als { appid: [{ d, c }, ...] } voor client-side filtering
-  const histByCcu = {};
-  for (const r of histRows) {
-    (histByCcu[r.appid] = histByCcu[r.appid] || []).push({ d: r.recorded_at, c: r.ccu });
-  }
+  if (!games.length) return renderEmpty();
 
-  const html = renderPage(top20, histByCcu, payload.updatedAt);
+  const top10 = games.slice(0, 10);
+  const html  = renderPage(top10, payload.generatedAt || payload.updatedAt);
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',
-      'Cache-Control': 's-maxage=1800, stale-while-revalidate=7200',
+      'Cache-Control': 's-maxage=600, stale-while-revalidate=3600',
     },
   });
 }
 
 function renderEmpty() {
   return new Response(
-    `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Trending | Loading Archive</title>
+    `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Most Played on Steam | Loading Archive</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -385,8 +253,8 @@ function renderEmpty() {
     p{color:rgba(153,156,163,0.6);font-size:13px;line-height:1.7;max-width:340px}
     a{color:#1A9FFF;text-decoration:none}a:hover{color:#5BBFFF}</style>
     </head><body><div>
-    <h2>Trending data wordt geladen</h2>
-    <p>De eerste snapshot wordt opgehaald door de dagelijkse cron om 03:00 UTC. <a href="/">Terug naar releases</a>.</p>
+    <h2>Player data loading</h2>
+    <p>Live player data is fetched every hour. <a href="/">Back to releases</a>.</p>
     </div></body></html>`,
     { headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Cache-Control': 'no-store' } },
   );

@@ -128,10 +128,10 @@ export async function runDailyCron(env) {
     console.error('  Sitemap: generatie mislukt —', e.message);
   }
 
-  // Trending: dagelijkse SteamSpy + Steam real-time CCU snapshot
+  // Trending: dagelijkse live CCU snapshot
   try {
-    const { total, steam, fallback } = await fetchAndStoreTrending(env);
-    console.log(`  Trending: ${total} games — ${steam} via Steam API, ${fallback} via SteamSpy fallback`);
+    const { total } = await fetchAndStoreTrending(env);
+    console.log(`  Trending: ${total} games in KV`);
   } catch (e) {
     console.error('  Trending mislukt —', e.message);
   }
@@ -328,6 +328,18 @@ async function updateDailyPrices(env) {
 }
 
 export { makeMonthEntry };
+
+// ---- hourly: trending update ----
+
+export async function runHourlyCron(env) {
+  console.log('Hourly cron: trending update');
+  try {
+    const { total } = await fetchAndStoreTrending(env);
+    console.log(`  Trending: ${total} games in KV`);
+  } catch (e) {
+    console.error('  Trending mislukt —', e.message);
+  }
+}
 
 // ---- weekly: Wikipedia scrape ----
 

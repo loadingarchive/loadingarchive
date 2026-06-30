@@ -2,7 +2,7 @@ import { handleGames }        from './handlers/games.js';
 import { handleTrailer }      from './handlers/trailer.js';
 import { handleGamePage }     from './handlers/game.js';
 import { handleTrendingPage } from './handlers/trending.js';
-import { runDailyCron, runWeeklyWikipediaCron } from './cron/build-cache.js';
+import { runDailyCron, runWeeklyWikipediaCron, runHourlyCron } from './cron/build-cache.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -40,6 +40,8 @@ export default {
   async scheduled(event, env, ctx) {
     if (event.cron === '0 4 * * 7') {
       ctx.waitUntil(runWeeklyWikipediaCron(env));
+    } else if (event.cron === '0 * * * *') {
+      ctx.waitUntil(runHourlyCron(env));
     } else {
       ctx.waitUntil(runDailyCron(env));
     }

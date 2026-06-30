@@ -28,7 +28,8 @@
 	"triggers": {
 		"crons": [
 			"0 3 * * *",
-			"0 4 * * 7"
+			"0 4 * * 7",
+			"0 * * * *"
 		]
 	},
 	// D1 database: duurzame bron van waarheid voor alle games.
