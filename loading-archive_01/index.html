@@ -497,7 +497,9 @@ let catDropdownOpen = false;
 let GAMES = [];
 let activeMonth = new Date().getMonth();
 let tbaMode = false;
-let activeFilters = new Set();
+const ALL_PLATFORMS = ['PC', 'NS', 'NS2', 'PS4', 'PS5', 'XBO', 'XSX'];
+let activePlatforms = new Set(ALL_PLATFORMS); // all on by default (opt-out)
+let showAnticipated = true;
 let searchSeq = 0;
 let loadSeq = 0;
 
@@ -608,9 +610,13 @@ function buildPlatformBar() {
 
   PLATFORM_DEFS.forEach(p => {
     const btn = document.createElement('button');
-    btn.className = `pbar-chip ${p.cls}` + (activeFilters.has(p.key) ? ' active' : '');
+    btn.className = `pbar-chip ${p.cls}` + (activePlatforms.has(p.key) ? ' active' : '');
     btn.innerHTML = `<span class="dot"></span>${p.label}`;
-    btn.onclick = () => toggleSet(activeFilters, p.key);
+    btn.onclick = () => {
+      activePlatforms.has(p.key) ? activePlatforms.delete(p.key) : activePlatforms.add(p.key);
+      buildPlatformBar();
+      renderGames();
+    };
     bar.appendChild(btn);
   });
 
@@ -620,9 +626,9 @@ function buildPlatformBar() {
   bar.appendChild(sep);
 
   const anticipatedBtn = document.createElement('button');
-  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (activeFilters.has('anticipated') ? ' active' : '');
+  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (showAnticipated ? ' active' : '');
   anticipatedBtn.innerHTML = `<span class="dot"></span>Anticipated`;
-  anticipatedBtn.onclick = () => toggleSet(activeFilters, 'anticipated');
+  anticipatedBtn.onclick = () => { showAnticipated = !showAnticipated; buildPlatformBar(); renderGames(); };
   bar.appendChild(anticipatedBtn);
 
   const catWrap = document.createElement('div');
@@ -736,11 +742,14 @@ function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
     if (q && !matchesSearch(g.title, q)) return false;
-    if (activeFilters.size > 0) {
-      if (activeFilters.has('anticipated') && !g.anticipated) return false;
-      const pf = [...activeFilters].filter(f => f !== 'anticipated');
-      if (pf.length > 0 && !pf.some(p => g.platforms.includes(p))) return false;
+    // Anticipated: deactivated chip = hide anticipated games
+    if (!showAnticipated && g.anticipated) return false;
+    // Platforms: show if game has no platforms, or has at least one active platform
+    const gamePlats = g.platforms || [];
+    if (gamePlats.length > 0 && activePlatforms.size < ALL_PLATFORMS.length) {
+      if (!gamePlats.some(p => activePlatforms.has(p))) return false;
     }
+    // Categories (opt-in: only filter when something is selected)
     if (activeCats.size > 0) {
       const gameGenres = g.genre.map(gen => gen.toLowerCase());
       if (![...activeCats].some(cat => gameGenres.some(gen => gen.includes(cat.toLowerCase())))) return false;
