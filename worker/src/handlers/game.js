@@ -98,8 +98,7 @@ function renderPage(g) {
     : shots.map((s, i) => `<div class="car-slide"><img src="${esc(s)}" alt="" loading="${i < 2 ? 'eager' : 'lazy'}" draggable="false"></div>`);
   const totalSlides = carSlides.length;
 
-  const portPtag  = g.rerelease ? `<span class="ptag ptag-port">Port</span>` : '';
-  const ptagsHtml = portPtag + (g.platforms || [])
+  const ptagsHtml = (g.platforms || [])
     .map(p => `<span class="ptag">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
     .join('');
 
@@ -291,9 +290,6 @@ body {
   font-size: 9px; font-weight: 700; padding: 3px 10px;
   border-radius: 20px; color: #999CA3;
   background: rgba(153,156,163,0.08); border: 1px solid var(--border);
-}
-.ptag-port {
-  color: #1A9FFF; border-color: rgba(26,159,255,0.35); background: rgba(26,159,255,0.08);
   letter-spacing: 0.05em;
 }
 
