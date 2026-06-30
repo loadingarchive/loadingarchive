@@ -177,6 +177,8 @@ button, select, input { font-family: inherit; }
 .pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
 .pbar-chip.active.ANTICIPATED { background: rgba(144,116,62,0.2); border-color: var(--gold); }
 .pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #90743E, #C89856); }
+.pbar-chip.active.PORT { background: rgba(26,159,255,0.15); border-color: var(--blue); }
+.pbar-chip.active.PORT .dot { background: var(--blue); }
 .pbar-chip.cat { color: var(--dim); border-color: var(--border); }
 .pbar-chip.cat.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
@@ -500,6 +502,7 @@ let tbaMode = false;
 const ALL_PLATFORMS = ['PC', 'NS', 'NS2', 'PS4', 'PS5', 'XBO', 'XSX'];
 let activePlatforms = new Set(ALL_PLATFORMS); // all on by default (opt-out)
 let showAnticipated = true;
+let showPorts = true;
 let searchSeq = 0;
 let loadSeq = 0;
 
@@ -631,6 +634,12 @@ function buildPlatformBar() {
   anticipatedBtn.onclick = () => { showAnticipated = !showAnticipated; buildPlatformBar(); renderGames(); };
   bar.appendChild(anticipatedBtn);
 
+  const portBtn = document.createElement('button');
+  portBtn.className = 'pbar-chip PORT' + (showPorts ? ' active' : '');
+  portBtn.innerHTML = `<span class="dot"></span>Port`;
+  portBtn.onclick = () => { showPorts = !showPorts; buildPlatformBar(); renderGames(); };
+  bar.appendChild(portBtn);
+
   const catWrap = document.createElement('div');
   catWrap.className = 'cat-wrap';
   const catBtn = document.createElement('button');
@@ -744,6 +753,8 @@ function getFiltered() {
     if (q && !matchesSearch(g.title, q)) return false;
     // Anticipated: deactivated chip = hide anticipated games
     if (!showAnticipated && g.anticipated) return false;
+    // Port: deactivated chip = hide ports/re-releases
+    if (!showPorts && g.rerelease) return false;
     // Platforms: show if game has no platforms, or has at least one active platform
     const gamePlats = g.platforms || [];
     if (gamePlats.length > 0 && activePlatforms.size < ALL_PLATFORMS.length) {
