@@ -441,24 +441,25 @@ ${totalSlides > 0 ? `
   ${rawDesc ? `<p class="game-desc">${esc(rawDesc)}</p>` : ''}
   ${ptagsHtml ? `<div class="ptags">${ptagsHtml}</div>` : ''}
 
-  ${(g.price || g.steam) ? `
+  ${g.steam ? `
   <div class="price-card">
     <div>
-      ${g.price ? `
-      <div class="price-label">${g.discount_percent > 0 ? 'Sale price' : 'Base price'}</div>
+      <div class="price-label">${g.price && g.discount_percent > 0 ? 'Sale price' : 'Price'}</div>
       <div class="price-row">
-        ${g.discount_percent > 0 && g.price_initial ? `<span class="price-original">${esc(g.price_initial)}</span>` : ''}
-        <div class="price-value" id="priceVal">${esc(g.price)}</div>
-        ${g.discount_percent > 0 ? `<span class="price-discount-badge">-${g.discount_percent}%</span>` : ''}
-        ${g.price !== 'Free' ? `
-        <div class="cur-toggle" role="group" aria-label="Currency">
-          <button class="cur-btn" data-cur="USD">USD</button>
-          <button class="cur-btn" data-cur="EUR">EUR</button>
-          <button class="cur-btn" data-cur="GBP">GBP</button>
-        </div>` : ''}
-      </div>` : ''}
+        ${g.price ? `
+          ${g.discount_percent > 0 && g.price_initial ? `<span class="price-original" id="priceOrig">${esc(g.price_initial)}</span>` : ''}
+          <div class="price-value" id="priceVal">${esc(g.price)}</div>
+          ${g.discount_percent > 0 ? `<span class="price-discount-badge">-${g.discount_percent}%</span>` : ''}
+          ${g.price !== 'Free' ? `
+          <div class="cur-toggle" role="group" aria-label="Currency">
+            <button class="cur-btn active" data-cur="USD">USD</button>
+            <button class="cur-btn" data-cur="EUR">EUR</button>
+            <button class="cur-btn" data-cur="GBP">GBP</button>
+          </div>` : ''}
+        ` : `<div class="price-value" style="color:var(--dim);font-size:16px">TBA</div>`}
+      </div>
     </div>
-    ${g.steam ? `<a class="steam-cta" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>` : ''}
+    <a class="steam-cta" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>
   </div>` : ''}
 
   ${(g.dev || g.metacritic) ? `
@@ -490,34 +491,40 @@ window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
 }, { passive: true });
 
-// Currency toggle
+// Currency toggle — echte regionale Steam-prijzen
 (function () {
-  const priceRaw = ${JSON.stringify(g.price || null)};
-  const priceEl  = document.getElementById('priceVal');
-  const btns     = document.querySelectorAll('.cur-btn');
+  const priceEl = document.getElementById('priceVal');
+  const origEl  = document.getElementById('priceOrig');
+  const btns    = document.querySelectorAll('.cur-btn');
   if (!priceEl || !btns.length) return;
 
-  // Parse USD amount from stored price string (e.g. "$19.99")
-  const usdAmount = priceRaw ? parseFloat(priceRaw.replace(/[^0-9.]/g, '')) : NaN;
-  if (isNaN(usdAmount)) return;
+  // Opgeslagen Steam regionale prijzen (null = nog niet beschikbaar voor die regio)
+  const PRICES = {
+    USD: { final: ${JSON.stringify(g.price || null)}, initial: ${JSON.stringify(g.price_initial || null)} },
+    EUR: { final: ${JSON.stringify(g.price_eur || null)}, initial: ${JSON.stringify(g.price_initial_eur || null)} },
+    GBP: { final: ${JSON.stringify(g.price_gbp || null)}, initial: ${JSON.stringify(g.price_initial_gbp || null)} },
+  };
 
-  const RATES   = { USD: 1, EUR: 0.91, GBP: 0.78 };
-  const SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
-
-  function applyRate(cur) {
-    const amt = (usdAmount * RATES[cur]).toFixed(2);
-    priceEl.textContent = SYMBOLS[cur] + amt;
+  function apply(cur) {
+    const p = PRICES[cur];
+    if (p?.final) {
+      priceEl.textContent = p.final;
+      if (origEl) origEl.textContent = p.initial || '';
+    } else {
+      // Regionale prijs nog niet opgeslagen — toon streepje
+      priceEl.textContent = '—';
+      if (origEl) origEl.textContent = '';
+    }
     btns.forEach(b => b.classList.toggle('active', b.dataset.cur === cur));
     try { localStorage.setItem('la_currency', cur); } catch {}
   }
 
-  btns.forEach(btn => btn.addEventListener('click', () => applyRate(btn.dataset.cur)));
+  btns.forEach(btn => btn.addEventListener('click', () => apply(btn.dataset.cur)));
 
-  // Restore saved preference, fall back to USD
   let saved = 'USD';
   try { saved = localStorage.getItem('la_currency') || 'USD'; } catch {}
-  if (!RATES[saved]) saved = 'USD';
-  applyRate(saved);
+  if (!PRICES[saved]) saved = 'USD';
+  apply(saved);
 }());
 
 // Carousel — infinite peek carousel (adjacent slides visible on sides)

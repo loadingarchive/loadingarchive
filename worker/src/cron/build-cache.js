@@ -1,7 +1,7 @@
 import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
-import { fetchSteamAppDetails, findExistingSteamAppId } from '../pipeline/steam.js';
+import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
 import {
   queryActiveMonthGames,
@@ -294,26 +294,39 @@ async function updateDailyPrices(env) {
   console.log(`  Prijsupdate: ${results.length} games controleren`);
 
   let updated = 0;
-  await mapWithConcurrency(results, 5, async (row) => {
-    const app = await fetchSteamAppDetails(row.steam_appid);
-    if (!app) return;
+  await mapWithConcurrency(results, 4, async (row) => {
+    // Haal USD, EUR en GBP prijzen op in parallel (lichte price_overview calls)
+    const { usd, eur, gbp } = await fetchSteamPriceMulti(row.steam_appid);
 
-    const po              = app.price_overview;
-    const discount        = po?.discount_percent ?? 0;
-    const priceInitial    = po?.initial_formatted ?? null;
-    const priceFinal      = app.is_free ? 'Free' : (po?.final_formatted ?? null);
+    // is_free wordt gesignaleerd als { is_free: true } terug van fetchOne
+    const isFree = usd?.is_free || eur?.is_free || gbp?.is_free;
+
+    const priceFinal    = isFree ? 'Free' : (usd?.final_formatted    ?? null);
+    const priceInitial  = isFree ? null   : (usd?.initial_formatted   ?? null) || null;
+    const discount      = isFree ? 0      : (usd?.discount_percent    ?? 0);
+
+    const priceEur      = isFree ? 'Free' : (eur?.final_formatted    ?? null);
+    const priceInitEur  = isFree ? null   : (eur?.initial_formatted   ?? null) || null;
+    const priceGbp      = isFree ? 'Free' : (gbp?.final_formatted    ?? null);
+    const priceInitGbp  = isFree ? null   : (gbp?.initial_formatted   ?? null) || null;
 
     const entry = JSON.parse(row.raw_json || '{}');
     const changed =
-      entry.discount_percent !== discount ||
+      entry.price            !== priceFinal   ||
       entry.price_initial    !== priceInitial ||
-      entry.price            !== priceFinal;
+      entry.discount_percent !== discount     ||
+      entry.price_eur        !== priceEur     ||
+      entry.price_gbp        !== priceGbp;
 
     if (!changed) return;
 
-    entry.discount_percent = discount;
-    entry.price_initial    = priceInitial;
     entry.price            = priceFinal;
+    entry.price_initial    = priceInitial;
+    entry.discount_percent = discount;
+    entry.price_eur        = priceEur;
+    entry.price_initial_eur = priceInitEur;
+    entry.price_gbp        = priceGbp;
+    entry.price_initial_gbp = priceInitGbp;
 
     const json = JSON.stringify(entry);
     await env.GAMES_D1
