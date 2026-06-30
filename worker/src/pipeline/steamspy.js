@@ -2,13 +2,22 @@
  * Most Played on Steam pipeline — live concurrent players.
  *
  * Databron: ISteamChartsService/GetGamesByConcurrentPlayers/v1/
- *           (GetMostPlayedGames heeft alleen peak_in_game, geen live count)
  * Metadatacache: D1 steam_app_meta tabel
  * Output: KV sleutel 'trending_steam'
+ *
+ * Filter: alleen type='game', geen adult content.
+ * Apps (Wallpaper Engine, FiveM) en desktop-toys hebben type='application'.
  */
 
 const ADULT_DESC_IDS = new Set([1, 3, 4]); // 1=nudity, 3=adult-only, 4=freq. nudity
 const META_MAX_AGE_DAYS = 14;
+
+// Apps die Steam als type='game' markeert maar geen games zijn
+const NON_GAME_APPIDS = new Set([
+  '431960',  // Wallpaper Engine
+  '3419430', // Bongo Cat
+  '3678970', // TBH: Task Bar Hero
+]);
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -21,20 +30,24 @@ async function ensureMetaTable(db) {
       image TEXT,
       required_age INTEGER DEFAULT 0,
       is_adult INTEGER DEFAULT 0,
+      type TEXT DEFAULT 'game',
       updated_at TEXT
     )
   `).run();
+  // Migratie: voeg type-kolom toe als die er nog niet is (tabel bestond al zonder)
+  try {
+    await db.prepare(`ALTER TABLE steam_app_meta ADD COLUMN type TEXT DEFAULT 'game'`).run();
+  } catch { /* kolom bestaat al */ }
 }
 
-async function getLiveRanking(count = 30) {
+async function getLiveRanking(count = 50) {
   const r = await fetch(
     'https://api.steampowered.com/ISteamChartsService/GetGamesByConcurrentPlayers/v1/',
     { signal: AbortSignal.timeout(10000) }
   );
   if (!r.ok) throw new Error(`Steam Charts ${r.status}`);
   const j = await r.json();
-  // Log raw voor veldbevestiging
-  console.log('  [raw] GetGamesByConcurrentPlayers rank[0]:', JSON.stringify(j.response?.ranks?.[0]));
+  console.log('  [raw] rank[0]:', JSON.stringify(j.response?.ranks?.[0]));
   const ranks = j.response?.ranks || [];
   return ranks.slice(0, count).map(g => ({
     appid:       String(g.appid),
@@ -51,8 +64,7 @@ async function fetchAppMeta(appid) {
     if (!r.ok) return null;
     const j = await r.json();
     const entry = j?.[appid];
-    // success:false → adult-gated of niet beschikbaar → overslaan
-    if (!entry?.success || !entry.data) return { is_adult: 1 };
+    if (!entry?.success || !entry.data) return { is_adult: 1, type: 'unknown' };
     const d = entry.data;
 
     const required_age = parseInt(d.required_age) || 0;
@@ -65,6 +77,7 @@ async function fetchAppMeta(appid) {
       image:        d.header_image || `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
       required_age,
       is_adult,
+      type:         d.type || 'game',   // 'game', 'application', 'dlc', 'mod', 'video', …
     };
   } catch { return null; }
 }
@@ -72,23 +85,22 @@ async function fetchAppMeta(appid) {
 export async function fetchAndStoreTrending(env) {
   const db = env.GAMES_D1;
 
-  // Tabel aanmaken als hij nog niet bestaat
   await ensureMetaTable(db);
 
-  // Stap 1: Live CCU ranking — top 50 (marge voor adult-filter, doel is 20)
+  // Stap 1: Live CCU ranking — top 50 (ruime marge na adult + non-game filter)
   const ranking = await getLiveRanking(50);
   if (!ranking.length) throw new Error('Steam Charts ranking leeg');
-  console.log(`  Live ranking: ${ranking.length} games, #1 appid ${ranking[0].appid} (${ranking[0].players_now.toLocaleString()} spelers)`);
+  console.log(`  Live ranking: ${ranking.length} items, #1 appid ${ranking[0].appid} (${ranking[0].players_now.toLocaleString()} spelers)`);
 
-  const appids        = ranking.map(g => g.appid);
+  const appids         = ranking.map(g => g.appid);
   const cacheThreshold = new Date(Date.now() - META_MAX_AGE_DAYS * 86400_000).toISOString().slice(0, 10);
 
-  // Stap 2a: Lees bestaande cache uit D1
+  // Stap 2a: Lees bestaande cache — inclusief type-kolom
   const cached = new Map();
   try {
     const ph = appids.map((_, i) => `?${i + 1}`).join(',');
     const { results } = await db
-      .prepare(`SELECT appid, name, developer, image, required_age, is_adult, updated_at FROM steam_app_meta WHERE appid IN (${ph})`)
+      .prepare(`SELECT appid, name, developer, image, required_age, is_adult, type, updated_at FROM steam_app_meta WHERE appid IN (${ph})`)
       .bind(...appids.map(Number))
       .all();
     for (const row of results) cached.set(String(row.appid), row);
@@ -96,10 +108,10 @@ export async function fetchAndStoreTrending(env) {
     console.error('  Cache read mislukt:', e.message);
   }
 
-  // Stap 2b: Bepaal welke appids vers opgehaald moeten worden
+  // Stap 2b: Appids die vers opgehaald moeten worden (nieuw of cache verlopen of type nog NULL)
   const toFetch = appids.filter(appid => {
     const c = cached.get(appid);
-    return !c || c.updated_at < cacheThreshold;
+    return !c || c.updated_at < cacheThreshold || c.type == null;
   });
   console.log(`  Metadata: ${cached.size} gecached, ${toFetch.length} vers ophalen`);
 
@@ -113,49 +125,53 @@ export async function fetchAndStoreTrending(env) {
       const appid = batch[j];
       const meta  = results[j];
       if (meta) {
-        freshMeta.set(appid, meta.is_adult === undefined ? { ...meta } : meta);
+        freshMeta.set(appid, meta);
       } else {
-        // Fetch mislukt → sla over (niet als adult markeren, herprobeert volgende run)
         console.warn(`  Metadata ophalen mislukt voor appid ${appid}`);
       }
     }
     if (i + CONCURRENCY < toFetch.length) await sleep(300);
   }
 
-  // Stap 2d: Upsert verse metadata naar D1
+  // Stap 2d: Upsert verse metadata naar D1 (inclusief type)
   if (freshMeta.size > 0) {
-    const today    = new Date().toISOString().slice(0, 10);
-    const upserts  = [];
+    const today   = new Date().toISOString().slice(0, 10);
+    const upserts = [];
     for (const [appid, meta] of freshMeta) {
-      if (!meta.name && !meta.is_adult) continue; // mislukte fetch overslaan
+      if (!meta.name && !meta.is_adult) continue;
       upserts.push(
         db.prepare(
-          `INSERT OR REPLACE INTO steam_app_meta (appid, name, developer, image, required_age, is_adult, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-        ).bind(Number(appid), meta.name || '', meta.developer || '', meta.image || '', meta.required_age || 0, meta.is_adult || 0, today)
+          `INSERT OR REPLACE INTO steam_app_meta (appid, name, developer, image, required_age, is_adult, type, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+        ).bind(Number(appid), meta.name || '', meta.developer || '', meta.image || '', meta.required_age || 0, meta.is_adult || 0, meta.type || 'game', today)
       );
     }
     if (upserts.length) {
       await db.batch(upserts);
-      console.log(`  Metadata: ${upserts.length} records in steam_app_meta`);
+      console.log(`  Metadata: ${upserts.length} records opgeslagen`);
     }
   }
 
-  // Stap 3: Samenvoegen (cache + vers), adult-filter, top 10
+  // Stap 3: Samenvoegen, filter op type='game' EN geen adult, neem top 20
   const allMeta = new Map([...cached]);
   for (const [k, v] of freshMeta) allMeta.set(k, v);
 
-  const top10 = ranking
+  const top20 = ranking
     .filter(g => {
+      if (NON_GAME_APPIDS.has(g.appid)) return false;
       const m = allMeta.get(g.appid);
-      return m && !m.is_adult;
+      if (!m) return false;
+      if (m.is_adult) return false;
+      // Alleen echte games — geen applications, mods, videos, advertising, etc.
+      return (m.type || 'game') === 'game';
     })
     .slice(0, 20);
 
-  console.log(`  Na adult-filter: ${top10.length} games (${ranking.length - top10.length} gefilterd/onbekend)`);
-  if (!top10.length) throw new Error('Geen games na adult-filter');
+  const filteredCount = ranking.length - top20.length;
+  console.log(`  Na filters: ${top20.length} games (${filteredCount} gefilterd — adult of non-game)`);
+  if (!top20.length) throw new Error('Geen games na filters');
 
   // Stap 4: Slug-koppeling met Loading Archive D1
-  const filteredAppids = top10.map(g => g.appid);  // top10 bevat nu 20 entries
+  const filteredAppids = top20.map(g => g.appid);
   const slugByAppid    = new Map();
   try {
     const ph = filteredAppids.map((_, i) => `?${i + 1}`).join(',');
@@ -170,7 +186,7 @@ export async function fetchAndStoreTrending(env) {
   }
 
   // Stap 5: Bouw KV payload
-  const games = top10.map(g => {
+  const games = top20.map(g => {
     const meta = allMeta.get(g.appid);
     const slug = slugByAppid.get(g.appid) || null;
     return {
