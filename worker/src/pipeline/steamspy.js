@@ -75,8 +75,8 @@ export async function fetchAndStoreTrending(env) {
   // Tabel aanmaken als hij nog niet bestaat
   await ensureMetaTable(db);
 
-  // Stap 1: Live CCU ranking — top 30 (marge voor adult-filter)
-  const ranking = await getLiveRanking(30);
+  // Stap 1: Live CCU ranking — top 50 (marge voor adult-filter, doel is 20)
+  const ranking = await getLiveRanking(50);
   if (!ranking.length) throw new Error('Steam Charts ranking leeg');
   console.log(`  Live ranking: ${ranking.length} games, #1 appid ${ranking[0].appid} (${ranking[0].players_now.toLocaleString()} spelers)`);
 
@@ -149,13 +149,13 @@ export async function fetchAndStoreTrending(env) {
       const m = allMeta.get(g.appid);
       return m && !m.is_adult;
     })
-    .slice(0, 10);
+    .slice(0, 20);
 
   console.log(`  Na adult-filter: ${top10.length} games (${ranking.length - top10.length} gefilterd/onbekend)`);
   if (!top10.length) throw new Error('Geen games na adult-filter');
 
   // Stap 4: Slug-koppeling met Loading Archive D1
-  const filteredAppids = top10.map(g => g.appid);
+  const filteredAppids = top10.map(g => g.appid);  // top10 bevat nu 20 entries
   const slugByAppid    = new Map();
   try {
     const ph = filteredAppids.map((_, i) => `?${i + 1}`).join(',');

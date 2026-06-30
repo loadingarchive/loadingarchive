@@ -79,7 +79,7 @@ if (!ccuRes.ok) throw new Error(`Steam Charts ${ccuRes.status}`);
 const ccuJ  = await ccuRes.json();
 console.log('  [raw] rank[0]:', JSON.stringify(ccuJ.response?.ranks?.[0]));
 
-const ranking = (ccuJ.response?.ranks || []).slice(0, 30).map(g => ({
+const ranking = (ccuJ.response?.ranks || []).slice(0, 50).map(g => ({
   appid:       String(g.appid),
   players_now: g.concurrent_in_game || 0,
 }));
@@ -167,7 +167,7 @@ const top10 = ranking
     const m = allMeta.get(g.appid);
     return m && !m.is_adult;
   })
-  .slice(0, 10);
+  .slice(0, 20);
 
 console.log(`\nStap 5: ${top10.length} games na adult-filter (${ranking.length - top10.length} gefilterd)`);
 

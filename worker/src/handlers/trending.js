@@ -232,8 +232,8 @@ export async function handleTrendingPage(env) {
 
   if (!games.length) return renderEmpty();
 
-  const top10 = games.slice(0, 10);
-  const html  = renderPage(top10, payload.generatedAt || payload.updatedAt);
+  const top20 = games.slice(0, 20);
+  const html  = renderPage(top20, payload.generatedAt || payload.updatedAt);
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',
