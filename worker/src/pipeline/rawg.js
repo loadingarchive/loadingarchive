@@ -12,10 +12,11 @@ function isAdultContent(g) {
 }
 
 function mapRawgGame(g, idx, idPrefix) {
-  const platforms = (g.platforms || [])
-    .map(p => PLATFORM_MAP[p.platform?.slug] || null)
-    .filter(Boolean)
-    .filter((v, i, a) => a.indexOf(v) === i);
+  const platforms = [...new Set(
+    (g.platforms || [])
+      .map(p => PLATFORM_MAP[p.platform?.slug] || null)
+      .filter(Boolean)
+  )];
   if (platforms.length === 0) return null;
 
   const steamStore = (g.stores || []).find(s => s.store?.slug === "steam");

@@ -1,3 +1,5 @@
+import { dominoFooterJS } from '../ui/domino.js';
+
 function esc(str) {
   if (str == null) return '';
   return String(str)
@@ -31,7 +33,7 @@ export async function handleGamePage(slug, env) {
   const raw = await env.GAMES_KV.get(`game:${slug}`);
   if (!raw) return notFound();
   let game;
-  try { game = JSON.parse(raw); } catch { return notFound(); }
+  try { game = JSON.parse(raw); } catch (e) { console.error('game JSON parse error', slug, e.message); return notFound(); }
   return new Response(renderPage(game), {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',
@@ -619,54 +621,7 @@ window.addEventListener('scroll', () => {
   }, { passive: true });
 })();
 
-// Domino footer — continuous wave right→left, single row
-(function () {
-  const rowEl = document.getElementById('dominoRow');
-  if (!rowEl) return;
-
-  const GAP = 7, BAR = 3, ROW_H = 22;
-  const STEP   = 40;
-  const TRAIL  = 15;
-  const T_FALL = 120;
-  const T_RISE = 100;
-  const PAUSE  = 800;
-
-  const FULL_W = rowEl.offsetWidth || 960;
-  const NCOLS  = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
-
-  const rowDiv = document.createElement('div');
-  rowDiv.style.cssText = \`display:flex;gap:\${GAP}px;align-items:flex-end;height:\${ROW_H}px;overflow:visible\`;
-  const bars = [];
-  for (let i = 0; i < NCOLS; i++) {
-    const b = document.createElement('div');
-    b.className = 'd-bar'; b.style.height = ROW_H + 'px';
-    rowDiv.appendChild(b); bars.push(b);
-  }
-  rowEl.appendChild(rowDiv);
-  rowEl.style.overflow = 'visible';
-
-  const TOTAL = NCOLS + TRAIL;
-  let p = 0;
-
-  function tick() {
-    const ci = NCOLS - 1 - p;
-    if (p < NCOLS) {
-      bars[ci].style.transition = \`transform \${T_FALL}ms ease-in\`;
-      bars[ci].style.transform  = 'rotateZ(-70deg)';
-    }
-    const rp = p - TRAIL;
-    const rc = NCOLS - 1 - rp;
-    if (rp >= 0 && rp < NCOLS) {
-      bars[rc].style.transition = \`transform \${T_RISE}ms ease-out\`;
-      bars[rc].style.transform  = '';
-    }
-    p++;
-    if (p >= TOTAL) { p = 0; setTimeout(tick, PAUSE); }
-    else             { setTimeout(tick, STEP); }
-  }
-
-  tick();
-})();
+${dominoFooterJS('dominoRow')}
 ${hasTrailer ? `
 async function playTrailer() {
   const trailer = ${JSON.stringify(g.trailer)};

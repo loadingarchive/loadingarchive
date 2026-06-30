@@ -302,13 +302,13 @@ async function updateDailyPrices(env) {
     const isFree = usd?.is_free || eur?.is_free || gbp?.is_free;
 
     const priceFinal    = isFree ? 'Free' : (usd?.final_formatted    ?? null);
-    const priceInitial  = isFree ? null   : (usd?.initial_formatted   ?? null) || null;
+    const priceInitial  = isFree ? null   : (usd?.initial_formatted   ?? null);
     const discount      = isFree ? 0      : (usd?.discount_percent    ?? 0);
 
     const priceEur      = isFree ? 'Free' : (eur?.final_formatted    ?? null);
-    const priceInitEur  = isFree ? null   : (eur?.initial_formatted   ?? null) || null;
+    const priceInitEur  = isFree ? null   : (eur?.initial_formatted   ?? null);
     const priceGbp      = isFree ? 'Free' : (gbp?.final_formatted    ?? null);
-    const priceInitGbp  = isFree ? null   : (gbp?.initial_formatted   ?? null) || null;
+    const priceInitGbp  = isFree ? null   : (gbp?.initial_formatted   ?? null);
 
     const entry = JSON.parse(row.raw_json || '{}');
     const changed =

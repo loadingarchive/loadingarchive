@@ -827,8 +827,8 @@ function renderGames() {
 }
 
 function platformTag(p) {
-  const cls   = p === 'Android' ? 'AND' : p === 'IOS' ? 'IOS' : p.toUpperCase();
-  const label = p === 'XSX' ? 'XSX/S' : p === 'Android' ? 'Droid' : p;
+  const cls   = p.toUpperCase();
+  const label = p === 'XSX' ? 'XSX/S' : p;
   return `<span class="ptag ${cls}">${label}</span>`;
 }
 
