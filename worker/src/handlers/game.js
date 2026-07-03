@@ -1,4 +1,5 @@
 import { dominoFooterJS } from '../ui/domino.js';
+import { siteFooterHtml } from '../ui/footer.js';
 
 function esc(str) {
   if (str == null) return '';
@@ -7,6 +8,27 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// JSON dat inline in een <script>-blok belandt: '<' escapen zodat een
+// waarde met '</script>' niet uit het blok kan breken (XSS).
+function jsonForScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+// Steam levert pc_requirements als rauwe HTML (publisher-aangeleverd, dus niet
+// volledig vertrouwd). Whitelist van tags, alle attributen weg (geen event
+// handlers/href/src mogelijk), <script>/<style> incl. inhoud verwijderd.
+const REQS_SAFE_TAGS = new Set(['ul', 'li', 'br', 'p', 'strong', 'b', 'i', 'em']);
+function sanitizeRequirementsHtml(html) {
+  if (!html) return '';
+  return String(html)
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<\/?([a-zA-Z0-9]+)[^>]*>/g, (match, tag) => {
+      const t = tag.toLowerCase();
+      if (!REQS_SAFE_TAGS.has(t)) return '';
+      return match.startsWith('</') ? `</${t}>` : `<${t}>`;
+    });
 }
 
 const PLATFORM_FULL = {
@@ -73,23 +95,40 @@ function renderPage(g) {
     : `${g.title} releases ${g.date ? 'on ' + date : '(TBA)'}${plats.length ? ' for ' + plats.join(', ') : ''}.`;
   const metaDesc = esc(rawDesc.slice(0, 160));
 
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type':    'VideoGame',
-    name:       g.title,
-    ...(g.date        ? { datePublished: g.date }                                                                    : {}),
-    ...(plats.length  ? { gamePlatform: plats }                                                                      : {}),
-    ...(genres.length ? { genre: genres }                                                                             : {}),
-    ...(ogImg         ? { image: ogImg }                                                                              : {}),
-    ...(g.dev         ? { author: { '@type': 'Organization', name: g.dev } }                                         : {}),
-    ...(g.steam       ? { url: `https://store.steampowered.com/app/${g.steam}` }                                     : {}),
-    ...(g.metacritic  ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: g.metacritic.score, bestRating: 100, ratingCount: 1 } } : {}),
-    ...(g.price && g.price !== 'TBA' ? {
-      offers: { '@type': 'Offer', priceCurrency: 'USD',
-                price: g.price === 'Free' ? '0.00' : g.price.replace(/[^0-9.]/g, ''),
-                availability: 'https://schema.org/PreOrder' }
-    } : {}),
-  });
+  // Maandpagina waar deze game onder valt — voor breadcrumb + interne linking.
+  const monthKey   = g.date ? g.date.slice(0, 7) : 'tba';
+  const monthLabel = g.date
+    ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(g.date + 'T12:00:00Z'))
+    : 'TBA';
+
+  const jsonLd = jsonForScript([
+    {
+      '@context': 'https://schema.org',
+      '@type':    'VideoGame',
+      name:       g.title,
+      ...(g.date        ? { datePublished: g.date }                                                                    : {}),
+      ...(plats.length  ? { gamePlatform: plats }                                                                      : {}),
+      ...(genres.length ? { genre: genres }                                                                             : {}),
+      ...(ogImg         ? { image: ogImg }                                                                              : {}),
+      ...(g.dev         ? { author: { '@type': 'Organization', name: g.dev } }                                         : {}),
+      ...(g.steam       ? { url: `https://store.steampowered.com/app/${g.steam}` }                                     : {}),
+      ...(g.metacritic  ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: g.metacritic.score, bestRating: 100, ratingCount: 1 } } : {}),
+      ...(g.price && g.price !== 'TBA' ? {
+        offers: { '@type': 'Offer', priceCurrency: 'USD',
+                  price: g.price === 'Free' ? '0.00' : g.price.replace(/[^0-9.]/g, ''),
+                  availability: 'https://schema.org/PreOrder' }
+      } : {}),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Loading Archive', item: 'https://www.loadingarchive.com/' },
+        { '@type': 'ListItem', position: 2, name: monthLabel, item: `https://www.loadingarchive.com/releases/${monthKey}` },
+        { '@type': 'ListItem', position: 3, name: g.title, item: `https://www.loadingarchive.com/game/${g.slug || ''}` },
+      ],
+    },
+  ]);
 
   const hasTrailer  = !!g.trailer;
   const hasReqs     = g.pc_requirements?.minimum || g.pc_requirements?.recommended;
@@ -106,18 +145,26 @@ function renderPage(g) {
 
   const antSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg>`;
   const portSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.53554 8.53554C7.59783 9.47321 6.32608 10 5 10C3.68031 10 2.70383 9.63463 1.94478 9.07575C1.68555 8.88488 1.45603 8.67437 1.25 8.45562V9.16667H0L2.72917e-08 6.875L8.295e-07 6.25H0.625H0.823867H2.91667V7.5H2.06945C2.25562 7.70913 2.45748 7.90096 2.6859 8.06913C3.21946 8.462 3.93333 8.75 5 8.75C5.99454 8.75 6.94837 8.35492 7.65167 7.65167C8.35492 6.94837 8.75 5.99454 8.75 5H10C10 6.32608 9.47321 7.59783 8.53554 8.53554ZM8.75 1.54438V0.833333H10V3.125V3.75H9.375H9.17612H7.08333V2.5H7.93054C7.74437 2.29087 7.5425 2.09903 7.31408 1.93085C6.78054 1.53802 6.06667 1.25 5 1.25C4.00544 1.25 3.05161 1.64509 2.34835 2.34835C1.64509 3.05161 1.25 4.00544 1.25 5H4.96667e-08C6.55e-08 3.67392 0.526783 2.40215 1.46447 1.46447C2.40215 0.526783 3.67392 -1.57917e-08 5 0C6.31971 1.575e-08 7.29617 0.365393 8.05521 0.924258C8.31446 1.11512 8.54396 1.32561 8.75 1.54438Z" fill="currentColor"/></svg>`;
+  const remakeSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 0L6.1 3.9L10 5L6.1 6.1L5 10L3.9 6.1L0 5L3.9 3.9L5 0Z" fill="currentColor"/></svg>`;
+
+  // rerelease.type onderscheidt een pure platform-port (zelfde assets, nieuw
+  // platform) van een remake/remaster (visueel/technisch herbouwd). Games die
+  // dit veld nog niet hebben (oude records, automatische Steam-datum-gap
+  // detectie) vallen terug op 'port', de conservatieve default.
+  const rrType = g.rerelease?.type || 'port';
+  const rrIsRemake = rrType === 'remake';
 
   const metaBadges = [
     g.anticipated ? `<span class="badge badge-anticipated">${antSvg} Anticipated</span>` : '',
-    g.rerelease   ? `<span class="badge badge-rerelease">${portSvg} Port · orig. ${fmtDate(g.rerelease.date)}</span>` : '',
+    g.rerelease   ? `<span class="badge ${rrIsRemake ? 'badge-remake' : 'badge-rerelease'}">${rrIsRemake ? remakeSvg : portSvg} ${rrIsRemake ? 'Remake' : 'Port'} · orig. ${fmtDate(g.rerelease.date)}</span>` : '',
   ].filter(Boolean).join('');
 
   const reqsHtml = hasReqs ? `
   <div class="section">
     <div class="section-title">System requirements</div>
     <div class="reqs-grid">
-      ${g.pc_requirements?.minimum     ? `<div class="req-col"><div class="req-label">Minimum</div><div class="req-body">${g.pc_requirements.minimum}</div></div>`     : ''}
-      ${g.pc_requirements?.recommended ? `<div class="req-col"><div class="req-label">Recommended</div><div class="req-body">${g.pc_requirements.recommended}</div></div>` : ''}
+      ${g.pc_requirements?.minimum     ? `<div class="req-col"><div class="req-label">Minimum</div><div class="req-body">${sanitizeRequirementsHtml(g.pc_requirements.minimum)}</div></div>`     : ''}
+      ${g.pc_requirements?.recommended ? `<div class="req-col"><div class="req-label">Recommended</div><div class="req-body">${sanitizeRequirementsHtml(g.pc_requirements.recommended)}</div></div>` : ''}
     </div>
   </div>` : '';
 
@@ -139,62 +186,22 @@ ${ogImg ? `<meta property="og:image" content="${esc(ogImg)}">` : ''}
 <meta name="twitter:description" content="${metaDesc}">
 ${ogImg ? `<meta name="twitter:image" content="${esc(ogImg)}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/css/site.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 ${hasTrailer ? '<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>' : ''}
 <style>
-:root {
-  --bg:      #0E1015;
-  --surface: #181A20;
-  --border:  #292B31;
-  --blue:    #1A9FFF;
-  --blue-hv: #5BBFFF;
-  --gold:    #C89856;
-  --dim:     #999CA3;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: #fff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── NAV ──────────────────────────────────────────── */
-.nav-wrap {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  max-width: 1060px; margin: 0 auto;
-  padding: 16px 20px 0;
-  pointer-events: none;
-}
-.nav-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 22px; padding: 11px 20px;
-  pointer-events: all;
-  transition: box-shadow 0.3s ease;
-  overflow: hidden;
-}
-.nav-card.scrolled { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3); }
-.nav-top { display: flex; align-items: center; justify-content: space-between; }
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo svg { width: 22px; height: 22px; flex-shrink: 0; }
-.logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
-.nav-right { display: flex; align-items: center; gap: 18px; }
-.nav-right a { font-size: 10px; color: #999CA3; text-decoration: none; font-weight: 500; }
-.nav-right a:hover { color: #fff; }
-
 /* ── CAROUSEL ─────────────────────────────────────── */
 .carousel { position: relative; width: 100%; overflow: hidden; user-select: none; margin-top: 82px; }
 .car-track { display: flex; gap: 10px; transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
 .car-slide {
   flex: 0 0 min(1020px, 100vw); width: min(1020px, 100vw); aspect-ratio: 16/9;
-  position: relative; overflow: hidden; background: #0E1015;
+  position: relative; overflow: hidden; background: var(--bg);
 }
 .car-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .car-play {
@@ -224,7 +231,7 @@ body {
 .car-next { right: max(14px, calc(50% - 496px)); }
 .car-counter {
   position: absolute; bottom: 12px; right: max(14px, calc(50% - 496px));
-  font-size: 10px; font-weight: 600; color: #999CA3;
+  font-size: 10px; font-weight: 600; color: var(--dim);
   background: rgba(0,0,0,0.55); padding: 3px 8px; border-radius: 10px;
   pointer-events: none; letter-spacing: 0.04em;
 }
@@ -247,7 +254,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: #999CA3;
+  color: var(--dim);
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
@@ -255,6 +262,11 @@ body {
 @media (max-width: 600px) { .back-btn { display: none; } }
 
 .main-grid { flex: 1; min-width: 0; }
+
+/* Breadcrumb */
+.crumbs { font-size: 11px; color: var(--dim); margin-bottom: 14px; }
+.crumbs a { color: var(--dim); text-decoration: none; }
+.crumbs a:hover { color: #fff; }
 
 /* Meta row */
 .meta-row {
@@ -267,14 +279,6 @@ body {
 }
 .meta-date strong { color: #fff; font-weight: 600; }
 .meta-badges { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-.badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 10px; font-weight: 600;
-  padding: 6px 10px; border-radius: 20px; border: 1px solid;
-  white-space: nowrap; height: 22px;
-}
-.badge-anticipated { color: var(--gold); border-color: rgba(200,152,86,0.35); background: rgba(144,116,62,0.1); }
-.badge-rerelease   { color: var(--blue); border-color: rgba(26,159,255,0.35); background: rgba(26,159,255,0.08); }
 
 /* Title + desc */
 .game-title {
@@ -284,16 +288,13 @@ body {
 }
 .game-desc {
   font-size: 15px; line-height: 1.7;
-  color: #999CA3;
+  color: var(--dim);
   margin-bottom: 18px;
 }
-.ptags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 28px; }
-.ptag {
-  font-size: 9px; font-weight: 700; padding: 3px 10px;
-  border-radius: 20px; color: #999CA3;
-  background: rgba(153,156,163,0.08); border: 1px solid var(--border);
-  letter-spacing: 0.05em;
-}
+/* Detail-pagina toont grotere, vetter platform-tags dan de homepage-kaart —
+   overschrijft alleen de afwijkende eigenschappen boven op .ptags/.ptag uit site.css */
+.ptags { gap: 5px; margin-bottom: 28px; }
+.ptag { font-size: 9px; font-weight: 700; padding: 3px 10px; letter-spacing: 0.05em; }
 
 /* Price card */
 .price-card {
@@ -310,31 +311,10 @@ body {
   font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 5px;
   background: rgba(76,175,80,0.18); color: #4CAF50; border: 1px solid rgba(76,175,80,0.35);
 }
-.cur-toggle {
-  display: flex; align-items: center; gap: 2px;
-  background: rgba(41,43,49,0.6); border-radius: 8px; padding: 3px;
-}
-.cur-btn {
-  font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-  color: #999CA3; background: none; border: none;
-  padding: 4px 9px; border-radius: 5px; cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-.cur-btn:hover { color: #fff; }
-.cur-btn.active { background: var(--border); color: #fff; }
-.steam-cta {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--blue); color: #fff;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  text-decoration: none; padding: 10px 20px; border-radius: 8px;
-  transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
-}
-.steam-cta:hover { background: var(--blue-hv); }
-
 /* Dev / metacritic */
 .game-info-row {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  font-size: 11px; color: #999CA3;
+  font-size: 11px; color: var(--dim);
   margin-bottom: 32px;
 }
 .game-info-row strong { color: #fff; }
@@ -343,9 +323,9 @@ body {
   font-size: 11px; font-weight: 700;
   padding: 2px 8px; border-radius: 4px; text-decoration: none;
 }
-.meta-green  { background: #1a4a14; color: #7ed47e; }
-.meta-yellow { background: #4a3f14; color: #d4c46e; }
-.meta-red    { background: #4a1414; color: #d47e7e; }
+.meta-green  { background: #1a4a14; color: var(--score-green); }
+.meta-yellow { background: #4a3f14; color: var(--score-yellow); }
+.meta-red    { background: #4a1414; color: var(--score-red); }
 
 /* System requirements */
 .section { margin-bottom: 36px; }
@@ -357,35 +337,12 @@ body {
 .reqs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 @media (max-width: 600px) { .reqs-grid { grid-template-columns: 1fr; } }
 .req-label {
-  font-size: 10px; font-weight: 700; color: #999CA3;
+  font-size: 10px; font-weight: 700; color: var(--dim);
   letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
 }
-.req-body { font-size: 12px; color: #999CA3; line-height: 1.8; }
+.req-body { font-size: 12px; color: var(--dim); line-height: 1.8; }
 .req-body ul { padding-left: 18px; }
 .req-body strong { color: #fff; }
-
-/* ── FOOTER ───────────────────────────────────────── */
-.site-footer { padding: 0 20px 24px; }
-.footer-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  overflow: visible;
-  max-width: 1020px;
-  margin: 0 auto;
-}
-.footer-top { padding: 20px 20px 0; overflow: visible; }
-.d-bar {
-  background: rgba(255,255,255,0.22);
-  transform-origin: bottom center;
-  width: 3px; height: 100%;
-  display: block; flex-shrink: 0;
-}
-.footer-bottom {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 20px;
-}
-.footer-copy { font-size: 10px; color: #999CA3; }
 </style>
 </head>
 <body>
@@ -403,9 +360,9 @@ body {
         <span>Loading Archive</span>
       </a>
       <div class="nav-right">
-        <a href="/">2026</a>
+        <a href="/">${new Date().getFullYear()}</a>
         <a href="/trending">Trending</a>
-        <a href="mailto:loadingarchive@outlook.com">Contact</a>
+        <a href="/contact">Contact</a>
       </div>
     </div>
   </div>
@@ -428,12 +385,13 @@ ${totalSlides > 0 ? `
 </div>` : ''}
 
 <!-- MAIN CONTENT -->
-<div class="back-wrap${totalSlides === 0 ? ' no-carousel' : ''}">
+<main class="back-wrap${totalSlides === 0 ? ' no-carousel' : ''}">
   <a href="/" class="back-btn" aria-label="Back to games">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 2 4 6 8 10"/></svg>
   </a>
 
   <div class="main-grid">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Loading Archive</a> / <a href="/releases/${monthKey}">${esc(monthLabel)}</a> / ${title}</nav>
   <div class="meta-row">
     <div class="meta-date">Release date / <strong>${date}</strong></div>
     ${metaBadges ? `<div class="meta-badges">${metaBadges}</div>` : ''}
@@ -443,7 +401,7 @@ ${totalSlides > 0 ? `
   ${rawDesc ? `<p class="game-desc">${esc(rawDesc)}</p>` : ''}
   ${ptagsHtml ? `<div class="ptags">${ptagsHtml}</div>` : ''}
 
-  ${g.steam ? `
+  ${(g.steam || g.store_url || g.price) ? `
   <div class="price-card">
     <div>
       <div class="price-label">${g.price && g.discount_percent > 0 ? 'Sale price' : 'Price'}</div>
@@ -461,7 +419,11 @@ ${totalSlides > 0 ? `
         ` : `<div class="price-value" style="color:var(--dim);font-size:16px">TBA</div>`}
       </div>
     </div>
-    <a class="steam-cta" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>
+    ${g.steam
+      ? `<a class="cta-btn" href="https://store.steampowered.com/app/${esc(g.steam)}" target="_blank" rel="noopener">View on Steam</a>`
+      : g.store_url
+        ? `<a class="cta-btn cta-btn-gold" href="${esc(g.store_url)}" target="_blank" rel="noopener">Pre-order</a>`
+        : ''}
   </div>` : ''}
 
   ${(g.dev || g.metacritic) ? `
@@ -473,20 +435,10 @@ ${totalSlides > 0 ? `
   ${reqsHtml}
 
   </div><!-- /main-grid -->
-</div><!-- /back-wrap -->
+</main><!-- /back-wrap -->
 
 <!-- FOOTER -->
-<footer class="site-footer">
-  <div class="footer-card">
-    <div class="footer-top">
-      <div id="dominoRow"></div>
-    </div>
-    <div class="footer-bottom">
-      <span class="footer-copy">&copy; Loading Archive 2026</span>
-      <span class="footer-copy">All rights reserved</span>
-    </div>
-  </div>
-</footer>
+${siteFooterHtml('dominoRow')}
 
 <script>
 window.addEventListener('scroll', () => {
@@ -502,9 +454,9 @@ window.addEventListener('scroll', () => {
 
   // Opgeslagen Steam regionale prijzen (null = nog niet beschikbaar voor die regio)
   const PRICES = {
-    USD: { final: ${JSON.stringify(g.price || null)}, initial: ${JSON.stringify(g.price_initial || null)} },
-    EUR: { final: ${JSON.stringify(g.price_eur || null)}, initial: ${JSON.stringify(g.price_initial_eur || null)} },
-    GBP: { final: ${JSON.stringify(g.price_gbp || null)}, initial: ${JSON.stringify(g.price_initial_gbp || null)} },
+    USD: { final: ${jsonForScript(g.price || null)}, initial: ${jsonForScript(g.price_initial || null)} },
+    EUR: { final: ${jsonForScript(g.price_eur || null)}, initial: ${jsonForScript(g.price_initial_eur || null)} },
+    GBP: { final: ${jsonForScript(g.price_gbp || null)}, initial: ${jsonForScript(g.price_initial_gbp || null)} },
   };
 
   function apply(cur) {
@@ -624,7 +576,7 @@ window.addEventListener('scroll', () => {
 ${dominoFooterJS('dominoRow')}
 ${hasTrailer ? `
 async function playTrailer() {
-  const trailer = ${JSON.stringify(g.trailer)};
+  const trailer = ${jsonForScript(g.trailer)};
   const slide = document.getElementById('carSlide0');
   const play  = document.getElementById('heroPlay');
   if (play) play.style.display = 'none';

@@ -1,5 +1,5 @@
-import { PLATFORM_MAP, parseSteamDate, mapWithConcurrency } from './utils.js';
-import { ADULT_DESCRIPTOR_IDS, fetchSteamAppDetails } from './steam.js';
+import { PLATFORM_MAP, mapWithConcurrency } from './utils.js';
+import { fetchSteamAppDetails } from './steam.js';
 
 // Laag B: client-side 18+ filter op RAWG-velden
 const ADULT_ESRB_SLUGS = new Set(['adults-only']);
@@ -67,7 +67,6 @@ async function enrichRawgGameWithSteam(rg, rawgKey) {
   }
 
   const steamGenre = (app.genres || []).map(g => g.description).slice(0, 2);
-  const steamDate  = parseSteamDate(app.release_date?.date);
 
   return {
     ...rg,
@@ -77,6 +76,10 @@ async function enrichRawgGameWithSteam(rg, rawgKey) {
     anticipated: rg.anticipated,
     price:      app.is_free ? "Free" : (app.price_overview?.final_formatted || rg.price),
     cover:      app.header_image || rg.cover,
+    // In-memory doorgegeven aan merge.js zodat backfill/saveGameToD1 niet
+    // nogmaals hetzelfde appdetails-endpoint hoeven aan te roepen.
+    // Wordt NIET gepersisteerd: saveGameToD1 bouwt de entry veld-voor-veld op.
+    steamApp:   app,
   };
 }
 
@@ -86,7 +89,7 @@ async function fetchRawg(rawgKey, query, maxPages = 5) {
   let pages = 0;
   try {
     while (url && pages < maxPages) {
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) { console.error("RAWG request failed", r.status); break; }
       const data = await r.json();
       all.push(...(data.results || []));

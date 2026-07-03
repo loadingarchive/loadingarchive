@@ -3,12 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <link rel="canonical" href="https://www.loadingarchive.com/">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loading Archive</title>
-<meta name="description" content="Browse release dates for all major upcoming games on every platform — PC, PlayStation, Xbox and Switch.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Video Game Release Dates Calendar 2026 — PC, PS5, Xbox, Switch | Loading Archive</title>
+<meta name="description" content="Complete 2026 video game release calendar. Browse exact release dates, platforms, prices and trailers for every major upcoming game on PC, PlayStation 5, Xbox Series X/S and Nintendo Switch.">
+<meta property="og:type"        content="website">
+<meta property="og:title"       content="Video Game Release Dates Calendar 2026 | Loading Archive">
+<meta property="og:description" content="Complete 2026 game release calendar — exact dates, platforms, prices and trailers for PC, PS5, Xbox and Switch.">
+<meta property="og:url"         content="https://www.loadingarchive.com/">
+<meta property="og:site_name"   content="Loading Archive">
+<meta property="og:image"       content="https://www.loadingarchive.com/assets/header-bg.jpg">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Video Game Release Dates Calendar 2026 | Loading Archive">
+<meta name="twitter:description" content="Complete 2026 game release calendar — exact dates, platforms, prices and trailers for PC, PS5, Xbox and Switch.">
+<meta name="twitter:image"       content="https://www.loadingarchive.com/assets/header-bg.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"Loading Archive","url":"https://www.loadingarchive.com/","description":"Video game release dates calendar for PC, PlayStation, Xbox and Nintendo Switch."}
+</script>
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.png">
+<!-- Hero-achtergrond is het LCP-element; als CSS-background wordt hij pas na
+     de CSS-parse ontdekt — preload met hoge prioriteit haalt seconden van LCP af. -->
+<link rel="preload" as="image" href="assets/header-bg.jpg" fetchpriority="high">
+<!-- Shared design tokens + repeating components (nav, footer, game card,
+     badges, month nav, side nav) — single source of truth, see /styleguide -->
+<link rel="stylesheet" href="/css/site.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts async: render-blocking Google Fonts CSS kostte ~775ms op mobiel.
+     Systeemfont toont eerst (display=swap), Inter swapt in zodra geladen. -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6965515761301412" crossorigin="anonymous"></script>
 <!-- Google tag (gtag.js) -->
@@ -21,55 +46,6 @@
   gtag('config', 'G-BL25QH6B7L');
 </script>
 <style>
-:root {
-  --bg:         #0E1015;
-  --surface:    #181A20;
-  --border:     #292B31;
-  --blue:       #1A9FFF;
-  --blue-hover: #5BBFFF;
-  --gold:       #C89856;
-  --dim:        #999CA3;
-  --dimmer:     rgba(153,156,163,0.35);
-  --pill:       20px;
-  --xs:         10px;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: #fff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  -webkit-font-smoothing: antialiased;
-}
-button, select, input { font-family: inherit; }
-
-/* NAV */
-.nav-wrap {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  max-width: 1060px; margin: 0 auto;
-  padding: 16px 20px 0;
-}
-.nav-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 11px 20px;
-  transition: box-shadow 0.3s ease;
-  overflow: hidden;
-}
-.nav-card.scrolled { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3); }
-.nav-top { display: flex; align-items: center; justify-content: space-between; }
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo svg { width: 22px; height: 22px; flex-shrink: 0; }
-.logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
-.nav-right { display: flex; align-items: center; gap: 18px; }
-.nav-right a { font-size: var(--xs); color: #999CA3; text-decoration: none; font-weight: 500; }
-.nav-right a:hover { color: #fff; }
-
 /* HERO */
 .hero {
   background: url('assets/header-bg.jpg') center center / cover no-repeat;
@@ -109,26 +85,6 @@ button, select, input { font-family: inherit; }
   width: 100%;
 }
 
-/* SIDE NAV */
-.side-nav {
-  position: absolute; left: -70px; top: 80px; bottom: 140px;
-  width: 50px; flex-shrink: 0;
-}
-.side-nav-inner {
-  position: sticky; top: 96px; height: 330px; width: 50px;
-  cursor: grab; user-select: none;
-}
-.side-nav-inner:active { cursor: grabbing; }
-.sn-label {
-  position: absolute; right: 36px;
-  font-size: var(--xs); color: #fff; font-weight: 500;
-  white-space: nowrap;
-  display: flex; align-items: center; gap: 6px;
-  transform: translateY(-50%); transition: top 0.08s ease;
-  pointer-events: none;
-}
-.sn-label::after { content: ''; display: block; width: 10px; height: 1px; background: var(--border); }
-
 /* CONTENT AREA */
 .content-area { flex: 1; min-width: 0; }
 
@@ -146,39 +102,19 @@ button, select, input { font-family: inherit; }
 .list-search::placeholder { color: rgba(153,156,163,0.5); }
 .list-search:focus { border-color: var(--border); }
 
+/* Desktop: platform-chips en categorie-knop in één rij, categorie zwevend
+   rechts. Mobiel (zie media query onderin) valt terug op gestapeld. */
+.filter-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 32px;
+}
+.filter-row .platform-bar,
+.filter-row .cat-row { margin-bottom: 0; }
+
 .platform-bar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 6px;
 }
-.pbar-chip {
-  font-size: var(--xs); font-weight: 600; padding: 4px 12px;
-  border-radius: var(--pill); cursor: pointer; border: 1.5px solid transparent;
-  color: var(--dim); background: rgba(41,43,49,0.3);
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
-  user-select: none; display: flex; align-items: center; gap: 5px;
-}
-.pbar-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid rgba(153,156,163,0.4); transition: background 0.15s, border-color 0.15s; }
-.pbar-chip.active { color: #fff; }
-.pbar-chip.active .dot { border-color: transparent; }
-.pbar-chip.active.PC  { background: rgba(90,93,100,0.3); border-color: #5A5D64; }
-.pbar-chip.active.PC  .dot { background: #A0A3AA; }
-.pbar-chip.active.NS  { background: rgba(224,52,43,0.2); border-color: #E0342B; }
-.pbar-chip.active.NS  .dot { background: #E0342B; }
-.pbar-chip.active.NS2 { background: rgba(192,40,43,0.2); border-color: #C0282B; }
-.pbar-chip.active.NS2 .dot { background: #E03030; }
-.pbar-chip.active.PS4 { background: rgba(46,109,180,0.2); border-color: #2E6DB4; }
-.pbar-chip.active.PS4 .dot { background: #2E6DB4; }
-.pbar-chip.active.PS5 { background: rgba(59,130,196,0.2); border-color: #3B82C4; }
-.pbar-chip.active.PS5 .dot { background: #3B82C4; }
-.pbar-chip.active.XBO,
-.pbar-chip.active.XSX { background: rgba(44,162,67,0.2); border-color: #2CA243; }
-.pbar-chip.active.XBO .dot,
-.pbar-chip.active.XSX .dot { background: #2CA243; }
-.pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
-.pbar-chip.active.ANTICIPATED { background: rgba(144,116,62,0.2); border-color: var(--gold); }
-.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #90743E, #C89856); }
-.pbar-chip.active.PORT { background: rgba(26,159,255,0.15); border-color: var(--blue); }
-.pbar-chip.active.PORT .dot { background: var(--blue); }
 .pbar-chip.cat { color: var(--dim); border-color: var(--border); }
 .pbar-chip.cat.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
@@ -190,34 +126,13 @@ button, select, input { font-family: inherit; }
 }
 @media (max-width: 600px) { .game-grid { grid-template-columns: 1fr; } }
 
-/* CARD DATE */
-.card-date {
-  font-size: var(--xs); color: var(--dim);
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-}
-.card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-date-text span { color: #fff; }
-.card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.card-action-btn {
-  background: none; border: none; color: #999CA3;
-  cursor: pointer; padding: 0; line-height: 1;
-  transition: color 0.15s;
-  position: relative;
-  display: flex; align-items: center;
-}
-.card-action-btn:hover        { color: #fff; }
-.card-action-anticipated      { color: var(--gold); }
-.card-action-anticipated:hover { color: #C89856; }
-.card-action-rerelease        { color: var(--blue); }
-.card-action-rerelease:hover  { color: var(--blue-hover); }
-
 /* Global fixed tooltip — rendered outside any overflow:hidden context */
 #site-tooltip {
   position: fixed;
-  background: #181A20;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: #999CA3;
+  color: var(--dim);
   font-size: 10px; font-weight: 500; font-family: 'Inter', sans-serif;
   letter-spacing: 0.01em;
   padding: 4px 9px;
@@ -229,75 +144,6 @@ button, select, input { font-family: inherit; }
   transform: translateX(-50%) translateY(-100%);
 }
 #site-tooltip.show { opacity: 1; }
-
-/* GAME CARD */
-.game-card {
-  background: var(--surface); border-radius: 10px;
-  border: 1px solid rgba(41,43,49,0.5);
-  transition: border-color 0.15s;
-  display: flex; flex-direction: column;
-  padding: 15px; gap: 10px;
-  aspect-ratio: 330 / 280;
-  overflow: hidden; position: relative;
-  cursor: pointer;
-}
-.game-card:hover { border-color: var(--border); z-index: 2; }
-.card-title a { color: inherit; text-decoration: none; }
-.card-title a:hover { color: var(--blue); }
-
-.card-cover {
-  width: 100%; aspect-ratio: 300/140;
-  overflow: hidden; flex-shrink: 0; border-radius: 5px;
-  background: var(--surface);
-  position: relative;
-}
-.card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cover-steam-tag {
-  position: absolute; top: 7px; right: 7px;
-  display: inline-flex; align-items: center; gap: 4px;
-  background: rgba(10,12,16,0.82); backdrop-filter: blur(4px);
-  border: 1px solid rgba(76,175,80,0.45);
-  border-radius: 5px; padding: 3px 6px;
-  font-size: 9px; font-weight: 700; color: #4CAF50;
-  pointer-events: none;
-}
-.cover-steam-tag svg { flex-shrink: 0; }
-
-.card-body { flex: 1; display: flex; flex-direction: column; gap: 7px; }
-
-.card-title {
-  font-size: 14px; font-weight: 700; color: #fff;
-  line-height: 1.3; letter-spacing: -0.02em;
-  overflow: hidden; white-space: nowrap;
-  -webkit-mask-image: linear-gradient(to right, #000 70%, transparent 100%);
-  mask-image: linear-gradient(to right, #000 70%, transparent 100%);
-}
-
-.ptags { display: flex; flex-wrap: wrap; gap: 4px; }
-.ptag {
-  font-size: 8px; font-weight: 600; padding: 2px 8px;
-  border-radius: var(--pill);
-  color: #999CA3;
-  background: rgba(153,156,163,0.08); border: 1px solid var(--border);
-}
-
-.card-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: auto; gap: 6px;
-}
-.card-genre {
-  font-size: var(--xs); color: #999CA3;
-  display: flex; align-items: center; gap: 4px;
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-}
-.card-genre .mlabel { color: rgba(153,156,163,0.5); }
-.bekijk-btn {
-  flex-shrink: 0; font-size: var(--xs); font-weight: 500;
-  color: #999CA3; text-decoration: none;
-  display: inline-flex; align-items: center; gap: 4px;
-  white-space: nowrap; transition: color 0.15s;
-}
-.bekijk-btn:hover { color: #fff; }
 
 /* AD CARD */
 .ad-card {
@@ -314,12 +160,12 @@ button, select, input { font-family: inherit; }
   border: 1px dashed var(--border); border-radius: 18px; display: none;
 }
 .empty-state.show { display: block; }
-.empty-state p    { font-size: var(--xs); color: #999CA3; font-weight: 500; margin-bottom: 4px; }
+.empty-state p    { font-size: var(--xs); color: var(--dim); font-weight: 500; margin-bottom: 4px; }
 .empty-state span { font-size: var(--xs); color: rgba(153,156,163,0.55); }
 
 /* CATEGORY DROPDOWN */
 .cat-wrap { position: relative; margin-left: auto; }
-.loading-row { grid-column: 1/-1; padding: 48px 24px; text-align: center; font-size: 10px; color: #999CA3; font-weight: 500; }
+.loading-row { grid-column: 1/-1; padding: 48px 24px; text-align: center; font-size: 10px; color: var(--dim); font-weight: 500; }
 .cat-dropdown {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   background: var(--surface); border: 1px solid var(--border);
@@ -333,64 +179,88 @@ button, select, input { font-family: inherit; }
   font-size: var(--xs); font-weight: 500; padding: 4px 10px;
   border-radius: var(--pill); cursor: pointer;
   border: 1.5px solid var(--dimmer);
-  background: rgba(41,43,49,0.3); color: #999CA3;
+  background: rgba(41,43,49,0.3); color: var(--dim);
   transition: color 0.15s, background 0.15s, border-color 0.15s;
   user-select: none;
 }
 .cat-chip.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
-/* MONTH NAV */
-.month-nav-wrap {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-  padding: 18px 20px 16px;
-  background: linear-gradient(180deg, rgba(14,16,21,0) 0%, var(--bg) 42%);
-}
-.month-nav-inner {
-  max-width: 1020px; margin: 0 auto;
-  display: flex; align-items: center;
-  background: rgba(24,26,32,0.96); backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(41,43,49,0.9);
-  border-radius: 100px; padding: 15px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
-}
-.month-nav-label { font-size: var(--xs); color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
-.months {
-  display: flex; align-items: center; gap: 10px; margin-left: auto;
-  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-}
-.months::-webkit-scrollbar { display: none; }
-.mnav {
-  font-size: var(--xs); color: #999CA3; padding: 0;
-  border-radius: 0; cursor: pointer; border: none; background: transparent;
-  transition: color 0.15s; font-weight: 500; line-height: 1; flex-shrink: 0;
-}
-.mnav:hover { color: #fff; }
-.mnav.active { color: #fff; }
-.month-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; flex-shrink: 0; }
-
-/* ── FOOTER ──────────────────────────────────────── */
-.site-footer { padding: 0 20px 24px; }
-.footer-card {
+/* ── SITE INTRO (crawlbaar tekstblok boven de footer) ── */
+.site-intro { padding: 0 20px 24px; margin-bottom: 70px; }
+.site-intro-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  overflow: visible;
   max-width: 1020px;
   margin: 0 auto;
+  padding: 28px 28px 18px;
 }
-.footer-top { padding: 20px 20px 0; overflow: visible; }
-.d-bar {
-  background: rgba(255,255,255,0.22);
-  transform-origin: bottom center;
-  width: 3px; height: 100%;
-  display: block;
+.site-intro-card h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 14px; letter-spacing: -0.01em; }
+.site-intro-card p { font-size: 13px; line-height: 1.75; color: var(--dim); margin-bottom: 12px; }
+.site-intro-card strong { color: #fff; font-weight: 600; }
+
+/* ── CATEGORIE RIJ ── */
+.cat-row { display: flex; justify-content: flex-end; margin-bottom: 16px; flex-shrink: 0; }
+
+/* ── MOBILE ────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Hero */
+  .hero { height: 300px; }
+  .tagline { padding: 0 20px 18px; }
+  .tagline h1 { font-size: 17px; line-height: 1.35; margin-bottom: 12px; max-width: 100%; }
+
+  /* Search: 16px zodat iOS niet auto-zoomt; meer ruimte onder de toolbar */
+  .list-search { font-size: 16px; padding: 11px 14px; }
+  .list-toolbar { margin-bottom: 26px; }
+
+  /* Categorie terug naar eigen rij onder de platform-chips (desktop zet ze
+     via .filter-row naast elkaar, zie basisregel). Marges hier herhalen met
+     dezelfde selector-specificiteit als de desktop-regel (.filter-row .x),
+     anders wint de desktop margin:0 ondanks de latere media query. */
+  .filter-row { display: block; }
+  .filter-row .platform-bar { margin-bottom: 14px; }
+  .filter-row .cat-row      { margin-bottom: 16px; }
+
+  /* Platform chips: één scrollbare rij met fade aan beide kanten */
+  .platform-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-bottom: 14px;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+  }
+  .platform-bar::-webkit-scrollbar { display: none; }
+  .pbar-chip { flex-shrink: 0; }
+  .pbar-sep  { flex-shrink: 0; }
+  /* Extra ruimte tussen Anticipated en Port */
+  .pbar-chip.PORT { margin-left: 8px; }
+
+  /* Categorie: full-width rij, tekst links, pijl rechts */
+  .cat-row { justify-content: flex-start; }
+  .cat-row .cat-wrap      { width: 100%; }
+  .cat-row .pbar-chip.cat {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .cat-row .cat-dropdown  { left: 0; right: auto; min-width: 100%; }
+
+  /* Card action buttons: tap-target padding + gap zitten in de basisregel */
+
+  /* Ruimte voor maandnav */
+  .main-wrap { padding-bottom: 200px; }
+
+  /* Maandnav */
+  .month-nav-label { display: none; }
+  .month-nav-inner { padding: 14px 16px; }
+  .months { margin-left: 0; justify-content: center; }
 }
-.footer-bottom {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 20px;
-}
-.footer-copy { font-size: 10px; color: #999CA3; }
 </style>
 </head>
 <body>
@@ -408,9 +278,9 @@ button, select, input { font-family: inherit; }
           <span>Loading Archive</span>
         </a>
         <div class="nav-right">
-          <a href="#">2026</a>
+          <a href="#" id="navYearLink">2026</a>
           <a href="/trending">Trending</a>
-          <a href="mailto:loadingarchive@outlook.com">Contact</a>
+          <a href="/contact">Contact</a>
         </div>
       </div>
 
@@ -421,12 +291,12 @@ button, select, input { font-family: inherit; }
     <h1>Discover the release dates for all the major upcoming video games across every platform</h1>
     <div class="month-pill" id="heroPill">June 2026</div>
     <div class="tagline-arrow">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999CA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </div>
   </div>
 </div>
 
-<div class="main-wrap">
+<main class="main-wrap">
   <div class="side-nav" id="sideNav">
     <div class="side-nav-inner" id="sideNavInner"></div>
   </div>
@@ -436,7 +306,9 @@ button, select, input { font-family: inherit; }
       <input class="list-search" id="searchInput" type="text" placeholder="Search game...">
     </div>
 
-    <div class="platform-bar" id="platformBar">
+    <div class="filter-row">
+      <div class="platform-bar" id="platformBar"></div>
+      <div class="cat-row" id="catRow"></div>
     </div>
 
     <div class="game-grid" id="gameGrid">
@@ -446,16 +318,52 @@ button, select, input { font-family: inherit; }
       </div>
     </div>
   </div>
-</div>
+</main>
+
+<!-- Statisch, crawlbaar tekstblok: legt uit wat de site is en doet.
+     Zichtbaar voor bezoekers én de enige echte tekst die een crawler op
+     de (verder client-side gerenderde) homepage ziet. -->
+<section class="site-intro" aria-label="About Loading Archive">
+  <div class="site-intro-card prose">
+    <h2>The release calendar that tells you what's actually new</h2>
+    <p>Loading Archive tracks every upcoming video game release for PC, PlayStation&nbsp;5, Xbox Series&nbsp;X/S and Nintendo Switch — with one difference from every other calendar: we label re-releases honestly. A <strong>Port</strong> badge means the same game is simply arriving on a new platform; a <strong>Remake</strong> badge means it has been visually or technically rebuilt. Both always show the original release date, so a ten-year-old game can never masquerade as a new one. These classifications are made by hand, not by an algorithm.</p>
+    <p>Release dates and platform lists are cross-checked daily against multiple sources, and prices come straight from Steam in USD, EUR and GBP — refreshed every day, including live discounts. The <a href="/trending">trending page</a> shows what people are actually playing right now, updated hourly from Steam player counts.</p>
+    <p>Browse by month using the links below, check the <a href="/releases/tba">announced games without a date</a>, or read more about <a href="/about">how we verify our data</a>. Spotted a mistake? <a href="/contact">Tell us</a> — corrections usually go live within a day.</p>
+  </div>
+</section>
 
 <footer class="site-footer">
   <div class="footer-card">
     <div class="footer-top">
       <div id="footerDominoRow"></div>
     </div>
+    <!-- Visueel verborgen maar crawlbaar: het enige interne linkpad dat
+         Google vanaf de homepage naar elke SSR /releases/-pagina brengt
+         (de JS-maandbalk hierboven filtert alleen client-side en linkt
+         nergens naartoe). -->
+    <nav class="footer-months-sr" aria-label="Browse releases by month" id="footerMonths">
+      <a href="/releases/2026-01">January</a>
+      <a href="/releases/2026-02">February</a>
+      <a href="/releases/2026-03">March</a>
+      <a href="/releases/2026-04">April</a>
+      <a href="/releases/2026-05">May</a>
+      <a href="/releases/2026-06">June</a>
+      <a href="/releases/2026-07">July</a>
+      <a href="/releases/2026-08">August</a>
+      <a href="/releases/2026-09">September</a>
+      <a href="/releases/2026-10">October</a>
+      <a href="/releases/2026-11">November</a>
+      <a href="/releases/2026-12">December</a>
+    </nav>
     <div class="footer-bottom">
-      <span class="footer-copy">&copy; Loading Archive 2026</span>
-      <span class="footer-copy">All rights reserved</span>
+      <span class="footer-copy" id="footerYear">&copy; Loading Archive 2026</span>
+      <nav class="footer-links" aria-label="Site links">
+        <a href="/releases/tba">TBA</a>
+        <a href="/trending">Trending</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/contact">Contact</a>
+      </nav>
     </div>
   </div>
 </footer>
@@ -472,6 +380,11 @@ button, select, input { font-family: inherit; }
 <div id="site-tooltip"></div>
 <script>
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const YEAR = new Date().getFullYear();
+
+// AdSense-account is nog niet goedgekeurd — ad-slots leveren tot die tijd
+// alleen lege/gebroken vakken op. Zet op true zodra de site is goedgekeurd.
+const ADS_ENABLED = false;
 
 const PLATFORM_DEFS = [
   { key:"PC",  label:"PC",    cls:"PC"  },
@@ -503,6 +416,7 @@ const ALL_PLATFORMS = ['PC', 'NS', 'NS2', 'PS4', 'PS5', 'XBO', 'XSX'];
 let activePlatforms = new Set(ALL_PLATFORMS); // all on by default (opt-out)
 let showAnticipated = true;
 let showPorts = true;
+let showRemakes = true;
 let searchSeq = 0;
 let loadSeq = 0;
 
@@ -515,10 +429,7 @@ function mapGame(g, idx) {
     genre: g.genre || [],
     dev: g.dev || "",
     anticipated: !!g.anticipated,
-    trailer: g.trailer || null,
     steam: g.steam || null,
-    price: g.price || null,
-    price_initial: g.price_initial || null,
     discount_percent: g.discount_percent || 0,
     cover: g.cover || null,
     rerelease: g.rerelease || null,
@@ -564,8 +475,6 @@ function matchesSearch(title, query) {
 function parseDate(str) { return new Date(str + 'T00:00:00'); }
 function formatDate(str) { return parseDate(str).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }
 function formatDateShort(str) { return parseDate(str).toLocaleDateString('en-US', { month:'short', year:'numeric' }); }
-function getMonth(str) { return parseInt(str.split('-')[1]) - 1; }
-
 function toggleSet(set, key) {
   set.has(key) ? set.delete(key) : set.add(key);
   buildPlatformBar();
@@ -584,7 +493,7 @@ async function fetchAndRenderGames(url, loadingText) {
 
   let results;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();
     results = data.results || [];
   } catch (e) {
@@ -599,12 +508,12 @@ async function fetchAndRenderGames(url, loadingText) {
 
 async function loadGames(monthIdx) {
   const m = String(monthIdx + 1).padStart(2, "0");
-  await fetchAndRenderGames(`/api/games?month=2026-${m}`, 'Loading releases...');
+  await fetchAndRenderGames(`/api/games?month=${YEAR}-${m}&cb=3`, 'Loading releases...');
   buildSideNav();
 }
 
 async function loadTba() {
-  await fetchAndRenderGames('/api/games?tba=1', 'Loading announced games...');
+  await fetchAndRenderGames('/api/games?tba=1&cb=3', 'Loading announced games...');
 }
 
 function buildPlatformBar() {
@@ -640,12 +549,19 @@ function buildPlatformBar() {
   portBtn.onclick = () => { showPorts = !showPorts; buildPlatformBar(); renderGames(); };
   bar.appendChild(portBtn);
 
+  const remakeBtn = document.createElement('button');
+  remakeBtn.className = 'pbar-chip REMAKE' + (showRemakes ? ' active' : '');
+  remakeBtn.innerHTML = `<span class="dot"></span>Remake`;
+  remakeBtn.onclick = () => { showRemakes = !showRemakes; buildPlatformBar(); renderGames(); };
+  bar.appendChild(remakeBtn);
+
   const catWrap = document.createElement('div');
   catWrap.className = 'cat-wrap';
   const catBtn = document.createElement('button');
   catBtn.className = 'pbar-chip cat' + (activeCats.size > 0 ? ' active' : '');
   catBtn.id = 'catBtn';
-  catBtn.innerHTML = activeCats.size > 0 ? `Categorie (${activeCats.size}) ▾` : 'Categorie ▾';
+  const catLabel = activeCats.size > 0 ? 'Categorie (' + activeCats.size + ')' : 'Categorie';
+  catBtn.innerHTML = '<span>' + catLabel + '</span><span>▾</span>';
   catBtn.onclick = (e) => { e.stopPropagation(); toggleCatDropdown(); };
 
   const dropdown = document.createElement('div');
@@ -665,7 +581,9 @@ function buildPlatformBar() {
   dropdown.appendChild(catGrid);
   catWrap.appendChild(catBtn);
   catWrap.appendChild(dropdown);
-  bar.appendChild(catWrap);
+  const catRow = document.getElementById('catRow');
+  catRow.innerHTML = '';
+  catRow.appendChild(catWrap);
 }
 
 function toggleCatDropdown() {
@@ -706,7 +624,7 @@ function buildMonthNav() {
 function setMonth(i) {
   tbaMode = false;
   activeMonth = i;
-  document.getElementById('heroPill').textContent = MONTHS[i] + ' 2026';
+  document.getElementById('heroPill').textContent = MONTHS[i] + ' ' + YEAR;
   document.getElementById('sideNav').style.display = '';
   buildMonthNav();
   loadGames(i);
@@ -720,41 +638,18 @@ function setTba() {
   loadTba();
 }
 
-function stepMonth(delta) {
-  const current = tbaMode ? MONTHS.length : activeMonth;
-  const next = current + delta;
-  if (next < 0 || next > MONTHS.length) return;
-  if (next === MONTHS.length) setTba(); else setMonth(next);
-}
-
-function setupMonthSwipe() {
-  const el = document.getElementById('monthNav');
-  let startX = 0, startY = 0, tracking = false;
-  el.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    tracking = true;
-  }, { passive: true });
-  el.addEventListener('touchend', e => {
-    if (!tracking) return;
-    tracking = false;
-    const touch = e.changedTouches[0];
-    const deltaX = touch.clientX - startX;
-    const deltaY = touch.clientY - startY;
-    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
-    stepMonth(deltaX < 0 ? 1 : -1);
-  }, { passive: true });
-}
-
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
     if (q && !matchesSearch(g.title, q)) return false;
     // Anticipated: deactivated chip = hide anticipated games
     if (!showAnticipated && g.anticipated) return false;
-    // Port: deactivated chip = hide ports/re-releases
-    if (!showPorts && g.rerelease) return false;
+    // Port/Remake: rerelease zonder type (oude records) telt als port.
+    if (g.rerelease) {
+      const isRemake = g.rerelease.type === 'remake';
+      if (isRemake && !showRemakes) return false;
+      if (!isRemake && !showPorts) return false;
+    }
     // Platforms: show if game has no platforms, or has at least one active platform
     const gamePlats = g.platforms || [];
     if (gamePlats.length > 0 && activePlatforms.size < ALL_PLATFORMS.length) {
@@ -769,8 +664,17 @@ function getFiltered() {
   });
 }
 
-async function onSearchInput() {
+// Lokaal filteren is instant (geen netwerk); de cross-month zoekactie hieronder
+// doet tot 11 API-calls en wordt daarom gedebouncet zodat die niet op elke
+// toetsaanslag afvuurt (en de dynamische ad-slots niet onnodig vaak herbouwt).
+let searchDebounceTimer = null;
+function onSearchInput() {
   renderGames();
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(searchAcrossMonths, 300);
+}
+
+async function searchAcrossMonths() {
   if (tbaMode) return;
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
   if (!query || GAMES.some(g => matchesSearch(g.title, query))) return;
@@ -785,7 +689,7 @@ async function onSearchInput() {
       if (mySeq !== searchSeq) return;
       let monthResults = [];
       try {
-        const res = await fetch(`/api/games?month=2026-${String(i + 1).padStart(2, '0')}`);
+        const res = await fetch(`/api/games?month=${YEAR}-${String(i + 1).padStart(2, '0')}&cb=3`, { cache: 'no-store' });
         const data = await res.json();
         monthResults = data.results || [];
       } catch (e) { /* skip on fetch error */ }
@@ -800,6 +704,27 @@ async function onSearchInput() {
   }
 }
 
+// Ad-slots worden één keer aangemaakt en één keer gepusht (AdSense-beleid
+// verbiedt herhaalde refresh van dezelfde <ins>-tag). Bij filter-/zoek-
+// wijzigingen verplaatst renderGames() de bestaande nodes in de DOM in plaats
+// van ze te verwijderen en opnieuw aan te maken + te pushen.
+const adSlots = [];
+function getAdSlot(i) {
+  if (adSlots[i]) return adSlots[i];
+  const adCard = document.createElement('div');
+  adCard.className = 'ad-card';
+  adCard.innerHTML = `
+    <ins class="adsbygoogle"
+      style="display:block;width:100%;height:250px;"
+      data-ad-client="ca-pub-6965515761301412"
+      data-ad-slot="3703289900"
+      data-ad-format="auto"
+      data-full-width-responsive="true"></ins>`;
+  adSlots[i] = adCard;
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {}
+  return adCard;
+}
+
 function renderGames() {
   [...gameGrid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
   emptyState.classList.remove('show');
@@ -807,21 +732,12 @@ function renderGames() {
   const games = getFiltered().sort((a, b) => tbaMode ? 0 : (a.date || '').localeCompare(b.date || ''));
   if (!games.length) { emptyState.classList.add('show'); return; }
 
-  const adPositions = [5, 11];
+  const adPositions = ADS_ENABLED ? [5, 11] : [];
+  let adIdx = 0;
   games.forEach((g, i) => {
     gameGrid.appendChild(buildCard(g));
     if (adPositions.includes(i + 1)) {
-      const adCard = document.createElement('div');
-      adCard.className = 'ad-card';
-      adCard.innerHTML = `
-        <ins class="adsbygoogle"
-          style="display:block;width:100%;height:250px;"
-          data-ad-client="ca-pub-6965515761301412"
-          data-ad-slot="3703289900"
-          data-ad-format="auto"
-          data-full-width-responsive="true"></ins>`;
-      gameGrid.appendChild(adCard);
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      gameGrid.appendChild(getAdSlot(adIdx++));
     }
   });
 }
@@ -832,30 +748,27 @@ function platformTag(p) {
   return `<span class="ptag ${cls}">${label}</span>`;
 }
 
-function makeInitials(title) {
-  let result = '';
-  for (const word of (title || '').split(/\s+/).filter(Boolean)) {
-    const ch = word.match(/[A-Za-z0-9]/)?.[0]?.toUpperCase() || '';
-    if (!ch) continue;
-    result += ch;
-    if (word.includes(':')) result += ':';
-    if (result.replace(/:/g, '').length >= 4) break;
-  }
-  return result || '?';
+// rerelease.type onderscheidt een pure platform-port (zelfde assets, nieuw
+// platform) van een remake/remaster (visueel/technisch herbouwd). Records
+// zonder type (oude tags, automatische detectie) vallen terug op 'port'.
+const PORT_SVG   = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.53554 8.53554C7.59783 9.47321 6.32608 10 5 10C3.68031 10 2.70383 9.63463 1.94478 9.07575C1.68555 8.88488 1.45603 8.67437 1.25 8.45562V9.16667H0L2.72917e-08 6.875L8.295e-07 6.25H0.625H0.823867H2.91667V7.5H2.06945C2.25562 7.70913 2.45748 7.90096 2.6859 8.06913C3.21946 8.462 3.93333 8.75 5 8.75C5.99454 8.75 6.94837 8.35492 7.65167 7.65167C8.35492 6.94837 8.75 5.99454 8.75 5H10C10 6.32608 9.47321 7.59783 8.53554 8.53554ZM8.75 1.54438V0.833333H10V3.125V3.75H9.375H9.17612H7.08333V2.5H7.93054C7.74437 2.29087 7.5425 2.09903 7.31408 1.93085C6.78054 1.53802 6.06667 1.25 5 1.25C4.00544 1.25 3.05161 1.64509 2.34835 2.34835C1.64509 3.05161 1.25 4.00544 1.25 5H4.96667e-08C6.55e-08 3.67392 0.526783 2.40215 1.46447 1.46447C2.40215 0.526783 3.67392 -1.57917e-08 5 0C6.31971 1.575e-08 7.29617 0.365393 8.05521 0.924258C8.31446 1.11512 8.54396 1.32561 8.75 1.54438Z" fill="currentColor"/></svg>`;
+const REMAKE_SVG = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 0L6.1 3.9L10 5L6.1 6.1L5 10L3.9 6.1L0 5L3.9 3.9L5 0Z" fill="currentColor"/></svg>`;
+
+function rereleaseButtonHtml(g) {
+  if (!g.rerelease) return '';
+  const isRemake = g.rerelease.type === 'remake';
+  const cls   = isRemake ? 'card-action-remake' : 'card-action-rerelease';
+  const label = isRemake ? 'Remake' : 'Port';
+  const svg   = isRemake ? REMAKE_SVG : PORT_SVG;
+  return `<button class="card-action-btn ${cls}" data-tooltip="${label} · orig. ${formatDateShort(g.rerelease.date)}" aria-label="${label}, originally released ${formatDateShort(g.rerelease.date)}">${svg}</button>`;
 }
 
-function coverPlaceholder(title) {
-  let h = 0;
-  for (let i = 0; i < (title || '').length; i++) h = (h * 31 + title.charCodeAt(i)) & 0xffff;
-  const hue = h % 360;
-  const bg  = `hsl(${hue},22%,13%)`;
-  const fg  = `hsl(${hue},50%,62%)`;
-  const initials = makeInitials(title);
-  const fs  = initials.replace(/:/g, '').length > 4 ? '20px' : '26px';
-  const ls  = initials.replace(/:/g, '').length > 4 ? '2px'  : '3px';
-  return `<div class="card-cover" style="background:${bg};display:flex;align-items:center;justify-content:center">` +
-    `<span style="font-family:Inter,sans-serif;font-weight:700;font-size:${fs};letter-spacing:${ls};color:${fg};user-select:none">${initials}</span>` +
-    `</div>`;
+// RAWG serveert covers op volledige resolutie (vaak 1080p+, honderden KB's)
+// terwijl kaarten ze op ~340px tonen. RAWG's CDN ondersteunt een resize-pad:
+// media.rawg.io/media/... → media.rawg.io/media/resize/640/-/...
+function coverUrl(url, width) {
+  if (!url) return url;
+  return url.replace(/^https:\/\/media\.rawg\.io\/media\/(?!resize\/)/, 'https://media.rawg.io/media/resize/' + width + '/-/');
 }
 
 function buildCard(g) {
@@ -870,19 +783,19 @@ function buildCard(g) {
     <div class="card-date">
       <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       <span class="card-actions">
-        ${g.rerelease  ? `<button class="card-action-btn card-action-rerelease"   data-tooltip="Port · orig. ${formatDateShort(g.rerelease.date)}"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.53554 8.53554C7.59783 9.47321 6.32608 10 5 10C3.68031 10 2.70383 9.63463 1.94478 9.07575C1.68555 8.88488 1.45603 8.67437 1.25 8.45562V9.16667H0L2.72917e-08 6.875L8.295e-07 6.25H0.625H0.823867H2.91667V7.5H2.06945C2.25562 7.70913 2.45748 7.90096 2.6859 8.06913C3.21946 8.462 3.93333 8.75 5 8.75C5.99454 8.75 6.94837 8.35492 7.65167 7.65167C8.35492 6.94837 8.75 5.99454 8.75 5H10C10 6.32608 9.47321 7.59783 8.53554 8.53554ZM8.75 1.54438V0.833333H10V3.125V3.75H9.375H9.17612H7.08333V2.5H7.93054C7.74437 2.29087 7.5425 2.09903 7.31408 1.93085C6.78054 1.53802 6.06667 1.25 5 1.25C4.00544 1.25 3.05161 1.64509 2.34835 2.34835C1.64509 3.05161 1.25 4.00544 1.25 5H4.96667e-08C6.55e-08 3.67392 0.526783 2.40215 1.46447 1.46447C2.40215 0.526783 3.67392 -1.57917e-08 5 0C6.31971 1.575e-08 7.29617 0.365393 8.05521 0.924258C8.31446 1.11512 8.54396 1.32561 8.75 1.54438Z" fill="currentColor"/></svg></button>` : ''}
-        ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" data-tooltip="Anticipated"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg></button>` : ''}
+        ${rereleaseButtonHtml(g)}
+        ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" data-tooltip="Anticipated" aria-label="Anticipated game"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg></button>` : ''}
       </span>
     </div>
     ${g.cover
-      ? `<div class="card-cover"><img src="${g.cover}" alt="${g.title}" loading="lazy">${g.discount_percent > 0 ? `<span class="cover-steam-tag"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.447 1.989-4.436 4.436-4.436 2.448 0 4.437 1.989 4.437 4.436s-1.989 4.437-4.437 4.437h-.103l-4.083 2.882c0 .06.004.12.004.181 0 1.836-1.494 3.33-3.33 3.33-1.619 0-2.974-1.153-3.275-2.683L.469 14.408C1.862 20.01 6.91 24 11.979 24 18.626 24 24 18.627 24 12S18.626 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.38-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.454-.397.957-1.494 1.41-2.452 1.013zm11.415-9.303c0-1.632-1.325-2.957-2.957-2.957-1.631 0-2.956 1.325-2.956 2.957 0 1.631 1.325 2.956 2.956 2.956 1.632 0 2.957-1.325 2.957-2.956zm-5.17.004c0-1.217.988-2.205 2.206-2.205 1.218 0 2.206.988 2.206 2.205 0 1.218-.988 2.206-2.206 2.206-1.218 0-2.206-.988-2.206-2.206z"/></svg>-${g.discount_percent}%</span>` : ''}</div>`
+      ? `<div class="card-cover"><img src="${coverUrl(g.cover, 640)}" alt="${g.title}" loading="lazy">${g.discount_percent > 0 ? `<span class="cover-steam-tag"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.447 1.989-4.436 4.436-4.436 2.448 0 4.437 1.989 4.437 4.436s-1.989 4.437-4.437 4.437h-.103l-4.083 2.882c0 .06.004.12.004.181 0 1.836-1.494 3.33-3.33 3.33-1.619 0-2.974-1.153-3.275-2.683L.469 14.408C1.862 20.01 6.91 24 11.979 24 18.626 24 24 18.627 24 12S18.626 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.38-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.454-.397.957-1.494 1.41-2.452 1.013zm11.415-9.303c0-1.632-1.325-2.957-2.957-2.957-1.631 0-2.956 1.325-2.956 2.957 0 1.631 1.325 2.956 2.956 2.956 1.632 0 2.957-1.325 2.957-2.956zm-5.17.004c0-1.217.988-2.205 2.206-2.205 1.218 0 2.206.988 2.206 2.205 0 1.218-.988 2.206-2.206 2.206-1.218 0-2.206-.988-2.206-2.206z"/></svg>-${g.discount_percent}%</span>` : ''}</div>`
       : ''}
     <div class="card-body">
       <div class="card-title">${g.slug ? `<a href="/game/${g.slug}">${g.title}</a>` : g.title}</div>
       <div class="ptags">${ptagsHtml}</div>
       <div class="card-footer">
         <div class="card-genre"><span class="mlabel">Genre /</span> ${genreHtml}</div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div class="card-footer-right">
           ${g.slug ? `<a class="bekijk-btn" href="/game/${g.slug}">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>` : ''}
         </div>
       </div>
@@ -901,7 +814,7 @@ function buildCard(g) {
 function buildSideNav() {
   const inner = document.getElementById('sideNavInner');
   inner.innerHTML = '';
-  const totalDays = new Date(2026, activeMonth + 1, 0).getDate();
+  const totalDays = new Date(YEAR, activeMonth + 1, 0).getDate();
   const navH = 330;
   const tickSpacing = navH / (totalDays - 1);
   let currentIdx = -1;
@@ -911,7 +824,7 @@ function buildSideNav() {
     const isWeekStart = i % 7 === 0;
     const tick = document.createElement('div');
     tick.id = 'sn-tick-' + i;
-    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:#292B31;transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
+    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:var(--border);transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
     inner.appendChild(tick);
   }
 
@@ -924,7 +837,7 @@ function buildSideNav() {
 
   function resetTick(i) {
     const el = document.getElementById('sn-tick-' + i);
-    if (el) { el.style.width = (i % 7 === 0 ? 18 : 10) + 'px'; el.style.height = '1.5px'; el.style.background = '#292B31'; }
+    if (el) { el.style.width = (i % 7 === 0 ? 18 : 10) + 'px'; el.style.height = '1.5px'; el.style.background = 'var(--border)'; }
   }
   function setActiveDay(idx) {
     idx = Math.max(0, Math.min(totalDays - 1, idx));
@@ -960,11 +873,16 @@ function buildSideNav() {
 }
 
 // Init
-document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' 2026';
+document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' ' + YEAR;
+document.getElementById('navYearLink').textContent = YEAR;
+document.getElementById('footerYear').innerHTML = '&copy; Loading Archive ' + YEAR;
+// Footer maand-links naar het lopende jaar laten wijzen (statische HTML is 2026)
+document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach(a => {
+  a.setAttribute('href', a.getAttribute('href').replace(/\/releases\/\d{4}-/, '/releases/' + YEAR + '-'));
+});
 document.getElementById('searchInput').addEventListener('input', onSearchInput);
 buildPlatformBar();
 buildMonthNav();
-setupMonthSwipe();
 loadGames(activeMonth);
 
 // Tooltip for data-tooltip elements (mouseover/out bubbles, works on dynamic cards)
@@ -975,9 +893,7 @@ loadGames(activeMonth);
     const el = e.target.closest('[data-tooltip]');
     if (!el) return;
     tip.textContent = el.dataset.tooltip;
-    tip.className = 'show'
-      + (el.classList.contains('card-action-anticipated') ? ' anticipated' : '')
-      + (el.classList.contains('card-action-rerelease')   ? ' rerelease'   : '');
+    tip.className = 'show';
     const r = el.getBoundingClientRect();
     tip.style.left = (r.left + r.width / 2) + 'px';
     tip.style.top  = (r.top - 7) + 'px';
@@ -1038,16 +954,17 @@ loadGames(activeMonth);
   tick();
 })();
 
-// Lift month nav above footer when footer enters viewport
+// Lift month nav above the intro/footer block once it enters the viewport
 function updateMonthNavBottom() {
-  const footer = document.querySelector('.site-footer');
+  const target = document.querySelector('.site-intro') || document.querySelector('.site-footer');
   const nav    = document.querySelector('.month-nav-wrap');
-  if (!footer || !nav) return;
-  const gap = window.innerHeight - footer.getBoundingClientRect().top;
+  if (!target || !nav) return;
+  const gap = window.innerHeight - target.getBoundingClientRect().top;
   nav.style.bottom = gap > 0 ? gap + 'px' : '0';
 }
 window.addEventListener('scroll', updateMonthNavBottom, { passive: true });
 window.addEventListener('resize', updateMonthNavBottom);
+updateMonthNavBottom();
 </script>
 </body>
 </html>

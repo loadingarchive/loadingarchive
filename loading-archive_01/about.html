@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About Loading Archive — How We Track Game Releases</title>
+<meta name="description" content="What Loading Archive is, where our release data comes from, how we verify dates and prices, and how we classify ports, remakes and anticipated games.">
+<link rel="canonical" href="https://www.loadingarchive.com/about">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+main { max-width:1020px; width:100%; margin:0 auto; padding:110px 20px 80px; flex:1; }
+h1 { font-size:clamp(26px,4vw,36px); font-weight:800; letter-spacing:-0.03em; line-height:1.15; margin-bottom:10px; }
+.sub { font-size:14px; color:var(--dim); line-height:1.7; margin-bottom:36px; }
+h2 { font-size:16px; font-weight:700; margin:36px 0 12px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+p { font-size:14px; line-height:1.75; color:#C6C8CD; margin-bottom:14px; }
+ul { margin:0 0 14px 20px; }
+li { font-size:14px; line-height:1.75; color:#C6C8CD; margin-bottom:6px; }
+strong { color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="nav-wrap">
+  <div class="nav-card">
+    <div class="nav-top">
+      <a class="logo" href="/">
+        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+        </svg>
+        <span>Loading Archive</span>
+      </a>
+      <div class="nav-right">
+        <a href="/">Releases</a>
+        <a href="/trending">Trending</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="prose">
+  <h1>About Loading Archive</h1>
+  <p class="sub">Loading Archive is an independent video game release calendar. We track every upcoming game across PC, PlayStation, Xbox and Nintendo Switch — with verified dates, prices, trailers and honest labels for what's genuinely new versus what's a port or remake.</p>
+
+  <h2>Why this site exists</h2>
+  <p>Most release calendars have one of two problems: they either list only the big blockbusters, or they dump thousands of unlabeled entries where a shovelware title sits next to a major launch and a re-released ten-year-old game looks like a brand-new one. We built Loading Archive to fix that second problem in particular.</p>
+  <p>Every game in our database is labeled for what it actually is. A <strong>Port</strong> is the same game arriving on a new platform. A <strong>Remake</strong> has been visually or technically rebuilt. An <strong>Anticipated</strong> tag marks the releases that genuinely matter each month. These distinctions are made by a human, not an algorithm — because no data feed on the internet reliably tells you whether the "new" game on a Switch 2 listing is actually new.</p>
+
+  <h2>Where our data comes from</h2>
+  <p>We combine several sources and cross-check them against each other:</p>
+  <ul>
+    <li><strong>Release dates and platforms</strong> are aggregated from the RAWG games database and Wikipedia's release lists, then re-verified daily. When sources disagree, we check the publisher's own announcement.</li>
+    <li><strong>Prices</strong> come directly from Steam's storefront in USD, EUR and GBP, and are refreshed daily — including live discount tracking, so the price you see is the price right now, not the launch price from months ago.</li>
+    <li><strong>Trailers, screenshots and system requirements</strong> come from the official store listings.</li>
+    <li><strong>Trending data</strong> is refreshed every hour from live Steam player statistics.</li>
+  </ul>
+  <p>The pipeline runs automatically every night, but the editorial layer on top of it — port/remake classification, anticipated picks, corrections, removal of duplicate and junk listings — is manual and ongoing.</p>
+
+  <h2>Our labeling policy</h2>
+  <p>Because "re-release" is doing a lot of work in the games industry right now (especially with the Switch 2 generation), we apply a strict two-tier rule:</p>
+  <ul>
+    <li><strong>Port</strong> — the same game with the same assets on a new platform. Example: Palworld arriving on PS5, or Elden Ring's Switch 2 edition.</li>
+    <li><strong>Remake</strong> — the game has been meaningfully rebuilt: new engine, redone visuals, or a ground-up reconstruction. Example: Fatal Frame II: Crimson Butterfly Remake or Rayman Legends Retold.</li>
+  </ul>
+  <p>Both labels always show the original release date, so you can see at a glance that a game is fifteen years old before you get excited about the "release."</p>
+
+  <h2>Corrections</h2>
+  <p>Release dates shift constantly and no calendar is ever perfect. If you spot a wrong date, a missing game, or a title we've misclassified, <a href="/contact">tell us</a> — corrections are usually live within a day.</p>
+
+  <h2>Who runs this</h2>
+  <p>Loading Archive is built and maintained by a solo developer in the Netherlands as an independent project. It is not affiliated with any publisher, platform holder or storefront. You can reach us any time via the <a href="/contact">contact page</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-card">
+    <div class="footer-top">
+      <div id="footerDominoRow"></div>
+    </div>
+    <nav class="footer-months-sr" aria-label="Browse releases by month" id="footerMonths">
+      <a href="/releases/2026-01">January</a>
+      <a href="/releases/2026-02">February</a>
+      <a href="/releases/2026-03">March</a>
+      <a href="/releases/2026-04">April</a>
+      <a href="/releases/2026-05">May</a>
+      <a href="/releases/2026-06">June</a>
+      <a href="/releases/2026-07">July</a>
+      <a href="/releases/2026-08">August</a>
+      <a href="/releases/2026-09">September</a>
+      <a href="/releases/2026-10">October</a>
+      <a href="/releases/2026-11">November</a>
+      <a href="/releases/2026-12">December</a>
+    </nav>
+    <div class="footer-bottom">
+      <span class="footer-copy" id="footerYear">&copy; Loading Archive 2026</span>
+      <nav class="footer-links" aria-label="Site links">
+        <a href="/releases/tba">TBA</a>
+        <a href="/trending">Trending</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var YEAR = new Date().getFullYear();
+  document.getElementById('footerYear').innerHTML = '&copy; Loading Archive ' + YEAR;
+  document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach(function (a) {
+    a.setAttribute('href', a.getAttribute('href').replace(/\/releases\/\d{4}-/, '/releases/' + YEAR + '-'));
+  });
+}());
+(function () {
+  var rowEl = document.getElementById('footerDominoRow');
+  if (!rowEl) return;
+  var GAP = 7, BAR = 3, ROW_H = 22, STEP = 40, TRAIL = 15, T_FALL = 120, T_RISE = 100, PAUSE = 800;
+  var FULL_W = rowEl.offsetWidth || 960;
+  var NCOLS = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
+  var rowDiv = document.createElement('div');
+  rowDiv.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:flex-end;height:' + ROW_H + 'px;overflow:visible';
+  var bars = [];
+  for (var i = 0; i < NCOLS; i++) { var b = document.createElement('div'); b.className = 'd-bar'; b.style.height = ROW_H + 'px'; rowDiv.appendChild(b); bars.push(b); }
+  rowEl.appendChild(rowDiv); rowEl.style.overflow = 'visible';
+  var TOTAL = NCOLS + TRAIL, p = 0;
+  function tick() {
+    var ci = NCOLS - 1 - p;
+    if (p < NCOLS) { bars[ci].style.transition = 'transform ' + T_FALL + 'ms ease-in'; bars[ci].style.transform = 'rotateZ(-70deg)'; }
+    var rp = p - TRAIL, rc = NCOLS - 1 - rp;
+    if (rp >= 0 && rp < NCOLS) { bars[rc].style.transition = 'transform ' + T_RISE + 'ms ease-out'; bars[rc].style.transform = ''; }
+    p++;
+    if (p >= TOTAL) { p = 0; setTimeout(tick, PAUSE); } else { setTimeout(tick, STEP); }
+  }
+  tick();
+}());
+</script>
+
+</body>
+</html>

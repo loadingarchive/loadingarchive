@@ -1,0 +1,353 @@
+/* ============================================================
+   Loading Archive — shared site stylesheet
+   Single source of truth for design tokens and the UI elements
+   that repeat across every page type (nav, footer, game card,
+   port/remake/anticipated badges, month-nav pill, side-nav).
+   Loaded by every page — edit here, it updates everywhere.
+   See /styleguide for a live reference of everything below.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --bg:         #0E1015;
+  --surface:    #181A20;
+  --border:     #292B31;
+
+  /* Accent colors */
+  --blue:       #1A9FFF;
+  --blue-hover: #5BBFFF;
+  --gold:       #C89856;
+  --purple:     #A78BFA;
+
+  /* Text */
+  --dim:        #999CA3;  /* secondary text */
+  --dimmer:     rgba(153,156,163,0.35);
+  --dim-aa:     #8A8D94;  /* lowest grey that still passes WCAG AA on --surface */
+
+  /* Platform indicator colors — one color per platform family
+     (Switch/Switch 2 share Nintendo red, PS4/PS5 share PlayStation blue) */
+  --plat-pc:         #A0A3AA;
+  --plat-nintendo:   #E0342B;
+  --plat-playstation: #2E6DB4;
+  --plat-xbox:       #2CA243;
+
+  /* Status colors (metacritic-style score) */
+  --score-green:  #7ed47e;
+  --score-yellow: #d4c46e;
+  --score-red:    #d47e7e;
+
+  /* Layout */
+  --pill: 20px;
+  --xs:   10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+button, select, input { font-family: inherit; }
+a { color: inherit; }
+
+/* ── MAIN NAV ─────────────────────────────────────────────── */
+.nav-wrap {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  max-width: 1060px; margin: 0 auto;
+  padding: 16px 20px 0;
+  pointer-events: none; /* laat klikken door naar content direct onder de nav (bv. game-detail carousel) */
+}
+.nav-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 11px 20px;
+  pointer-events: all;
+  transition: box-shadow 0.3s ease;
+  overflow: hidden;
+}
+.nav-card.scrolled { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3); }
+.nav-top { display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 22px; height: 22px; flex-shrink: 0; }
+.logo span { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-right a { font-size: var(--xs); color: var(--dim); text-decoration: none; font-weight: 500; }
+.nav-right a:hover { color: #fff; }
+.nav-right a.nav-active { color: #fff; font-weight: 600; }
+
+/* ── SIDE NAV (homepage calendar rail) ───────────────────────── */
+.side-nav {
+  position: absolute; left: -70px; top: 80px; bottom: 140px;
+  width: 50px; flex-shrink: 0;
+}
+.side-nav-inner {
+  position: sticky; top: 96px; height: 330px; width: 50px;
+  cursor: grab; user-select: none;
+}
+.side-nav-inner:active { cursor: grabbing; }
+.sn-label {
+  position: absolute; right: 36px;
+  font-size: var(--xs); color: #fff; font-weight: 500;
+  white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  transform: translateY(-50%); transition: top 0.08s ease;
+  pointer-events: none;
+}
+.sn-label::after { content: ''; display: block; width: 10px; height: 1px; background: var(--border); }
+
+/* ── FLOATING MONTH NAV (homepage) ───────────────────────────── */
+.month-nav-wrap {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  padding: 18px 20px max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+  background: linear-gradient(180deg, rgba(14,16,21,0) 0%, var(--bg) 42%);
+}
+.month-nav-inner {
+  max-width: 1020px; margin: 0 auto;
+  display: flex; align-items: center;
+  background: rgba(24,26,32,0.96); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 100px; padding: 15px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+}
+.month-nav-label { font-size: var(--xs); color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
+.months {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.months::-webkit-scrollbar { display: none; }
+.mnav {
+  font-size: var(--xs); color: var(--dim); padding: 0;
+  border-radius: 0; cursor: pointer; border: none; background: transparent;
+  transition: color 0.15s; font-weight: 500; line-height: 1; flex-shrink: 0;
+}
+.mnav:hover { color: #fff; }
+.mnav.active { color: #fff; }
+.month-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; flex-shrink: 0; }
+
+/* ── GAME CARD (homepage grid) ───────────────────────────────── */
+.game-card {
+  background: var(--surface); border-radius: 10px;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+  display: flex; flex-direction: column;
+  padding: 15px; gap: 10px;
+  aspect-ratio: 330 / 280;
+  overflow: hidden; position: relative;
+  cursor: pointer;
+}
+.game-card:hover { border-color: #54555A; z-index: 2; }
+.card-title a { color: inherit; text-decoration: none; }
+.card-title a:hover { color: var(--blue); }
+
+.card-cover {
+  width: 100%; aspect-ratio: 300/140;
+  overflow: hidden; flex-shrink: 0; border-radius: 5px;
+  background: var(--surface);
+  position: relative;
+}
+.card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-steam-tag {
+  position: absolute; top: 7px; right: 7px;
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(10,12,16,0.82); backdrop-filter: blur(4px);
+  border: 1px solid rgba(76,175,80,0.45);
+  border-radius: 5px; padding: 3px 6px;
+  font-size: 9px; font-weight: 700; color: #4CAF50;
+  pointer-events: none;
+}
+.cover-steam-tag svg { flex-shrink: 0; }
+
+.card-body { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+.card-title {
+  font-size: 14px; font-weight: 700; color: #fff;
+  line-height: 1.3; letter-spacing: -0.02em;
+  overflow: hidden; white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 70%, transparent 100%);
+}
+
+.card-date {
+  font-size: var(--xs); color: var(--dim);
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-date-text span { color: #fff; }
+.card-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.card-action-btn {
+  background: none; border: none; color: var(--dim);
+  cursor: pointer; line-height: 1;
+  transition: color 0.15s;
+  position: relative;
+  display: flex; align-items: center;
+  padding: 8px; margin: -8px;
+}
+.card-action-btn:hover         { color: #fff; }
+.card-action-anticipated       { color: var(--gold); }
+.card-action-anticipated:hover { color: var(--gold); }
+.card-action-rerelease         { color: var(--blue); }
+.card-action-rerelease:hover   { color: var(--blue-hover); }
+.card-action-remake            { color: var(--purple); }
+.card-action-remake:hover      { color: #C4B5FD; }
+
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: auto; gap: 6px;
+}
+.card-footer-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.card-genre {
+  font-size: var(--xs); color: var(--dim);
+  display: flex; align-items: center; gap: 4px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.card-genre .mlabel { color: var(--dim-aa); }
+.bekijk-btn {
+  flex-shrink: 0; font-size: var(--xs); font-weight: 500;
+  color: var(--dim); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  white-space: nowrap; transition: color 0.15s;
+}
+.bekijk-btn:hover { color: #fff; }
+
+/* ── PORT / REMAKE / ANTICIPATED INDICATOR SYSTEM ────────────
+   Three sizes of the same three states, reused across pages:
+   .ptag        — small platform tag (game card, game detail)
+   .badge       — pill badge with icon (game detail page)
+   .row-badge   — compact list badge (month list rows)
+   All three share the exact same three accent colors so a
+   change here can never let one page drift out of sync. ── */
+.ptags { display: flex; flex-wrap: wrap; gap: 4px; }
+.ptag {
+  font-size: 8px; font-weight: 600; padding: 2px 8px;
+  border-radius: var(--pill);
+  color: var(--dim);
+  background: rgba(153,156,163,0.08); border: 1px solid var(--border);
+  letter-spacing: 0.05em;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 600;
+  padding: 6px 10px; border-radius: 20px; border: 1px solid;
+  white-space: nowrap; height: 22px;
+}
+.badge-anticipated { color: var(--gold);   border-color: rgba(200,152,86,0.35);  background: rgba(144,116,62,0.1); }
+.badge-rerelease   { color: var(--blue);   border-color: rgba(26,159,255,0.35);  background: rgba(26,159,255,0.08); }
+.badge-remake      { color: var(--purple); border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.08); }
+
+.row-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; border: 1px solid; flex-shrink: 0; }
+.b-port    { color: var(--blue);   border-color: rgba(26,159,255,0.35);  background: rgba(26,159,255,0.08); }
+.b-remake  { color: var(--purple); border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.08); }
+.b-ant     { color: var(--gold);   border-color: rgba(200,152,86,0.35);  background: rgba(144,116,62,0.1); }
+
+/* ── FILTER CHIP (platform bar) ──────────────────────────────
+   Toggle-style pill used to filter the homepage grid by platform
+   or status. .cat modifier (category dropdown trigger) stays local
+   to the homepage since it's tied to that dropdown's own markup. ── */
+.pbar-chip {
+  font-size: var(--xs); font-weight: 600; padding: 4px 12px;
+  border-radius: var(--pill); cursor: pointer; border: 1.5px solid transparent;
+  color: var(--dim); background: rgba(41,43,49,0.3);
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  user-select: none; display: flex; align-items: center; gap: 5px;
+}
+.pbar-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid rgba(153,156,163,0.4); transition: background 0.15s, border-color 0.15s; }
+.pbar-chip.active { color: #fff; }
+.pbar-chip.active .dot { border-color: transparent; }
+.pbar-chip.active.PC  { background: rgba(90,93,100,0.3); border-color: #5A5D64; }
+.pbar-chip.active.PC  .dot { background: var(--plat-pc); }
+.pbar-chip.active.NS,
+.pbar-chip.active.NS2 { background: rgba(224,52,43,0.2); border-color: var(--plat-nintendo); }
+.pbar-chip.active.NS  .dot,
+.pbar-chip.active.NS2 .dot { background: var(--plat-nintendo); }
+.pbar-chip.active.PS4,
+.pbar-chip.active.PS5 { background: rgba(46,109,180,0.2); border-color: var(--plat-playstation); }
+.pbar-chip.active.PS4 .dot,
+.pbar-chip.active.PS5 .dot { background: var(--plat-playstation); }
+.pbar-chip.active.XBO,
+.pbar-chip.active.XSX { background: rgba(44,162,67,0.2); border-color: var(--plat-xbox); }
+.pbar-chip.active.XBO .dot,
+.pbar-chip.active.XSX .dot { background: var(--plat-xbox); }
+.pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
+.pbar-chip.active.ANTICIPATED { background: rgba(144,116,62,0.2); border-color: var(--gold); }
+.pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #90743E, #C89856); }
+.pbar-chip.active.PORT { background: rgba(26,159,255,0.15); border-color: var(--blue); }
+.pbar-chip.active.PORT .dot { background: var(--blue); }
+.pbar-chip.active.REMAKE { background: rgba(167,139,250,0.15); border-color: var(--purple); }
+.pbar-chip.active.REMAKE .dot { background: var(--purple); }
+
+/* ── CURRENCY TOGGLE (game detail price card) ───────────────── */
+.cur-toggle {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(41,43,49,0.6); border-radius: 8px; padding: 3px;
+}
+.cur-btn {
+  font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--dim); background: none; border: none;
+  padding: 4px 9px; border-radius: 5px; cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.cur-btn:hover { color: #fff; }
+.cur-btn.active { background: var(--border); color: #fff; }
+
+/* ── PRIMARY CTA BUTTON ──────────────────────────────────────
+   Solid pill button — game detail "View on Steam"/"Pre-order" and
+   the contact page's "Send an e-mail". Same shape everywhere. ── */
+.cta-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue); color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  text-decoration: none; padding: 10px 20px; border-radius: 8px;
+  border: none; cursor: pointer; font-family: inherit;
+  transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.cta-btn:hover { background: var(--blue-hover); color: #fff; }
+.cta-btn-gold { background: #e8a020; }
+.cta-btn-gold:hover { background: #d4911a; }
+
+/* ── PROSE LINKS ──────────────────────────────────────────────
+   Inline text links inside body copy (about/privacy/contact pages,
+   month intros, homepage intro) — white text, dim underline that
+   brightens on hover. Distinct from nav/footer chrome links, which
+   use the muted-grey-to-white pattern instead. Excludes .cta-btn so
+   a button placed inside prose text never inherits the link look. ── */
+.prose a:not(.cta-btn) { color: #fff; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(255,255,255,0.35); }
+.prose a:not(.cta-btn):hover { text-decoration-color: #fff; }
+
+/* ── FOOTER ───────────────────────────────────────────────── */
+.site-footer { padding: 0 20px 24px; }
+.footer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: visible;
+  max-width: 1020px;
+  margin: 0 auto;
+}
+.footer-top { padding: 20px 20px 0; overflow: visible; }
+.d-bar {
+  background: rgba(255,255,255,0.22);
+  transform-origin: bottom center;
+  width: 3px; height: 100%;
+  display: block; flex-shrink: 0;
+}
+/* Crawlbaar maar niet zichtbaar/tabbaar — standaard sr-only patroon */
+.footer-months-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.footer-bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px; flex-wrap: wrap; gap: 10px;
+}
+.footer-copy { font-size: 10px; color: var(--dim); }
+.footer-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.footer-links a { font-size: 10px; color: var(--dim); text-decoration: none; font-weight: 500; }
+.footer-links a:hover { color: #fff; }

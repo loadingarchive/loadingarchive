@@ -1,7 +1,7 @@
 import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
-import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId } from '../pipeline/steam.js';
+import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
 import {
   queryActiveMonthGames,
@@ -10,6 +10,7 @@ import {
   rebuildTbaGamePagesKv,
   rebuildAllGamePagesKv,
   softDeleteStaleGames,
+  loadSlugOwners,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
 
@@ -22,21 +23,6 @@ function makeMonthEntry(year, month) {
   const m = pad(month);
   const lastDay = new Date(y, month, 0).getDate();
   return { kvKey: `games:${y}-${m}`, dateFrom: `${y}-${m}-01`, dateTo: `${y}-${m}-${lastDay}`, label: `${y}-${m}` };
-}
-
-/** Returns the 4 months around today that get refreshed daily. */
-function activeMonths() {
-  const today = new Date();
-  return [-1, 0, 1, 2].map(delta => {
-    const d = new Date(today.getFullYear(), today.getMonth() + delta, 1);
-    return makeMonthEntry(d.getFullYear(), d.getMonth() + 1);
-  });
-}
-
-/** Returns all 12 months of the current year. */
-function allYearMonths() {
-  const y = new Date().getFullYear();
-  return Array.from({ length: 12 }, (_, i) => makeMonthEntry(y, i + 1));
 }
 
 /** Load extra-games from KV (updated by weekly Wikipedia cron), fall back to bundle. */
@@ -57,9 +43,9 @@ async function loadExtraGames(env) {
  * Dankzij stap 2 verdwijnen games die RAWG deze run niet teruggaf nooit
  * uit de publieke site, zolang ze in D1 staan met status='active'.
  */
-async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo, label }) {
+async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo, label }, slugOwners) {
   // Stap 1: pipeline upsert → D1
-  await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env);
+  await runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env, slugOwners);
 
   // Stap 2: lees alle actieve games voor deze maand uit D1
   const results = await queryActiveMonthGames(env, dateFrom, dateTo);
@@ -74,36 +60,55 @@ async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo,
 }
 
 // ---- daily: monthly pipeline ----
+//
+// De dagelijkse keten is opgeknipt in drie aparte cron-invocaties omdat één
+// Worker-invocation max ~1000 subrequests mag doen (fetch + D1 + KV samen).
+// Alles in één run — 12 maanden × tientallen games × meerdere Steam-calls,
+// plus TBA, prijzen en KV-rebuilds — schoot daar ruim overheen, waardoor de
+// laatste stappen stil konden falen.
+//
+//   0 3 * * *   → runMonthsCron(1, 6)                 maanden jan–jun
+//   45 3 * * *  → runMonthsCron(7, 12, withTba)       maanden jul–dec + TBA
+//   30 4 * * *  → runMaintenanceCron                  soft-delete, KV, sitemap,
+//                                                     appid-backfill, prijzen
 
-export async function runDailyCron(env) {
+export async function runMonthsCron(env, fromMonth, toMonth, { withTba = false } = {}) {
   const rawgKey    = env.RAWG_API_KEY;
   const extraGames = await loadExtraGames(env);
 
-  // Verwerk alle 12 maanden van het jaar zodat elke maand verse data en slugs heeft.
-  // Actieve maanden (vorige, huidige, volgende, daarna) krijgen altijd een volledige
-  // RAWG-pipeline. Voor de overige maanden haalt RAWG weinig nieuws op, maar D1
-  // blijft als bron zodat de KV-cache compleet en up-to-date is.
-  const toProcess = allYearMonths();
-  console.log(`Daily cron: verwerk alle 12 maanden`);
+  // Slug-eigenaars vooraf laden uit D1 zodat assignSlugs() botsingen kan
+  // detecteren over ALLE maanden en de TBA-batch heen, niet alleen binnen
+  // één maand-run. De map wordt gemuteerd terwijl elke maand verwerkt wordt.
+  const slugOwners = await loadSlugOwners(env);
 
-  for (const month of toProcess) {
+  const y = new Date().getFullYear();
+  console.log(`Months cron: maanden ${fromMonth}–${toMonth}${withTba ? ' + TBA' : ''}`);
+
+  for (let m = fromMonth; m <= toMonth; m++) {
+    const month = makeMonthEntry(y, m);
     try {
-      await processMonth(rawgKey, extraGames, env, month);
+      await processMonth(rawgKey, extraGames, env, month, slugOwners);
     } catch (e) {
       console.error(`  ${month.label}: pipeline mislukt —`, e.message);
     }
   }
 
-  // TBA-pipeline → D1 + KV
-  try {
-    await runTbaPipeline(rawgKey, extraGames, env);
-    const tbaResults = await queryActiveTbaGames(env);
-    await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
-    await rebuildTbaGamePagesKv(env);
-    console.log(`  TBA: ${tbaResults.length} games in KV`);
-  } catch (e) {
-    console.error('  TBA: pipeline mislukt —', e.message);
+  if (withTba) {
+    try {
+      await runTbaPipeline(rawgKey, extraGames, env, slugOwners);
+      const tbaResults = await queryActiveTbaGames(env);
+      await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
+      await rebuildTbaGamePagesKv(env);
+      console.log(`  TBA: ${tbaResults.length} games in KV`);
+    } catch (e) {
+      console.error('  TBA: pipeline mislukt —', e.message);
+    }
   }
+}
+
+export async function runMaintenanceCron(env) {
+  const rawgKey = env.RAWG_API_KEY;
+  console.log('Maintenance cron');
 
   // Soft-delete: games die 7+ dagen niet meer in de pipeline voorkwamen → 'hidden'
   try {
@@ -128,14 +133,6 @@ export async function runDailyCron(env) {
     console.error('  Sitemap: generatie mislukt —', e.message);
   }
 
-  // Trending: dagelijkse live CCU snapshot
-  try {
-    const { total } = await fetchAndStoreTrending(env);
-    console.log(`  Trending: ${total} games in KV`);
-  } catch (e) {
-    console.error('  Trending mislukt —', e.message);
-  }
-
   // Backfill: geef games zonder Steam appid nog een kans (max 15 per dag)
   try {
     await backfillSteamAppids(rawgKey, env);
@@ -149,6 +146,17 @@ export async function runDailyCron(env) {
   } catch (e) {
     console.error('  Prijsupdate mislukt —', e.message);
   }
+}
+
+/**
+ * Volledige keten in één invocation. Alleen bedoeld als fallback voor
+ * onbekende cron-strings en handmatige runs — overschrijdt bij veel games
+ * het subrequest-budget, gebruik in productie de gesplitste triggers.
+ */
+export async function runDailyCron(env) {
+  await runMonthsCron(env, 1, 6);
+  await runMonthsCron(env, 7, 12, { withTba: true });
+  await runMaintenanceCron(env);
 }
 
 async function generateSitemap(env) {
@@ -165,12 +173,34 @@ async function generateSitemap(env) {
     }
   }
 
+  // TBA-games hebben geen release_date (dus geen maand-KV), maar wel een
+  // live detailpagina — anders missen ze in de sitemap tot ze een datum krijgen.
+  const tbaData = await env.GAMES_KV.get('games:tba', 'json');
+  if (tbaData?.results) {
+    for (const g of tbaData.results) {
+      if (g.slug) allGames.push({ slug: g.slug, date: g.date });
+    }
+  }
+
   const base  = 'https://www.loadingarchive.com';
   const today = new Date().toISOString().slice(0, 10);
 
+  // SSR maand-overzichten + trending — hoge prioriteit, dit zijn de
+  // programmatic-SEO landingspagina's ("july 2026 game releases" etc.)
+  const monthUrls = months.map(m =>
+    `  <url><loc>${base}/releases/${m}</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`
+  );
+  monthUrls.push(`  <url><loc>${base}/releases/tba</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
+  monthUrls.push(`  <url><loc>${base}/trending</loc><lastmod>${today}</lastmod><changefreq>hourly</changefreq><priority>0.8</priority></url>`);
+  // Statische trust-pagina's (AdSense/E-E-A-T): about, privacy, contact
+  monthUrls.push(`  <url><loc>${base}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`);
+  monthUrls.push(`  <url><loc>${base}/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>`);
+  monthUrls.push(`  <url><loc>${base}/contact</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>`);
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${base}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>${base}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+${monthUrls.join('\n')}
 ${allGames.map(({ slug, date }) =>
   `  <url><loc>${base}/game/${slug}</loc><lastmod>${date || today}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`
 ).join('\n')}
@@ -185,9 +215,10 @@ ${allGames.map(({ slug, date }) =>
 export async function seedMonths(env, months) {
   const rawgKey    = env.RAWG_API_KEY;
   const extraGames = await loadExtraGames(env);
+  const slugOwners = await loadSlugOwners(env);
   for (const month of months) {
     try {
-      await processMonth(rawgKey, extraGames, env, month);
+      await processMonth(rawgKey, extraGames, env, month, slugOwners);
     } catch (e) {
       console.error(`  ${month.label}: seed mislukt —`, e.message);
     }
@@ -238,17 +269,19 @@ async function backfillSteamAppids(rawgKey, env) {
     if (!steamAppid) continue;
 
     // Steam details ophalen voor cover, screenshots, etc.
-    const entry = JSON.parse(row.raw_json || '{}');
-    entry.steam   = steamAppid;
-    entry.trailer = entry.trailer || `steam:${steamAppid}`;
+    // Handmatig gemarkeerde velden (entry.manual) blijven onaangeroerd.
+    const entry  = JSON.parse(row.raw_json || '{}');
+    const manual = entry.manual || {};
+    entry.steam = steamAppid;
+    if (!manual.trailer) entry.trailer = entry.trailer || `steam:${steamAppid}`;
 
     const app = await fetchSteamAppDetails(steamAppid);
     if (app) {
-      entry.cover        = app.header_image || entry.cover;
-      entry.screenshots  = (app.screenshots || []).slice(0, 3).map(s => s.path_full);
-      if (!entry.short_description) entry.short_description = app.short_description || null;
-      if (!entry.dev) entry.dev = app.developers?.[0] || null;
-      if (!entry.price) entry.price = app.is_free ? 'Free' : (app.price_overview?.final_formatted || null);
+      if (!manual.cover)       entry.cover       = app.header_image || entry.cover;
+      if (!manual.screenshots) entry.screenshots = (app.screenshots || []).slice(0, 3).map(s => s.path_full);
+      if (!manual.short_description && !entry.short_description) entry.short_description = app.short_description || null;
+      if (!manual.dev   && !entry.dev)   entry.dev   = app.developers?.[0] || null;
+      if (!manual.price && !entry.price) entry.price = app.is_free ? 'Free' : (app.price_overview?.final_formatted || null);
     }
 
     const now  = new Date().toISOString();
@@ -280,14 +313,43 @@ async function backfillSteamAppids(rawgKey, env) {
   if (fixed) console.log(`  Backfill: ${fixed} games bijgewerkt`);
 }
 
+async function ensurePriceCheckColumn(db) {
+  try {
+    await db.prepare(`ALTER TABLE games ADD COLUMN price_checked_at TEXT`).run();
+  } catch { /* kolom bestaat al */ }
+}
+
+// Bovengrens op games/run: elke game kost tot 3 Steam-requests plus 1-2
+// D1-writes en 1 KV-write, en de maintenance-invocation doet daarnaast ook de
+// KV-rebuild en sitemap. 150 games ≈ 700 subrequests voor prijzen — ruim
+// binnen het invocation-budget van ~1000. Near-term games staan vooraan in de
+// sortering; de rotatie op price_checked_at zorgt dat de rest elke paar dagen
+// aan de beurt komt.
+const PRICE_UPDATE_DAILY_CAP = 150;
+const PRICE_UPDATE_NEAR_TERM_DAYS = 30;
+
 /**
- * Haalt dagelijks de actuele prijs + korting op van Steam voor alle actieve games.
+ * Haalt dagelijks de actuele prijs + korting op van Steam.
+ * Eén query met totale cap: games rond hun releasedatum (±30 dagen) eerst —
+ * daar veranderen prijzen het vaakst — daarna de rest, beide groepen intern
+ * geroteerd op price_checked_at (oudste eerst) zodat elke game periodiek aan
+ * de beurt komt zonder het subrequest-budget van de invocation te overschrijden.
  * Slaat discount_percent en price_initial op in raw_json + KV.
  */
 async function updateDailyPrices(env) {
+  await ensurePriceCheckColumn(env.GAMES_D1);
+
+  const now      = new Date();
+  const nearFrom = new Date(now.getTime() - PRICE_UPDATE_NEAR_TERM_DAYS * 86400_000).toISOString().slice(0, 10);
+  const nearTo   = new Date(now.getTime() + PRICE_UPDATE_NEAR_TERM_DAYS * 86400_000).toISOString().slice(0, 10);
+
   const { results } = await env.GAMES_D1
     .prepare(`SELECT slug, steam_appid, raw_json FROM games
-              WHERE status = 'active' AND steam_appid IS NOT NULL`)
+              WHERE status = 'active' AND steam_appid IS NOT NULL
+              ORDER BY CASE WHEN release_date IS NOT NULL AND release_date BETWEEN ?1 AND ?2 THEN 0 ELSE 1 END,
+                       COALESCE(price_checked_at, '') ASC
+              LIMIT ?3`)
+    .bind(nearFrom, nearTo, PRICE_UPDATE_DAILY_CAP)
     .all();
 
   if (!results.length) return;
@@ -295,22 +357,44 @@ async function updateDailyPrices(env) {
 
   let updated = 0;
   await mapWithConcurrency(results, 4, async (row) => {
+    const entry     = JSON.parse(row.raw_json || '{}');
+    const checkedAt = new Date().toISOString();
+    const touch     = () => env.GAMES_D1
+      .prepare(`UPDATE games SET price_checked_at = ?1 WHERE slug = ?2`)
+      .bind(checkedAt, row.slug).run();
+
+    // Handmatig vastgezette prijzen (scripts/set-manual.mjs) niet aanraken.
+    if (entry.manual?.price) return touch();
+
+    // Ports/re-releases tonen bewust geen prijs (die hoort bij de oude PC-release).
+    if (entry.rerelease) return touch();
+
     // Haal USD, EUR en GBP prijzen op in parallel (lichte price_overview calls)
-    const { usd, eur, gbp } = await fetchSteamPriceMulti(row.steam_appid);
+    const multi = await fetchSteamPriceMulti(row.steam_appid);
+    if (multi === null) {
+      // USD-fetch mislukt — bestaande prijzen laten staan, maar checked_at wel
+      // bijwerken zodat deze game niet blijft vastzitten vooraan de rotatie.
+      return touch();
+    }
+    const { usd, eur, gbp } = multi;
 
     // is_free wordt gesignaleerd als { is_free: true } terug van fetchOne
     const isFree = usd?.is_free || eur?.is_free || gbp?.is_free;
+
+    // PRICE_FETCH_FAILED: de regionale call zelf faalde (timeout/429) — houd
+    // dan de opgeslagen regionale prijs vast i.p.v. hem te wissen.
+    const eurFailed = eur === PRICE_FETCH_FAILED;
+    const gbpFailed = gbp === PRICE_FETCH_FAILED;
 
     const priceFinal    = isFree ? 'Free' : (usd?.final_formatted    ?? null);
     const priceInitial  = isFree ? null   : (usd?.initial_formatted   ?? null);
     const discount      = isFree ? 0      : (usd?.discount_percent    ?? 0);
 
-    const priceEur      = isFree ? 'Free' : (eur?.final_formatted    ?? null);
-    const priceInitEur  = isFree ? null   : (eur?.initial_formatted   ?? null);
-    const priceGbp      = isFree ? 'Free' : (gbp?.final_formatted    ?? null);
-    const priceInitGbp  = isFree ? null   : (gbp?.initial_formatted   ?? null);
+    const priceEur      = isFree ? 'Free' : eurFailed ? (entry.price_eur         ?? null) : (eur?.final_formatted   ?? null);
+    const priceInitEur  = isFree ? null   : eurFailed ? (entry.price_initial_eur ?? null) : (eur?.initial_formatted ?? null);
+    const priceGbp      = isFree ? 'Free' : gbpFailed ? (entry.price_gbp         ?? null) : (gbp?.final_formatted   ?? null);
+    const priceInitGbp  = isFree ? null   : gbpFailed ? (entry.price_initial_gbp ?? null) : (gbp?.initial_formatted ?? null);
 
-    const entry = JSON.parse(row.raw_json || '{}');
     const changed =
       entry.price            !== priceFinal   ||
       entry.price_initial    !== priceInitial ||
@@ -318,7 +402,7 @@ async function updateDailyPrices(env) {
       entry.price_eur        !== priceEur     ||
       entry.price_gbp        !== priceGbp;
 
-    if (!changed) return;
+    if (!changed) return touch();
 
     entry.price            = priceFinal;
     entry.price_initial    = priceInitial;
@@ -330,8 +414,8 @@ async function updateDailyPrices(env) {
 
     const json = JSON.stringify(entry);
     await env.GAMES_D1
-      .prepare(`UPDATE games SET price = ?1, raw_json = ?2, last_updated = ?3 WHERE slug = ?4`)
-      .bind(priceFinal ?? null, json, new Date().toISOString(), row.slug)
+      .prepare(`UPDATE games SET price = ?1, raw_json = ?2, last_updated = ?3, price_checked_at = ?3 WHERE slug = ?4`)
+      .bind(priceFinal ?? null, json, checkedAt, row.slug)
       .run();
     await env.GAMES_KV.put(`game:${row.slug}`, json);
     updated++;

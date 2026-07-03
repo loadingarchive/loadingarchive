@@ -1,5 +1,5 @@
 import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug, isJapanOnly } from './utils.js';
-import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails } from './steam.js';
+import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails, extractSteamDetails } from './steam.js';
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
 import { fetchNintendoCover } from './nintendo.js';
 import { upsertGameToD1 } from './d1.js';
@@ -17,7 +17,9 @@ function withoutAlreadyCovered(extraGames, existingResults) {
 async function backfillFromExistingSteamPage(game) {
   const appid = game.steam ?? await findExistingSteamAppId(game.title);
   if (!appid) return game;
-  const app   = await fetchSteamAppDetails(appid);
+  // Hergebruik het app-object dat rawg.js al ophaalde; alleen fetchen als
+  // deze game via een ander pad binnenkwam (extra-games/Wikipedia).
+  const app   = game.steamApp ?? await fetchSteamAppDetails(appid);
   if (!app)   return game;
 
   // Laag B: skip Steam-verrijking als Steam het als 18+ markeert (game blijft wel)
@@ -34,20 +36,38 @@ async function backfillFromExistingSteamPage(game) {
   return {
     ...game,
     steam:     String(appid),
+    steamApp:  app, // in-memory door naar saveGameToD1 (scheelt een derde fetch)
     cover:     game.cover  || app.header_image || null,
     price,
     genre:     game.genre.length ? game.genre : (app.genres || []).map(g => g.description).slice(0, 2),
     trailer:   game.trailer || (app.movies?.length ? `steam:${appid}` : null),
     // Voeg PC alleen toe als het GEEN re-release is (bij port is de PC versie al lang uit)
     platforms: isRerelease ? game.platforms : [...new Set([...game.platforms, "PC"])],
-    rerelease: isRerelease ? { date: originalDate } : game.rerelease || null,
+    // type:'port' is de conservatieve default — de Steam-datum-gap heuristiek
+    // kan niet onderscheiden of het een kale platform-port of een remake/
+    // remaster is. Dat onderscheid wordt handmatig gezet via set-manual.mjs.
+    rerelease: isRerelease ? { date: originalDate, type: 'port' } : game.rerelease || null,
   };
 }
 
 // Genereert unieke slugs voor een lijst games. Bij botsing: voeg jaar toe, dan jaar-maand.
 // Titels in niet-Latijns schrift (Japans, Chinees) leveren een lege base op → val terug op rawg-id.
-function assignSlugs(games) {
-  const used = new Map();
+//
+// slugOwners is een gedeelde Map<slug, rawg_id> die wordt voorgeladen vanuit D1
+// (loadSlugOwners) en tussen maand-runs in dezelfde cron wordt doorgegeven.
+// Zonder deze map dedupliceerde assignSlugs alleen binnen één maand-batch: twee
+// verschillende games met dezelfde titel in verschillende maanden konden dezelfde
+// slug krijgen, waarna de tweede de eerste in D1 overschreef (ON CONFLICT(slug)).
+function assignSlugs(games, slugOwners = new Map()) {
+  // Dezelfde game heeft als TBA-record id "rawg-tba-{n}" en als gedateerd
+  // record "rawg-{n}". Normaliseer zodat een game die van TBA naar een datum
+  // verhuist zijn eigen slug reclaimt i.p.v. een "-jaar" duplicaat te krijgen.
+  const normId = id => String(id ?? '').replace(/^rawg-tba-/, 'rawg-');
+  const isFree = (slug, id) => {
+    const owner = slugOwners.get(slug);
+    return owner === undefined || normId(owner) === normId(id);
+  };
+
   return games.map(g => {
     const raw  = generateSlug(g.title);
     const base = raw || String(g.id || "game"); // lege slug → gebruik rawg-id als anker
@@ -55,21 +75,51 @@ function assignSlugs(games) {
     const mon  = g.date ? g.date.slice(0, 7) : "tba";
 
     let slug = base;
-    if (used.has(slug)) slug = `${base}-${year}`;
-    if (used.has(slug)) slug = `${base}-${mon}`;
-    if (used.has(slug)) slug = `${base}-${g.id}`; // absolute fallback op RAWG-id
+    if (!isFree(slug, g.id)) slug = `${base}-${year}`;
+    if (!isFree(slug, g.id)) slug = `${base}-${mon}`;
+    if (!isFree(slug, g.id)) slug = `${base}-${g.id}`; // absolute fallback op RAWG-id
 
-    used.set(slug, true);
+    slugOwners.set(slug, g.id);
     return { ...g, slug };
   });
 }
 
 /**
  * Haalt Steam-details op, bouwt de volledige entry en upsert naar D1.
+ * Leest het bestaande D1-record eerst zodat handmatig ge-backfillde velden
+ * (prijzen, kortingen, covers, screenshots) niet worden overschreven als de
+ * pipeline ze deze run niet teruggeeft.
+ *
+ * Handmatige overrides: als het bestaande record een `manual`-object heeft
+ * (bv. { rerelease: true, cover: true }, gezet via scripts/set-manual.mjs),
+ * dan wint voor die velden ALTIJD de bestaande waarde — inclusief null, zodat
+ * je een pipeline-waarde ook handmatig kunt wissen. De marker zelf reist mee
+ * in raw_json en overleeft dus elke cron-run.
+ *
  * Schrijft niet direct naar KV; dat doet build-cache.js vanuit D1.
  */
 async function saveGameToD1(game, env) {
-  const detail = game.steam ? await fetchSteamGameDetails(game.steam) : null;
+  // Lees bestaand record om handmatig ge-backfillde velden te bewaren.
+  let existing = null;
+  try {
+    const { results } = await env.GAMES_D1
+      .prepare(`SELECT raw_json FROM games WHERE slug = ?1`)
+      .bind(game.slug)
+      .all();
+    if (results[0]?.raw_json) existing = JSON.parse(results[0].raw_json);
+  } catch { /* nieuw record, geen fallback nodig */ }
+
+  // Hergebruik het appdetails-object uit de backfill-stap; alleen als dat
+  // ontbreekt (bv. 18+-geskipte verrijking) nog zelf details ophalen.
+  const detail = game.steamApp
+    ? extractSteamDetails(game.steamApp)
+    : (game.steam ? await fetchSteamGameDetails(game.steam) : null);
+
+  // Screenshots: neem Steam-resultaat als het niet leeg is, anders bewaar bestaande.
+  const shots = detail?.screenshots?.length
+    ? detail.screenshots
+    : (existing?.screenshots?.length ? existing.screenshots : []);
+
   const entry = {
     id:                   game.id,
     slug:                 game.slug,
@@ -77,20 +127,47 @@ async function saveGameToD1(game, env) {
     date:                 game.date,
     platforms:            game.platforms,
     genre:                game.genre,
-    dev:                  game.dev,
-    anticipated:          game.anticipated,
-    rerelease:            game.rerelease || null,
-    trailer:              game.trailer,
-    steam:                game.steam,
-    price:                game.price,
-    cover:                game.cover,
-    short_description:    detail?.short_description    || null,
-    detailed_description: detail?.detailed_description || null,
-    pc_requirements:      detail?.pc_requirements      || null,
-    metacritic:           detail?.metacritic            || null,
-    screenshots:          detail?.screenshots           || [],
-    categories:           detail?.categories            || [],
+    dev:                  game.dev                          || existing?.dev                    || null,
+    // Eenmaal anticipated blijft anticipated: RAWG's added-count daalt nooit,
+    // en dit beschermt handmatig gezette vlaggen zonder marker.
+    anticipated:          game.anticipated                   || existing?.anticipated            || false,
+    // Bewaar een bestaande port-tag als de Steam-heuristiek hem deze run niet
+    // (opnieuw) detecteerde — beschermt handmatige tags van tag-ports-scripts.
+    rerelease:            game.rerelease                     || existing?.rerelease              || null,
+    trailer:              game.trailer                       || existing?.trailer                || null,
+    steam:                game.steam                         || existing?.steam                  || null,
+    // Ports/re-releases: prijs bewust null houden (hoort bij de oude PC-release),
+    // dus niet terughalen uit het bestaande record.
+    price:                game.rerelease ? null : (game.price || existing?.price || null),
+    // Prijs-backfill-velden: bewaar altijd als pipeline ze niet teruggeeft.
+    price_initial:        game.price_initial                 || existing?.price_initial          || null,
+    price_eur:            game.price_eur                     || existing?.price_eur              || null,
+    price_initial_eur:    game.price_initial_eur             || existing?.price_initial_eur      || null,
+    price_gbp:            game.price_gbp                     || existing?.price_gbp              || null,
+    price_initial_gbp:    game.price_initial_gbp             || existing?.price_initial_gbp      || null,
+    discount_percent:     game.discount_percent              ?? existing?.discount_percent       ?? 0,
+    cover:                game.cover                         || existing?.cover                  || null,
+    store_url:            game.store_url                     || existing?.store_url              || null,
+    short_description:    detail?.short_description          || existing?.short_description      || null,
+    detailed_description: detail?.detailed_description       || existing?.detailed_description   || null,
+    pc_requirements:      detail?.pc_requirements            || existing?.pc_requirements        || null,
+    metacritic:           detail?.metacritic                  || existing?.metacritic             || null,
+    screenshots:          shots,
+    categories:           detail?.categories?.length
+                            ? detail.categories
+                            : (existing?.categories          || []),
   };
+
+  // Handmatige overrides toepassen: gemarkeerde velden komen 1-op-1 uit het
+  // bestaande record (ook als dat null is), en de marker blijft behouden.
+  const manual = existing?.manual;
+  if (manual && typeof manual === 'object') {
+    for (const [field, isManual] of Object.entries(manual)) {
+      if (isManual) entry[field] = existing[field] ?? null;
+    }
+    entry.manual = manual;
+  }
+
   await upsertGameToD1(entry, env);
 }
 
@@ -102,7 +179,7 @@ async function enrichWithNintendoCover(game) {
 }
 
 // RAWG is de enige bron voor game-releases. Steam voegt alleen cover, prijs en trailer toe.
-export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env) {
+export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, env, slugOwners) {
   const rawgGames = await fetchRawgGames(rawgKey, dateFrom, dateTo);
   console.log(`  ${dateFrom}–${dateTo}: ${rawgGames.length} games van RAWG`);
 
@@ -115,12 +192,12 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
   const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 
   // Slugs toewijzen en upserten naar D1
-  const withSlugs = assignSlugs(withNintendo);
+  const withSlugs = assignSlugs(withNintendo, slugOwners);
   await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
   console.log(`  ${dateFrom}–${dateTo}: ${withSlugs.length} games → D1`);
 }
 
-export async function runTbaPipeline(rawgKey, extraGames, env) {
+export async function runTbaPipeline(rawgKey, extraGames, env, slugOwners) {
   const rawgResults = await fetchRawgTbaGames(rawgKey);
   const extraTba    = extraGames.filter(g => !g.date);
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
@@ -130,7 +207,7 @@ export async function runTbaPipeline(rawgKey, extraGames, env) {
   const withCovers   = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
   const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 
-  const withSlugs = assignSlugs(withNintendo);
+  const withSlugs = assignSlugs(withNintendo, slugOwners);
   await mapWithConcurrency(withSlugs, 5, g => saveGameToD1(g, env));
   console.log(`  TBA: ${withSlugs.length} games → D1`);
 }

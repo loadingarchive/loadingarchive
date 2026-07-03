@@ -23,13 +23,13 @@ export async function upsertGameToD1(entry, env) {
       name              = excluded.name,
       release_date      = excluded.release_date,
       platforms         = excluded.platforms,
-      cover_image       = excluded.cover_image,
+      cover_image       = COALESCE(excluded.cover_image, cover_image),
       steam_appid       = COALESCE(excluded.steam_appid, steam_appid),
-      short_description = excluded.short_description,
-      price             = excluded.price,
-      metacritic        = excluded.metacritic,
-      screenshots       = excluded.screenshots,
-      requirements      = excluded.requirements,
+      short_description = COALESCE(excluded.short_description, short_description),
+      price             = COALESCE(excluded.price, price),
+      metacritic        = COALESCE(excluded.metacritic, metacritic),
+      screenshots       = CASE WHEN json_array_length(excluded.screenshots) > 0 THEN excluded.screenshots ELSE screenshots END,
+      requirements      = COALESCE(excluded.requirements, requirements),
       status            = 'active',
       last_seen         = excluded.last_seen,
       last_updated      = excluded.last_updated,
@@ -52,6 +52,18 @@ export async function upsertGameToD1(entry, env) {
     now,
     JSON.stringify(entry)
   ).run();
+}
+
+/**
+ * Laadt alle bestaande slug → rawg_id mappings uit D1.
+ * Gebruikt door assignSlugs() (merge.js) om botsingen te detecteren over
+ * maanden en cron-runs heen — niet alleen binnen de huidige batch.
+ */
+export async function loadSlugOwners(env) {
+  const { results } = await env.GAMES_D1.prepare(`SELECT slug, rawg_id FROM games`).all();
+  const map = new Map();
+  for (const r of results) map.set(r.slug, r.rawg_id);
+  return map;
 }
 
 /**
@@ -128,17 +140,39 @@ export async function rebuildAllGamePagesKv(env) {
 
 /**
  * Markeert games als 'hidden' als ze `olderThanDays` dagen niet meer zijn
- * teruggekomen in de pipeline. Verwijdert geen rijen.
+ * teruggekomen in de pipeline. Verwijdert geen D1-rijen, maar verwijdert wel
+ * hun game:{slug} KV-record — anders blijft de detailpagina voor altijd
+ * publiek bereikbaar ondanks dat de game nergens meer in de lijsten staat.
+ *
+ * Games met raw_json.manual.protected = true worden nooit verborgen, ook niet
+ * als last_seen verloopt — voor volledig handmatig toegevoegde games die nooit
+ * via RAWG/extra-games terugkomen. Zet via:
+ *   node scripts/set-manual.mjs <slug> protected true
+ *
  * Retourneert het aantal verborgen games.
  */
 export async function softDeleteStaleGames(env, olderThanDays = 7) {
   const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
   const now    = new Date().toISOString();
-  const result = await env.GAMES_D1
-    .prepare(`UPDATE games
-              SET status = 'hidden', last_updated = ?1
-              WHERE status = 'active' AND last_seen < ?2`)
-    .bind(now, cutoff)
+
+  const { results } = await env.GAMES_D1
+    .prepare(`SELECT slug, raw_json FROM games WHERE status = 'active' AND last_seen < ?1`)
+    .bind(cutoff)
+    .all();
+  if (!results.length) return 0;
+
+  const toHide = results.filter(r => {
+    try { return !JSON.parse(r.raw_json || '{}').manual?.protected; } catch { return true; }
+  });
+  if (!toHide.length) return 0;
+
+  const slugs        = toHide.map(r => r.slug);
+  const placeholders = slugs.map((_, i) => `?${i + 2}`).join(',');
+  await env.GAMES_D1
+    .prepare(`UPDATE games SET status = 'hidden', last_updated = ?1 WHERE slug IN (${placeholders})`)
+    .bind(now, ...slugs)
     .run();
-  return result.meta?.changes ?? 0;
+
+  await Promise.all(slugs.map(slug => env.GAMES_KV.delete(`game:${slug}`)));
+  return slugs.length;
 }

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contact | Loading Archive</title>
+<meta name="description" content="Contact Loading Archive — report a wrong release date, request a missing game, or reach us for press and business inquiries.">
+<link rel="canonical" href="https://www.loadingarchive.com/contact">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+main { max-width:1020px; width:100%; margin:0 auto; padding:110px 20px 80px; flex:1; }
+h1 { font-size:clamp(26px,4vw,36px); font-weight:800; letter-spacing:-0.03em; line-height:1.15; margin-bottom:10px; }
+.sub { font-size:14px; color:var(--dim); line-height:1.7; margin-bottom:36px; }
+h2 { font-size:16px; font-weight:700; margin:36px 0 12px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+p { font-size:14px; line-height:1.75; color:#C6C8CD; margin-bottom:14px; }
+ul { margin:0 0 14px 20px; }
+li { font-size:14px; line-height:1.75; color:#C6C8CD; margin-bottom:6px; }
+strong { color:#fff; }
+.email-card { display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin:24px 0 8px; flex-wrap:wrap; }
+.email-label { font-size:10px; color:var(--dim); font-weight:500; margin-bottom:5px; }
+.email-value { font-size:18px; font-weight:700; letter-spacing:-0.01em; }
+</style>
+</head>
+<body>
+
+<div class="nav-wrap">
+  <div class="nav-card">
+    <div class="nav-top">
+      <a class="logo" href="/">
+        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="8" y="0.11145" width="3" height="20" fill="white"/>
+          <rect x="16" y="0.417511" width="3" height="20" transform="rotate(-8 16 0.417511)" fill="white"/>
+        </svg>
+        <span>Loading Archive</span>
+      </a>
+      <div class="nav-right">
+        <a href="/">Releases</a>
+        <a href="/trending">Trending</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="prose">
+  <h1>Contact</h1>
+  <p class="sub">Spotted a wrong date? Missing a game? We read everything and corrections usually go live within a day.</p>
+
+  <div class="email-card">
+    <div>
+      <div class="email-label">E-mail</div>
+      <div class="email-value">loadingarchive@outlook.com</div>
+    </div>
+    <a class="cta-btn" href="mailto:loadingarchive@outlook.com">Send an e-mail</a>
+  </div>
+
+  <h2>What to contact us about</h2>
+  <ul>
+    <li><strong>Corrections</strong> — a wrong release date, price, platform list or a game we've misclassified as a port or remake. Please include a link to the official source if you have one.</li>
+    <li><strong>Missing games</strong> — an announced title that isn't in the calendar yet. Tell us the name and platform(s) and we'll add it.</li>
+    <li><strong>Developers &amp; publishers</strong> — want your game's listing updated with a better trailer, corrected details or a confirmed date? Reach out from a studio e-mail address.</li>
+    <li><strong>Content removal</strong> — if you hold rights to media shown on this site and want something taken down, we'll handle it promptly.</li>
+    <li><strong>Press &amp; business</strong> — anything else, same address.</li>
+  </ul>
+
+  <p>We typically respond within one to two days. For more about how the site works and where the data comes from, see the <a href="/about">about page</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-card">
+    <div class="footer-top">
+      <div id="footerDominoRow"></div>
+    </div>
+    <nav class="footer-months-sr" aria-label="Browse releases by month" id="footerMonths">
+      <a href="/releases/2026-01">January</a>
+      <a href="/releases/2026-02">February</a>
+      <a href="/releases/2026-03">March</a>
+      <a href="/releases/2026-04">April</a>
+      <a href="/releases/2026-05">May</a>
+      <a href="/releases/2026-06">June</a>
+      <a href="/releases/2026-07">July</a>
+      <a href="/releases/2026-08">August</a>
+      <a href="/releases/2026-09">September</a>
+      <a href="/releases/2026-10">October</a>
+      <a href="/releases/2026-11">November</a>
+      <a href="/releases/2026-12">December</a>
+    </nav>
+    <div class="footer-bottom">
+      <span class="footer-copy" id="footerYear">&copy; Loading Archive 2026</span>
+      <nav class="footer-links" aria-label="Site links">
+        <a href="/releases/tba">TBA</a>
+        <a href="/trending">Trending</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var YEAR = new Date().getFullYear();
+  document.getElementById('footerYear').innerHTML = '&copy; Loading Archive ' + YEAR;
+  document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach(function (a) {
+    a.setAttribute('href', a.getAttribute('href').replace(/\/releases\/\d{4}-/, '/releases/' + YEAR + '-'));
+  });
+}());
+(function () {
+  var rowEl = document.getElementById('footerDominoRow');
+  if (!rowEl) return;
+  var GAP = 7, BAR = 3, ROW_H = 22, STEP = 40, TRAIL = 15, T_FALL = 120, T_RISE = 100, PAUSE = 800;
+  var FULL_W = rowEl.offsetWidth || 960;
+  var NCOLS = Math.max(1, Math.floor((FULL_W + GAP) / (BAR + GAP)));
+  var rowDiv = document.createElement('div');
+  rowDiv.style.cssText = 'display:flex;gap:' + GAP + 'px;align-items:flex-end;height:' + ROW_H + 'px;overflow:visible';
+  var bars = [];
+  for (var i = 0; i < NCOLS; i++) { var b = document.createElement('div'); b.className = 'd-bar'; b.style.height = ROW_H + 'px'; rowDiv.appendChild(b); bars.push(b); }
+  rowEl.appendChild(rowDiv); rowEl.style.overflow = 'visible';
+  var TOTAL = NCOLS + TRAIL, p = 0;
+  function tick() {
+    var ci = NCOLS - 1 - p;
+    if (p < NCOLS) { bars[ci].style.transition = 'transform ' + T_FALL + 'ms ease-in'; bars[ci].style.transform = 'rotateZ(-70deg)'; }
+    var rp = p - TRAIL, rc = NCOLS - 1 - rp;
+    if (rp >= 0 && rp < NCOLS) { bars[rc].style.transition = 'transform ' + T_RISE + 'ms ease-out'; bars[rc].style.transform = ''; }
+    p++;
+    if (p >= TOTAL) { p = 0; setTimeout(tick, PAUSE); } else { setTimeout(tick, STEP); }
+  }
+  tick();
+}());
+</script>
+
+</body>
+</html>

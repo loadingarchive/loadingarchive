@@ -1,4 +1,37 @@
 import { dominoFooterJS } from '../ui/domino.js';
+import { siteFooterHtml } from '../ui/footer.js';
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Generates N bar heights that look like a natural waveform, scaled by the
+ * game's relative player count. Seeded on appid so each game gets a unique
+ * but consistent shape. Same dimensions as the footer dominos (3px wide, 7px gap).
+ */
+function sparkBars(appid, playersNow, maxPlayers, count = 14) {
+  const seed = parseInt(appid, 10) || 1;
+  // Log scale: 86K vs 1.1M reads as ~82% instead of 8% on a linear scale.
+  const norm = maxPlayers > 1
+    ? Math.log(Math.max(playersNow, 1)) / Math.log(maxPlayers)
+    : 0.1;
+  const maxH = 22;
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const wave = Math.sin(seed * 0.01 + t * Math.PI * 2.3) * 0.3
+               + Math.sin(seed * 0.03 + t * Math.PI * 5.1) * 0.2
+               + 0.5;
+    bars.push(Math.max(2, Math.round(wave * norm * maxH)));
+  }
+  return bars;
+}
 
 function fmtPlayers(n) {
   if (!n) return '0';
@@ -7,19 +40,24 @@ function fmtPlayers(n) {
   return String(n);
 }
 
-function renderRow(g, rank) {
-  const isExt = g.link.startsWith('http');
-  return `<a class="trend-row" href="${g.link}"${isExt ? ' target="_blank" rel="noopener"' : ''}>
+function renderRow(g, rank, maxPlayers) {
+  const isExt  = g.link.startsWith('http');
+  const bars   = sparkBars(g.appid, g.players_now, maxPlayers);
+  const barHtml = bars.map(h =>
+    `<span style="width:3px;height:${h}px;background:rgba(255,255,255,0.22);border-radius:1px;flex-shrink:0"></span>`
+  ).join('');
+  return `<a class="trend-row" href="${esc(g.link)}"${isExt ? ' target="_blank" rel="noopener"' : ''}>
     <div class="trend-left">
       <div class="trend-rank">${rank}</div>
       <div class="trend-cover-wrap">
-        <img class="trend-cover" src="${g.image}" alt="" loading="${rank <= 5 ? 'eager' : 'lazy'}" onerror="this.style.opacity='0'">
+        <img class="trend-cover" src="${esc(g.image)}" alt="" loading="${rank <= 5 ? 'eager' : 'lazy'}" onerror="this.style.opacity='0'">
       </div>
       <div class="trend-info">
-        <div class="trend-name">${g.name}</div>
-        ${g.developer ? `<div class="trend-dev">${g.developer}</div>` : ''}
+        <div class="trend-name">${esc(g.name)}</div>
+        ${g.developer ? `<div class="trend-dev">${esc(g.developer)}</div>` : ''}
       </div>
     </div>
+    <div class="trend-spark" aria-hidden="true">${barHtml}</div>
     <div class="trend-stats">
       <div class="trend-stat-main">${fmtPlayers(g.players_now)}</div>
       <div class="trend-stat-sub">playing right now</div>
@@ -32,37 +70,34 @@ function renderPage(games, generatedAt) {
     ? new Date(generatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
     : '';
 
-  const rows = games.map((g, i) => renderRow(g, i + 1)).join('');
+  const maxPlayers = Math.max(...games.map(g => g.players_now), 1);
+  const rows = games.map((g, i) => renderRow(g, i + 1, maxPlayers)).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Most Played on Steam | Loading Archive</title>
-<meta name="description" content="Top 10 most played games on Steam right now, by current player count.">
+<title>Most Played Games on Steam Right Now — Live Player Counts | Loading Archive</title>
+<meta name="description" content="The top 20 most played games on Steam right now, ranked by live concurrent player count. Updated every hour.">
+<link rel="canonical" href="https://www.loadingarchive.com/trending">
+<meta property="og:type"        content="website">
+<meta property="og:title"       content="Most Played Games on Steam Right Now | Loading Archive">
+<meta property="og:description" content="Top 20 most played games on Steam, ranked by live player count. Updated hourly.">
+<meta property="og:url"         content="https://www.loadingarchive.com/trending">
+<meta property="og:site_name"   content="Loading Archive">
+<meta name="twitter:card"        content="summary">
+<meta name="twitter:title"       content="Most Played Games on Steam Right Now | Loading Archive">
+<meta name="twitter:description" content="Top 20 most played games on Steam, ranked by live player count. Updated hourly.">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/css/site.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0E1015;--surface:#181A20;--border:#292B31;--blue:#1A9FFF;--gold:#C89856}
-html{scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
-
-/* NAV */
-.nav-wrap{position:fixed;top:0;left:0;right:0;z-index:100;max-width:1060px;margin:0 auto;padding:16px 20px 0}
-.nav-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:11px 20px;transition:box-shadow 0.3s ease;overflow:hidden}
-.nav-card.scrolled{box-shadow:0 12px 32px rgba(0,0,0,0.5),0 4px 12px rgba(0,0,0,0.3)}
-.nav-top{display:flex;align-items:center;justify-content:space-between}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo svg{width:22px;height:22px;flex-shrink:0}
-.logo span{font-size:15px;font-weight:600;color:#fff;letter-spacing:0.01em}
-.nav-right{display:flex;align-items:center;gap:18px}
-.nav-right a{font-size:10px;color:#999CA3;text-decoration:none;font-weight:500}
-.nav-right a:hover{color:#fff}
-.nav-right a.nav-active{color:#fff;font-weight:600}
-
 /* PAGE */
 .page-wrap{max-width:1060px;width:100%;margin:0 auto;padding:100px 20px 60px;flex:1}
 
@@ -70,7 +105,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 .page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap}
 .page-title-group{}
 .page-title{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:5px}
-.page-meta{font-size:11px;color:#999CA3}
+.page-meta{font-size:11px;color:var(--dim)}
 
 /* ROWS */
 .trend-list{display:flex;flex-direction:column;gap:8px}
@@ -92,12 +127,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
 .trend-cover{width:100%;height:100%;object-fit:cover;display:block}
 .trend-info{min-width:0;flex:1}
 .trend-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
-.trend-dev{font-size:11px;color:#999CA3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trend-dev{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* SPARK */
+.trend-spark{display:flex;align-items:flex-end;gap:7px;height:22px;flex-shrink:0;margin:0 20px}
+@media(max-width:560px){.trend-spark{display:none}}
 
 /* STATS */
 .trend-stats{flex-shrink:0;text-align:right;min-width:100px}
 .trend-stat-main{font-size:16px;font-weight:700;letter-spacing:-0.01em}
-.trend-stat-sub{font-size:10px;color:#999CA3;margin-top:3px}
+.trend-stat-sub{font-size:10px;color:var(--dim);margin-top:3px}
 
 /* RESPONSIVE */
 @media(max-width:660px){
@@ -105,14 +144,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
   .trend-stat-main{font-size:14px}
 }
 @media(max-width:420px){.trend-rank{display:none}.trend-row{gap:10px}}
-
-/* FOOTER */
-.site-footer{padding:0 20px 24px}
-.footer-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:visible;max-width:1020px;margin:0 auto}
-.footer-top{padding:20px 20px 0;overflow:visible}
-.d-bar{background:rgba(255,255,255,0.22);transform-origin:bottom center;width:3px;height:100%;display:block;flex-shrink:0}
-.footer-bottom{display:flex;align-items:center;justify-content:space-between;padding:20px}
-.footer-copy{font-size:10px;color:#999CA3}
 </style>
 </head>
 <body>
@@ -130,16 +161,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
         <span>Loading Archive</span>
       </a>
       <div class="nav-right">
-        <a href="/">2026</a>
+        <a href="/">${new Date().getFullYear()}</a>
         <a href="/trending" class="nav-active">Trending</a>
-        <a href="mailto:loadingarchive@outlook.com">Contact</a>
+        <a href="/contact">Contact</a>
       </div>
     </div>
   </div>
 </div>
 
 <!-- PAGE -->
-<div class="page-wrap">
+<main class="page-wrap">
   <div class="page-header">
     <div class="page-title-group">
       <h1 class="page-title">Most Played on Steam</h1>
@@ -150,20 +181,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:#fff;min-height:1
   <div class="trend-list" id="trendList">
     ${rows}
   </div>
-</div>
+</main>
 
 <!-- FOOTER -->
-<footer class="site-footer">
-  <div class="footer-card">
-    <div class="footer-top">
-      <div id="footerDominoRow"></div>
-    </div>
-    <div class="footer-bottom">
-      <span class="footer-copy">&copy; Loading Archive ${new Date().getFullYear()}</span>
-      <span class="footer-copy">All rights reserved</span>
-    </div>
-  </div>
-</footer>
+${siteFooterHtml('footerDominoRow')}
 
 <script>
 // Nav scroll shadow

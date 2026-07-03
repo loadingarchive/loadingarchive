@@ -22,6 +22,25 @@ export async function fetchSteamAppDetails(appid) {
   }
 }
 
+/**
+ * Destilleert de detailvelden uit een reeds opgehaald Steam appdetails-object.
+ * Losgetrokken uit fetchSteamGameDetails zodat de pipeline een al gefetcht
+ * app-object kan hergebruiken i.p.v. hetzelfde endpoint nogmaals aan te roepen.
+ */
+export function extractSteamDetails(app) {
+  return {
+    short_description:    app.short_description || null,
+    detailed_description: app.detailed_description || null,
+    pc_requirements: {
+      minimum:     app.pc_requirements?.minimum     || null,
+      recommended: app.pc_requirements?.recommended || null,
+    },
+    metacritic:    app.metacritic ? { score: app.metacritic.score, url: app.metacritic.url } : null,
+    screenshots:   (app.screenshots || []).slice(0, 3).map(s => s.path_full),
+    categories:    (app.categories  || []).map(c => c.description),
+  };
+}
+
 export async function fetchSteamGameDetails(appid) {
   try {
     const r = await fetch(
@@ -32,22 +51,17 @@ export async function fetchSteamGameDetails(appid) {
     const data = await r.json();
     const app = data?.[appid]?.data;
     if (!app) return null;
-    return {
-      short_description:    app.short_description || null,
-      detailed_description: app.detailed_description || null,
-      pc_requirements: {
-        minimum:     app.pc_requirements?.minimum     || null,
-        recommended: app.pc_requirements?.recommended || null,
-      },
-      metacritic:    app.metacritic ? { score: app.metacritic.score, url: app.metacritic.url } : null,
-      screenshots:   (app.screenshots || []).slice(0, 3).map(s => s.path_full),
-      categories:    (app.categories  || []).map(c => c.description),
-    };
+    return extractSteamDetails(app);
   } catch (e) {
     console.error("Steam game details failed", appid, e.message);
     return null;
   }
 }
+
+// Sentinel: een regionale (EUR/GBP) prijs-fetch is mislukt (timeout/429).
+// Onderscheidt "fetch faalde" van "game heeft echt geen prijs" (null) zodat
+// de aanroeper bestaande regionale prijzen niet wist bij een storing.
+export const PRICE_FETCH_FAILED = Symbol('steam-price-fetch-failed');
 
 /**
  * Haal Steam-prijzen op voor USD, EUR (nl) en GBP (gb).
@@ -55,7 +69,10 @@ export async function fetchSteamGameDetails(appid) {
  * Stap 2: als het een betaald spel is, haal EUR + GBP op via lichte
  *         filters=price_overview calls in parallel.
  * Geeft { usd, eur, gbp } terug; elke waarde is null (geen prijs),
- * { is_free: true } of een Steam price_overview object.
+ * { is_free: true }, een Steam price_overview object, of PRICE_FETCH_FAILED
+ * (alleen eur/gbp) als die regionale call zelf mislukte.
+ * Geeft null (heel resultaat) terug als de USD-fetch mislukte (timeout,
+ * rate-limit) — de aanroeper mag bestaande prijzen dan NIET overschrijven.
  */
 export async function fetchSteamPriceMulti(appid) {
   const NONE = { usd: null, eur: null, gbp: null };
@@ -67,12 +84,12 @@ export async function fetchSteamPriceMulti(appid) {
       `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en`,
       { signal: AbortSignal.timeout(7000) }
     );
-    if (!r.ok) return NONE;
+    if (!r.ok) return null; // fetch mislukt — geen uitspraak over de prijs
     const j = await r.json();
     const d = j?.[appid];
     if (!d?.success || !d.data) return NONE;
     usdData = d.data;
-  } catch { return NONE; }
+  } catch { return null; }
 
   // Gratis games hebben geen price_overview
   if (usdData.is_free) return { usd: { is_free: true }, eur: { is_free: true }, gbp: { is_free: true } };
@@ -87,10 +104,10 @@ export async function fetchSteamPriceMulti(appid) {
         `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=${cc}&filters=price_overview`,
         { signal: AbortSignal.timeout(6000) }
       );
-      if (!r.ok) return null;
+      if (!r.ok) return PRICE_FETCH_FAILED;
       const j = await r.json();
       return j?.[appid]?.data?.price_overview || null;
-    } catch { return null; }
+    } catch { return PRICE_FETCH_FAILED; }
   }
 
   const [eur, gbp] = await Promise.all([fetchRegional('nl'), fetchRegional('gb')]);

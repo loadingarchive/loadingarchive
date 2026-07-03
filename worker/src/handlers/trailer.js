@@ -2,13 +2,14 @@ export async function handleTrailer(request) {
   const { searchParams } = new URL(request.url);
   const appid = searchParams.get('appid');
 
-  if (!appid) {
-    return Response.json({ error: 'Missing appid' }, { status: 400 });
+  if (!appid || !/^\d+$/.test(appid)) {
+    return Response.json({ error: 'Missing or invalid appid' }, { status: 400 });
   }
 
   try {
     const response = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${appid}&l=en`
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&l=en`,
+      { signal: AbortSignal.timeout(8000) }
     );
     const data = await response.json();
     const app  = data?.[appid]?.data;

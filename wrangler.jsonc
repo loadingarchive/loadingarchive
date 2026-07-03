@@ -22,12 +22,20 @@
 			"remote": true
 		}
 	],
-	// Two cron triggers, both handled by the scheduled() export in index.js:
-	//   0 3 * * *  → daily: rebuild active months + TBA (runDailyCron)
-	//   0 4 * * 0  → weekly Sunday: Wikipedia incremental scrape (runWeeklyWikipediaCron)
+	// Five cron triggers, all dispatched by scheduled() in index.js.
+	// De dagelijkse keten is gesplitst over drie invocaties vanwege het
+	// subrequest-budget (~1000 per invocation):
+	//   0 3 * * *   → maanden jan–jun (runMonthsCron 1–6)
+	//   45 3 * * *  → maanden jul–dec + TBA (runMonthsCron 7–12)
+	//   30 4 * * *  → maintenance: soft-delete, KV-rebuild, sitemap,
+	//                 appid-backfill, prijsupdate (runMaintenanceCron)
+	//   0 4 * * 7   → weekly Sunday: Wikipedia scrape (runWeeklyWikipediaCron)
+	//   0 * * * *   → hourly: trending refresh (runHourlyCron)
 	"triggers": {
 		"crons": [
 			"0 3 * * *",
+			"45 3 * * *",
+			"30 4 * * *",
 			"0 4 * * 7",
 			"0 * * * *"
 		]
