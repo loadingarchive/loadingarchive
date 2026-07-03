@@ -98,7 +98,7 @@ function renderRow(g) {
     <div class="row-cover">${g.cover ? `<img src="${esc(coverUrl(g.cover, 420))}" alt="" loading="lazy" width="92" height="43">` : ''}</div>
     <div class="row-info">
       <div class="row-title">${esc(g.title)}${badge(g)}</div>
-      <div class="row-meta">${plats}${(g.genre || []).length ? ` — ${esc(g.genre.join(', '))}` : ''}</div>
+      <div class="row-meta">${plats}${(g.genre || []).length ? ` · ${esc(g.genre.join(', '))}` : ''}</div>
     </div>
     <div class="row-date">${g.date ? fmtDay(g.date) : 'TBA'}</div>`;
   return href
@@ -113,10 +113,10 @@ function renderPage(monthKey, label, games, isTba) {
 
   const title    = isTba
     ? `Announced Games Without a Release Date (TBA) | Loading Archive`
-    : `${label} Game Releases — PC, PS5, Xbox, Switch | Loading Archive`;
+    : `${label} Game Releases: PC, PS5, Xbox, Switch | Loading Archive`;
   const metaDesc = isTba
     ? `All ${games.length} announced video games without a confirmed release date, with platforms, genres and details.`
-    : `All ${games.length} video games releasing in ${label} with exact dates, platforms, genres, prices and trailers — PC, PlayStation 5, Xbox Series X/S and Nintendo Switch.`;
+    : `All ${games.length} video games releasing in ${label} with exact dates, platforms, genres, prices and trailers for PC, PlayStation 5, Xbox Series X/S and Nintendo Switch.`;
 
   const prevKey = isTba ? null : shiftMonth(monthKey, -1);
   const nextKey = isTba ? null : shiftMonth(monthKey, 1);
@@ -225,7 +225,7 @@ a.rel-row:hover{border-color:rgba(255,255,255,0.12)}
 
 <main class="page-wrap">
   <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Loading Archive</a> / ${esc(label)}</nav>
-  <h1 class="page-title">${isTba ? 'Announced Games — No Release Date Yet' : `${esc(label)} Game Releases`}</h1>
+  <h1 class="page-title">${isTba ? 'Announced Games, No Release Date Yet' : `${esc(label)} Game Releases`}</h1>
   <p class="page-meta">${games.length} games · PC, PlayStation, Xbox &amp; Nintendo Switch${payloadNote(isTba)}</p>
 
   ${MONTH_INTROS[monthKey] ? `<div class="month-intro prose">

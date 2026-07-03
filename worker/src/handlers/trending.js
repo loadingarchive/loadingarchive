@@ -78,7 +78,7 @@ function renderPage(games, generatedAt) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Most Played Games on Steam Right Now — Live Player Counts | Loading Archive</title>
+<title>Most Played Games on Steam Right Now: Live Player Counts | Loading Archive</title>
 <meta name="description" content="The top 20 most played games on Steam right now, ranked by live concurrent player count. Updated every hour.">
 <link rel="canonical" href="https://www.loadingarchive.com/trending">
 <meta property="og:type"        content="website">

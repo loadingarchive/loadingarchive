@@ -89,7 +89,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
 <main>
   <h1>Style Guide</h1>
-  <p class="sg-intro">Internal reference, not linked from the site. Every color, type size and component below is pulled from <code>/css/site.css</code> — the single stylesheet loaded by every page (homepage, game pages, month pages, trending, about, privacy, contact). Edit a value there and it updates everywhere at once. Page-specific layout (hero, carousels, forms, filters) stays local to each page's own template.</p>
+  <p class="sg-intro">Internal reference, not linked from the site. Every color, type size and component below is pulled from <code>/css/site.css</code>, the single stylesheet loaded by every page (homepage, game pages, month pages, trending, about, privacy, contact). Edit a value there and it updates everywhere at once. Page-specific layout (hero, carousels, forms, filters) stays local to each page's own template.</p>
 
   <!-- ============ COLORS ============ -->
   <section class="sg-section">
@@ -151,11 +151,11 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
     <div class="sg-type-row"><div class="sg-type-meta">400 · 11px</div><div class="sg-type-sample" style="font-weight:400;font-size:11px;color:var(--dim)">Breadcrumb</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">500 · 10px (--xs)</div><div class="sg-type-sample" style="font-weight:500;font-size:10px;color:var(--dim)">Nav links, footer links, meta text</div></div>
   </section>
-  <p style="font-size:11px;color:var(--dim);margin-top:-8px">Button labels and badge/ptag text have their own type specs — see <a href="#sg-buttons" style="color:var(--dim);text-decoration:underline">Buttons</a> and <a href="#sg-indicators" style="color:var(--dim);text-decoration:underline">Port / Remake / Anticipated indicators</a> below.</p>
+  <p style="font-size:11px;color:var(--dim);margin-top:-8px">Button labels and badge/ptag text have their own type specs, see <a href="#sg-buttons" style="color:var(--dim);text-decoration:underline">Buttons</a> and <a href="#sg-indicators" style="color:var(--dim);text-decoration:underline">Port / Remake / Anticipated indicators</a> below.</p>
 
   <!-- ============ MAIN NAV ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Main nav</h2><span>.nav-wrap / .nav-card — identical on all 7 page types</span></div>
+    <div class="sg-section-head"><h2>Main nav</h2><span>.nav-wrap / .nav-card: identical on all 7 page types</span></div>
     <div class="sg-demo sg-nav-demo">
       <div class="nav-wrap">
         <div class="nav-card">
@@ -181,7 +181,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ GAME CARD ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Game card</h2><span>.game-card — homepage grid</span></div>
+    <div class="sg-section-head"><h2>Game card</h2><span>.game-card: homepage grid</span></div>
     <div class="sg-card-grid">
       <div class="game-card">
         <div class="card-date">
@@ -229,18 +229,18 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
   <section class="sg-section" id="sg-buttons">
     <div class="sg-section-head"><h2>Buttons</h2><span>every distinct clickable control on the site</span></div>
 
-    <div class="sg-block-label">.cta-btn — primary CTA (game detail "View on Steam" / "Pre-order", contact "Send an e-mail") <span class="sg-spec">700 · 11px · uppercase</span></div>
+    <div class="sg-block-label">.cta-btn: primary CTA (game detail "View on Steam" / "Pre-order", contact "Send an e-mail") <span class="sg-spec">700 · 11px · uppercase</span></div>
     <div class="sg-badge-row">
       <a class="cta-btn" href="#" onclick="return false">View on Steam</a>
       <a class="cta-btn cta-btn-gold" href="#" onclick="return false">Pre-order</a>
     </div>
 
-    <div class="sg-block-label">.bekijk-btn — ghost text link with arrow (game card) <span class="sg-spec">500 · 10px (--xs)</span></div>
+    <div class="sg-block-label">.bekijk-btn: ghost text link with arrow (game card) <span class="sg-spec">500 · 10px (--xs)</span></div>
     <div class="sg-badge-row">
       <a class="bekijk-btn" href="#" onclick="return false">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a>
     </div>
 
-    <div class="sg-block-label">.cur-toggle / .cur-btn — segmented toggle (game detail currency switch) <span class="sg-spec">600 · 10px</span></div>
+    <div class="sg-block-label">.cur-toggle / .cur-btn: segmented toggle (game detail currency switch) <span class="sg-spec">600 · 10px</span></div>
     <div class="sg-badge-row">
       <div class="cur-toggle" role="group" aria-label="Currency">
         <button class="cur-btn active">USD</button>
@@ -249,7 +249,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
       </div>
     </div>
 
-    <div class="sg-block-label">.pbar-chip — platform filter chip (homepage), active state per platform <span class="sg-spec">600 · 10px (--xs)</span></div>
+    <div class="sg-block-label">.pbar-chip: platform filter chip (homepage), active state per platform <span class="sg-spec">600 · 10px (--xs)</span></div>
     <div class="sg-badge-row">
       <span class="pbar-chip active PC"><span class="dot"></span>PC</span>
       <span class="pbar-chip active NS"><span class="dot"></span>NS</span>
@@ -261,13 +261,13 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
       <span class="pbar-chip">Inactive</span>
     </div>
 
-    <div class="sg-block-label">.month-pager — prev/next month pagination (month pages) <span class="sg-spec">500 · 11px</span></div>
+    <div class="sg-block-label">.month-pager: prev/next month pagination (month pages) <span class="sg-spec">500 · 11px</span></div>
     <div class="sg-badge-row">
       <a href="#" onclick="return false" style="font-size:11px;color:var(--dim);text-decoration:none;font-weight:500;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 16px">← June 2026</a>
       <a href="#" onclick="return false" style="font-size:11px;color:var(--dim);text-decoration:none;font-weight:500;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 16px">August 2026 →</a>
     </div>
 
-    <div class="sg-block-label">.back-btn / .car-btn / .car-play — icon-only circular controls (game detail carousel)</div>
+    <div class="sg-block-label">.back-btn / .car-btn / .car-play: icon-only circular controls (game detail carousel)</div>
     <div class="sg-badge-row" style="background:var(--surface);border-radius:12px;padding:20px">
       <a href="#" onclick="return false" style="flex-shrink:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--dim)">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 2 4 6 8 10"/></svg>
@@ -280,33 +280,33 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
       </button>
     </div>
 
-    <div class="sg-block-label">.card-action-btn — icon-only status buttons (homepage card) — see Port / Remake / Anticipated indicators below</div>
+    <div class="sg-block-label">.card-action-btn: icon-only status buttons (homepage card), see Port / Remake / Anticipated indicators below</div>
   </section>
 
   <!-- ============ STATUS INDICATORS ============ -->
   <section class="sg-section" id="sg-indicators">
     <div class="sg-section-head"><h2>Port / Remake / Anticipated indicators</h2><span>Same 3 accent colors, 3 different sizes for 3 different contexts</span></div>
 
-    <div class="sg-block-label">.ptag — platform tag (card, detail page) <span class="sg-spec">card: 600 · 8px — detail page: 700 · 9px</span></div>
+    <div class="sg-block-label">.ptag: platform tag (card, detail page) <span class="sg-spec">card: 600 · 8px, detail page: 700 · 9px</span></div>
     <div class="sg-badge-row">
       <span class="ptag">PC</span><span class="ptag">PS5</span><span class="ptag">XSX/S</span><span class="ptag">NS2</span>
     </div>
 
-    <div class="sg-block-label">.badge — pill with icon (game detail page) <span class="sg-spec">600 · 10px</span></div>
+    <div class="sg-block-label">.badge: pill with icon (game detail page) <span class="sg-spec">600 · 10px</span></div>
     <div class="sg-badge-row">
       <span class="badge badge-anticipated">Anticipated</span>
       <span class="badge badge-rerelease">Port · orig. Mar 3, 2016</span>
       <span class="badge badge-remake">Remake · orig. Oct 12, 2010</span>
     </div>
 
-    <div class="sg-block-label">.row-badge — compact (month list rows) <span class="sg-spec">700 · 9px</span></div>
+    <div class="sg-block-label">.row-badge: compact (month list rows) <span class="sg-spec">700 · 9px</span></div>
     <div class="sg-badge-row">
       <span class="row-badge b-ant">Anticipated</span>
       <span class="row-badge b-port">Port</span>
       <span class="row-badge b-remake">Remake</span>
     </div>
 
-    <div class="sg-block-label">.card-action-btn — icon-only (homepage card)</div>
+    <div class="sg-block-label">.card-action-btn: icon-only (homepage card)</div>
     <div class="sg-badge-row">
       <button class="card-action-btn card-action-anticipated" style="background:var(--surface);border-radius:6px" aria-label="Anticipated"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></svg></button>
       <button class="card-action-btn card-action-rerelease" style="background:var(--surface);border-radius:6px" aria-label="Port"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.53554 8.53554C7.59783 9.47321 6.32608 10 5 10C3.68031 10 2.70383 9.63463 1.94478 9.07575C1.68555 8.88488 1.45603 8.67437 1.25 8.45562V9.16667H0L2.72917e-08 6.875L8.295e-07 6.25H0.625H0.823867H2.91667V7.5H2.06945C2.25562 7.70913 2.45748 7.90096 2.6859 8.06913C3.21946 8.462 3.93333 8.75 5 8.75C5.99454 8.75 6.94837 8.35492 7.65167 7.65167C8.35492 6.94837 8.75 5.99454 8.75 5H10C10 6.32608 9.47321 7.59783 8.53554 8.53554ZM8.75 1.54438V0.833333H10V3.125V3.75H9.375H9.17612H7.08333V2.5H7.93054C7.74437 2.29087 7.5425 2.09903 7.31408 1.93085C6.78054 1.53802 6.06667 1.25 5 1.25C4.00544 1.25 3.05161 1.64509 2.34835 2.34835C1.64509 3.05161 1.25 4.00544 1.25 5H4.96667e-08C6.55e-08 3.67392 0.526783 2.40215 1.46447 1.46447C2.40215 0.526783 3.67392 -1.57917e-08 5 0C6.31971 1.575e-08 7.29617 0.365393 8.05521 0.924258C8.31446 1.11512 8.54396 1.32561 8.75 1.54438Z" fill="currentColor"/></svg></button>
@@ -316,15 +316,15 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ PROSE LINKS ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Prose links</h2><span>.prose a — inline text links in body copy (about, privacy, contact, month intros, homepage intro)</span></div>
+    <div class="sg-section-head"><h2>Prose links</h2><span>.prose a: inline text links in body copy (about, privacy, contact, month intros, homepage intro)</span></div>
     <div class="sg-demo prose">
-      <p style="font-size:14px;line-height:1.75;color:#C6C8CD">White text with a dim underline that brightens to solid white on hover — used for inline links like <a href="#">this one</a> or a <a href="#">correction request link</a>, as opposed to nav/footer chrome links which stay muted grey and never show an underline.</p>
+      <p style="font-size:14px;line-height:1.75;color:#C6C8CD">White text with a dim underline that brightens to solid white on hover, used for inline links like <a href="#">this one</a> or a <a href="#">correction request link</a>, as opposed to nav/footer chrome links which stay muted grey and never show an underline.</p>
     </div>
   </section>
 
   <!-- ============ MONTH NAV ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Floating month nav</h2><span>.month-nav-wrap — homepage only, fixed to viewport bottom</span></div>
+    <div class="sg-section-head"><h2>Floating month nav</h2><span>.month-nav-wrap: homepage only, fixed to viewport bottom</span></div>
     <div class="sg-demo sg-monthnav-demo">
       <div class="month-nav-inner">
         <span class="month-nav-label">Month /</span>
@@ -342,7 +342,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ SIDE NAV ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Side nav</h2><span>.side-nav — homepage calendar drag-rail, desktop only</span></div>
+    <div class="sg-section-head"><h2>Side nav</h2><span>.side-nav: homepage calendar drag-rail, desktop only</span></div>
     <div class="sg-demo sg-sidenav-demo">
       <div class="side-nav">
         <div class="side-nav-inner">
@@ -360,7 +360,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ FOOTER ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Footer</h2><span>.site-footer — identical on all 7 page types, see worker/src/ui/footer.js</span></div>
+    <div class="sg-section-head"><h2>Footer</h2><span>.site-footer: identical on all 7 page types, see worker/src/ui/footer.js</span></div>
     <div class="sg-demo sg-footer-demo">
       <footer class="site-footer">
         <div class="footer-card">
