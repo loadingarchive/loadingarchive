@@ -32,19 +32,22 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 .sg-swatch-name { font-size: 11px; font-weight: 700; }
 .sg-swatch-hex { font-size: 10px; color: var(--dim); font-family: monospace; }
 
-/* Type scale */
-.sg-type-row { display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+/* Type scale — flex-wrap zodat lange samples op smalle schermen onder de
+   meta-kolom vallen in plaats van horizontaal buiten de pagina te steken */
+.sg-type-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .sg-type-row:last-child { border-bottom: none; }
 .sg-type-meta { flex-shrink: 0; width: 190px; font-size: 11px; color: var(--dim); font-family: monospace; }
-.sg-type-sample { color: #fff; }
+.sg-type-sample { color: #fff; min-width: 0; }
 
 /* Generic demo frame */
 .sg-demo { border: 1px dashed var(--border); border-radius: 14px; padding: 24px; position: relative; overflow: hidden; }
 .sg-demo-label { position: absolute; top: 8px; right: 12px; font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
 
-/* Nav demo needs relative positioning context since .nav-wrap is fixed everywhere else */
-.sg-nav-demo { background: var(--bg); border-radius: 14px; padding: 16px; }
-.sg-nav-demo .nav-wrap { position: static; padding: 0; max-width: none; }
+/* Nav demo needs relative positioning context since .nav-wrap is fixed everywhere else.
+   overflow-x auto: op smalle schermen scrollt de demo binnen zijn kader in plaats
+   van de pagina te verbreden (de statische demo-nav kan niet krimpen). */
+.sg-nav-demo { background: var(--bg); border-radius: 14px; padding: 16px; overflow-x: auto; }
+.sg-nav-demo .nav-wrap { position: static; padding: 0; max-width: none; min-width: max-content; }
 
 /* Footer demo: same override */
 .sg-footer-demo .site-footer { padding: 0; }

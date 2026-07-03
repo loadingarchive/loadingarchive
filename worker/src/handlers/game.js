@@ -89,9 +89,18 @@ function renderPage(g) {
   const plats  = (g.platforms || []).map(p => PLATFORM_FULL[p] || p);
 
   const ogImg    = g.cover || shots[0] || '';
-  const rawDesc  = g.short_description
+  // Steam-beschrijvingen bevatten al HTML-entities (&quot; etc.); die eerst
+  // decoderen, anders escapet esc() ze dubbel en staat er letterlijk "&quot;"
+  // op de pagina. &amp; als laatste, standaard decode-volgorde.
+  const rawDesc  = (g.short_description
     ? g.short_description.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    : `${g.title} releases ${g.date ? 'on ' + date : '(TBA)'}${plats.length ? ' for ' + plats.join(', ') : ''}.`;
+    : `${g.title} releases ${g.date ? 'on ' + date : '(TBA)'}${plats.length ? ' for ' + plats.join(', ') : ''}.`)
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&');
   const metaDesc = esc(rawDesc.slice(0, 160));
 
   // Maandpagina waar deze game onder valt — voor breadcrumb + interne linking.
