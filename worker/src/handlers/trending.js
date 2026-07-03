@@ -1,4 +1,3 @@
-import { dominoFooterJS } from '../ui/domino.js';
 import { siteFooterHtml } from '../ui/footer.js';
 
 function esc(str) {
@@ -186,13 +185,14 @@ function renderPage(games, generatedAt) {
 <!-- FOOTER -->
 ${siteFooterHtml('footerDominoRow')}
 
+<script src="/js/domino.js"></script>
 <script>
 // Nav scroll shadow
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', scrollY > 10);
 }, { passive: true });
 
-${dominoFooterJS('footerDominoRow')}
+initDominoRow('footerDominoRow');
 </script>
 </body>
 </html>`;

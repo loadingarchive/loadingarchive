@@ -1,4 +1,3 @@
-import { dominoFooterJS } from '../ui/domino.js';
 import { siteFooterHtml } from '../ui/footer.js';
 
 function esc(str) {
@@ -440,6 +439,7 @@ ${totalSlides > 0 ? `
 <!-- FOOTER -->
 ${siteFooterHtml('dominoRow')}
 
+<script src="/js/domino.js"></script>
 <script>
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', window.scrollY > 30);
@@ -573,7 +573,7 @@ window.addEventListener('scroll', () => {
   }, { passive: true });
 })();
 
-${dominoFooterJS('dominoRow')}
+initDominoRow('dominoRow');
 ${hasTrailer ? `
 async function playTrailer() {
   const trailer = ${jsonForScript(g.trailer)};

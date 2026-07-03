@@ -1,4 +1,3 @@
-import { dominoFooterJS } from '../ui/domino.js';
 import { siteFooterHtml } from '../ui/footer.js';
 import { MONTH_INTROS } from '../content/month-intros.js';
 
@@ -245,11 +244,12 @@ a.rel-row:hover{border-color:rgba(255,255,255,0.12)}
 
 ${siteFooterHtml('footerDominoRow')}
 
+<script src="/js/domino.js"></script>
 <script>
 window.addEventListener('scroll', () => {
   document.getElementById('navCard').classList.toggle('scrolled', scrollY > 10);
 }, { passive: true });
-${dominoFooterJS('footerDominoRow')}
+initDominoRow('footerDominoRow');
 </script>
 </body>
 </html>`;
