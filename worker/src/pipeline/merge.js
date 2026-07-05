@@ -58,28 +58,76 @@ async function backfillFromExistingSteamPage(game) {
 // Zonder deze map dedupliceerde assignSlugs alleen binnen één maand-batch: twee
 // verschillende games met dezelfde titel in verschillende maanden konden dezelfde
 // slug krijgen, waarna de tweede de eerste in D1 overschreef (ON CONFLICT(slug)).
-function assignSlugs(games, slugOwners = new Map()) {
+export function assignSlugs(games, slugOwners = new Map()) {
   // Dezelfde game heeft als TBA-record id "rawg-tba-{n}" en als gedateerd
   // record "rawg-{n}". Normaliseer zodat een game die van TBA naar een datum
   // verhuist zijn eigen slug reclaimt i.p.v. een "-jaar" duplicaat te krijgen.
   const normId = id => String(id ?? '').replace(/^rawg-tba-/, 'rawg-');
   const isFree = (slug, id) => {
     const owner = slugOwners.get(slug);
-    return owner === undefined || normId(owner) === normId(id);
+    return owner === undefined || normId(owner.id) === normId(id);
   };
+
+  // Identiteits-indexen over bestaande actieve records: zelfde Steam-appid, of
+  // zelfde genormaliseerde titel + release-maand ⇒ hetzelfde spel, ook als het
+  // eerder via een andere bron binnenkwam (ander pipeline-id: excel-/wiki-/
+  // rawg-). Zonder deze check muntte de botsingslogica hieronder een
+  // "-jaar"-slug en stond dezelfde game twee keer in de maandlijst.
+  // Hidden records doen niet mee: een dupe adopteren die verborgen is zou hem
+  // reactiveren naast het actieve record.
+  const byAppid      = new Map();
+  const byTitleMonth = new Map();
+  for (const [slug, owner] of slugOwners) {
+    if (!owner.active) continue;
+    if (owner.appid) byAppid.set(String(owner.appid), slug);
+    // CJK-titels normaliseren naar een lege string — die zouden allemaal op
+    // dezelfde sleutel botsen, dus alleen indexeren bij een bruikbare titel.
+    const normTitle = normalizeTitle(owner.title);
+    if (normTitle) {
+      const mon = owner.date ? owner.date.slice(0, 7) : "tba";
+      byTitleMonth.set(`${normTitle}|${mon}`, slug);
+    }
+  }
+
+  // Elke bestaande slug mag per batch maar één keer gereclaimd worden: twee
+  // batch-games die op hetzelfde record matchen zouden anders allebei dezelfde
+  // slug krijgen en elkaar concurrent overschrijven (last-writer-wins). De
+  // tweede valt terug op de suffix-keten; het dedupe-vangnet ruimt hem
+  // desnoods de volgende nacht op.
+  const adopted = new Set();
 
   return games.map(g => {
     const raw  = generateSlug(g.title);
     const base = raw || String(g.id || "game"); // lege slug → gebruik rawg-id als anker
-    const year = g.date ? g.date.slice(0, 4) : "tba";
     const mon  = g.date ? g.date.slice(0, 7) : "tba";
 
-    let slug = base;
-    if (!isFree(slug, g.id)) slug = `${base}-${year}`;
-    if (!isFree(slug, g.id)) slug = `${base}-${mon}`;
-    if (!isFree(slug, g.id)) slug = `${base}-${g.id}`; // absolute fallback op RAWG-id
+    // Reclaim: bestaat dit spel al onder een andere slug/bron, neem die slug
+    // over zodat de upsert het bestaande record bijwerkt i.p.v. dupliceert.
+    const normTitle = normalizeTitle(g.title);
+    let slug = (g.steam && byAppid.get(String(g.steam))) || null;
+    if (!slug && normTitle) {
+      const cand = byTitleMonth.get(`${normTitle}|${mon}`);
+      // Titel+maand-match alleen vertrouwen als de appids niet aantoonbaar
+      // verschillen — anders zou een écht ander spel met dezelfde titel het
+      // bestaande record overschrijven (upsert heeft geen COALESCE op
+      // name/rawg_id/release_date).
+      const owner = cand ? slugOwners.get(cand) : undefined;
+      if (cand && !(g.steam && owner?.appid && String(owner.appid) !== String(g.steam))) {
+        slug = cand;
+      }
+    }
+    if (slug && adopted.has(slug)) slug = null;
+    if (slug) adopted.add(slug);
 
-    slugOwners.set(slug, g.id);
+    if (!slug) {
+      const year = g.date ? g.date.slice(0, 4) : "tba";
+      slug = base;
+      if (!isFree(slug, g.id)) slug = `${base}-${year}`;
+      if (!isFree(slug, g.id)) slug = `${base}-${mon}`;
+      if (!isFree(slug, g.id)) slug = `${base}-${g.id}`; // absolute fallback op RAWG-id
+    }
+
+    slugOwners.set(slug, { id: g.id, appid: g.steam ?? null, title: g.title, date: g.date ?? null, active: true });
     return { ...g, slug };
   });
 }

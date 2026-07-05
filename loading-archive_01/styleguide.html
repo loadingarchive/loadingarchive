@@ -142,14 +142,14 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
     <div class="sg-type-row"><div class="sg-type-meta">800 · clamp(24–38px)</div><div class="sg-type-sample" style="font-weight:800;font-size:clamp(24px,3.5vw,38px);letter-spacing:-0.03em">Game title (detail page)</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">700 · 22px</div><div class="sg-type-sample" style="font-weight:700;font-size:22px;letter-spacing:-0.01em">Page title (month, trending)</div></div>
+    <div class="sg-type-row"><div class="sg-type-meta">700 · 22px</div><div class="sg-type-sample" style="font-weight:700;font-size:22px;letter-spacing:-0.02em">Game price value (detail page)</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">700 · 18px</div><div class="sg-type-sample" style="font-weight:700;font-size:18px">Style guide section head</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">700 · 16px</div><div class="sg-type-sample" style="font-weight:700;font-size:16px">Section title (about, requirements)</div></div>
-    <div class="sg-type-row"><div class="sg-type-meta">700 · 15px</div><div class="sg-type-sample" style="font-weight:700;font-size:15px">Game price value area</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">600 · 15px</div><div class="sg-type-sample" style="font-weight:600;font-size:15px">Logo wordmark</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">700 · 14px</div><div class="sg-type-sample" style="font-weight:700;font-size:14px">Game card title</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">400 · 14px</div><div class="sg-type-sample" style="font-weight:400;font-size:14px;color:var(--dim)">Body copy (about, privacy, contact)</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">600 · 13px</div><div class="sg-type-sample" style="font-weight:600;font-size:13px">List row title (month page)</div></div>
-    <div class="sg-type-row"><div class="sg-type-meta">400 · 13px</div><div class="sg-type-sample" style="font-weight:400;font-size:13px;color:var(--dim)">Month intro paragraph</div></div>
+    <div class="sg-type-row"><div class="sg-type-meta">400 · 13px</div><div class="sg-type-sample" style="font-weight:400;font-size:13px;color:#C6C8CD">Month intro paragraph (#C6C8CD prose grey, not --dim)</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">600 · 12px</div><div class="sg-type-sample" style="font-weight:600;font-size:12px">Row date</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">400 · 11px</div><div class="sg-type-sample" style="font-weight:400;font-size:11px;color:var(--dim)">Breadcrumb</div></div>
     <div class="sg-type-row"><div class="sg-type-meta">500 · 10px (--xs)</div><div class="sg-type-sample" style="font-weight:500;font-size:10px;color:var(--dim)">Nav links, footer links, meta text</div></div>
@@ -158,7 +158,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ MAIN NAV ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Main nav</h2><span>.nav-wrap / .nav-card: identical on all 7 page types</span></div>
+    <div class="sg-section-head"><h2>Main nav</h2><span>.nav-wrap / .nav-card: same structure on all 7 page types; first link is the current year on release pages, "Releases" on static pages (about/privacy/contact)</span></div>
     <div class="sg-demo sg-nav-demo">
       <div class="nav-wrap">
         <div class="nav-card">
@@ -370,6 +370,22 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
           <div class="footer-top">
             <div id="sgDominoRow"></div>
           </div>
+          <!-- Crawlbare (visueel verborgen) maandlinks — vast onderdeel van de
+               productie-footer (worker/src/ui/footer.js); niet verwijderen. -->
+          <nav class="footer-months-sr" aria-label="Browse releases by month">
+            <a href="#">January</a>
+            <a href="#">February</a>
+            <a href="#">March</a>
+            <a href="#">April</a>
+            <a href="#">May</a>
+            <a href="#">June</a>
+            <a href="#">July</a>
+            <a href="#">August</a>
+            <a href="#">September</a>
+            <a href="#">October</a>
+            <a href="#">November</a>
+            <a href="#">December</a>
+          </nav>
           <div class="footer-bottom">
             <span class="footer-copy">&copy; Loading Archive 2026</span>
             <nav class="footer-links" aria-label="Site links">

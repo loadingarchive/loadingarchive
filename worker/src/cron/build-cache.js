@@ -10,6 +10,7 @@ import {
   rebuildTbaGamePagesKv,
   rebuildAllGamePagesKv,
   softDeleteStaleGames,
+  dedupeActiveGames,
   loadSlugOwners,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
@@ -116,6 +117,29 @@ export async function runMaintenanceCron(env) {
     if (hidden > 0) console.log(`  Soft-delete: ${hidden} game(s) op 'hidden' gezet`);
   } catch (e) {
     console.error('  Soft-delete mislukt —', e.message);
+  }
+
+  // Dedupe-vangnet: dezelfde game onder twee slugs (verschillende bronnen) →
+  // duplicaat verbergen en de geraakte maand-KV's direct herbouwen, zodat de
+  // dubbeling nooit langer dan één dag op de site staat.
+  try {
+    const { hidden, months } = await dedupeActiveGames(env);
+    if (hidden.length) {
+      console.log(`  Dedupe: ${hidden.length} duplicaat verborgen: ${hidden.join(', ')}`);
+      for (const mon of months) {
+        if (mon === 'tba') {
+          const results = await queryActiveTbaGames(env);
+          await env.GAMES_KV.put('games:tba', JSON.stringify({ results, generatedAt: new Date().toISOString() }));
+        } else {
+          const [y, m] = mon.split('-').map(Number);
+          const { kvKey, dateFrom, dateTo } = makeMonthEntry(y, m);
+          const results = await queryActiveMonthGames(env, dateFrom, dateTo);
+          await env.GAMES_KV.put(kvKey, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
+        }
+      }
+    }
+  } catch (e) {
+    console.error('  Dedupe mislukt —', e.message);
   }
 
   // Herbouw game:{slug} KV voor ALLE actieve D1-records zodat elke game een detailpagina heeft.
