@@ -87,19 +87,18 @@ a { color: inherit; }
   width: 50px; flex-shrink: 0;
 }
 .side-nav-inner {
-  position: sticky; top: 96px; height: 330px; width: 50px;
-  cursor: grab; user-select: none;
+  position: sticky; top: 96px; width: 50px;
+  display: flex; flex-direction: column; gap: 8px;
 }
-.side-nav-inner:active { cursor: grabbing; }
-.sn-label {
-  position: absolute; right: 36px;
-  font-size: var(--xs); color: #fff; font-weight: 500;
-  white-space: nowrap;
-  display: flex; align-items: center; gap: 6px;
-  transform: translateY(-50%); transition: top 0.08s ease;
-  pointer-events: none;
+.sn-week-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--dim); font-size: var(--xs); font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.sn-label::after { content: ''; display: block; width: 10px; height: 1px; background: var(--border); }
+.sn-week-btn:hover  { color: #fff; border-color: #54555A; }
+.sn-week-btn.active { color: #fff; background: var(--surface); border-color: #54555A; }
 
 /* ── FLOATING MONTH NAV (homepage) ───────────────────────────── */
 .month-nav-wrap {

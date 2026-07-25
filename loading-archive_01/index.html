@@ -133,6 +133,7 @@
   font-size: var(--xs); font-weight: 600; color: var(--dim);
   text-transform: uppercase; letter-spacing: 0.04em;
   margin: 4px 0;
+  scroll-margin-top: 96px; /* ruimte voor de zwevende nav-pill bij het scrollen via de week-knoppen */
 }
 .week-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .week-divider:first-child { margin-top: 0; }
@@ -526,7 +527,7 @@ async function fetchAndRenderGames(url, loadingText) {
 async function loadGames(monthIdx) {
   const m = String(monthIdx + 1).padStart(2, "0");
   await fetchAndRenderGames(`/api/games?month=${YEAR}-${m}&cb=3`, 'Loading releases...');
-  buildSideNav();
+  buildWeekJumpNav();
 }
 
 async function loadTba() {
@@ -754,9 +755,10 @@ function weekLabel(monthIdx, weekIdx) {
   return `Week ${weekIdx + 1} · ${mShort} ${start}–${end}`;
 }
 
-function buildWeekDivider(label) {
+function buildWeekDivider(label, weekIdx) {
   const el = document.createElement('div');
   el.className = 'week-divider';
+  el.id = 'week-divider-' + weekIdx;
   el.textContent = label;
   return el;
 }
@@ -775,7 +777,7 @@ function renderGames() {
     if (!tbaMode && g.date) {
       const week = Math.floor((parseDate(g.date).getDate() - 1) / 7);
       if (week !== lastWeek) {
-        gameGrid.appendChild(buildWeekDivider(weekLabel(activeMonth, week)));
+        gameGrid.appendChild(buildWeekDivider(weekLabel(activeMonth, week), week));
         lastWeek = week;
       }
     }
@@ -859,66 +861,43 @@ function buildCard(g) {
 }
 
 
-function buildSideNav() {
+// Eén rij knoppen, één per week van de actieve maand — klik scrolt naar de
+// bijbehorende week-divider in de lijst. Vervangt de oude sleep-gebaseerde
+// dag-liniaal (werkte alleen met de muis, geen touch, en klikken zonder
+// slepen deed niets — nu is elke knop gewoon direct klikbaar/tapbaar).
+function buildWeekJumpNav() {
   const inner = document.getElementById('sideNavInner');
   inner.innerHTML = '';
-  const totalDays = new Date(YEAR, activeMonth + 1, 0).getDate();
-  const navH = 330;
-  const tickSpacing = navH / (totalDays - 1);
-  let currentIdx = -1;
-  let dragging = false, startY = 0, startIdx = 0;
+  if (tbaMode) return;
 
-  for (let i = 0; i < totalDays; i++) {
-    const isWeekStart = i % 7 === 0;
-    const tick = document.createElement('div');
-    tick.id = 'sn-tick-' + i;
-    tick.style.cssText = `position:absolute;right:0;top:${i * tickSpacing}px;width:${isWeekStart ? 18 : 10}px;height:1.5px;border-radius:1px;background:var(--border);transform:translateY(-50%);transition:background 0.1s,height 0.1s,width 0.1s;`;
-    inner.appendChild(tick);
+  const totalWeeks = Math.ceil(daysInMonth(activeMonth) / 7);
+  for (let w = 0; w < totalWeeks; w++) {
+    const btn = document.createElement('button');
+    btn.className = 'sn-week-btn' + (w === 0 ? ' active' : '');
+    btn.textContent = 'W' + (w + 1);
+    btn.dataset.tooltip = weekLabel(activeMonth, w);
+    btn.setAttribute('aria-label', 'Jump to ' + weekLabel(activeMonth, w));
+    btn.onclick = () => {
+      document.getElementById('week-divider-' + w)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    inner.appendChild(btn);
   }
-
-  const label = document.createElement('div');
-  label.className = 'sn-label';
-  label.id = 'sn-label';
-  label.style.top = '0px';
-  label.textContent = 'W1/D1';
-  inner.appendChild(label);
-
-  function resetTick(i) {
-    const el = document.getElementById('sn-tick-' + i);
-    if (el) { el.style.width = (i % 7 === 0 ? 18 : 10) + 'px'; el.style.height = '1.5px'; el.style.background = 'var(--border)'; }
-  }
-  function setActiveDay(idx) {
-    idx = Math.max(0, Math.min(totalDays - 1, idx));
-    if (currentIdx >= 0) resetTick(currentIdx);
-    currentIdx = idx;
-    const tick = document.getElementById('sn-tick-' + idx);
-    if (tick) { tick.style.width = '28px'; tick.style.height = '2.5px'; tick.style.background = '#ffffff'; }
-    label.style.top = (idx * tickSpacing) + 'px';
-    label.textContent = `W${Math.floor(idx / 7) + 1}/D${idx + 1}`;
-  }
-
-  setActiveDay(0);
-
-  inner.addEventListener('mousedown', e => { dragging = true; startY = e.clientY; startIdx = currentIdx; e.preventDefault(); });
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const delta = e.clientY - startY;
-    const newIdx = Math.max(0, Math.min(totalDays - 1, startIdx + Math.round(delta / tickSpacing)));
-    setActiveDay(newIdx);
-    const pct = newIdx / (totalDays - 1);
-    window.scrollTo({ top: pct * (document.body.scrollHeight - window.innerHeight), behavior: 'instant' });
-  });
-  document.addEventListener('mouseup', () => { dragging = false; });
-
-  window.addEventListener('scroll', () => {
-    const navCard = document.getElementById('navCard');
-    if (window.scrollY > 50) navCard.classList.add('scrolled');
-    else navCard.classList.remove('scrolled');
-    if (dragging) return;
-    const pct = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);
-    setActiveDay(Math.round(pct * (totalDays - 1)));
-  }, { passive: true });
 }
+
+// Eén keer opgezet (niet per buildWeekJumpNav-aanroep) zodat maandwissels
+// geen stapel dubbele scroll-listeners achterlaten.
+window.addEventListener('scroll', () => {
+  const navCard = document.getElementById('navCard');
+  if (window.scrollY > 50) navCard.classList.add('scrolled');
+  else navCard.classList.remove('scrolled');
+
+  if (tbaMode) return;
+  const dividers = [...document.querySelectorAll('.week-divider')];
+  if (!dividers.length) return;
+  let activeIdx = 0;
+  dividers.forEach((d, i) => { if (d.getBoundingClientRect().top <= 140) activeIdx = i; });
+  document.querySelectorAll('.sn-week-btn').forEach((b, i) => b.classList.toggle('active', i === activeIdx));
+}, { passive: true });
 
 // Init
 document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' ' + YEAR;
