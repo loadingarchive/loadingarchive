@@ -8,7 +8,13 @@ import { normalizeTitle } from './utils.js';
 //
 // Toegevoegd 2026-07-07: Royale Battle — vermoedelijk fake game (dev=publisher
 // "Btl Games", geen website, generieke boilerplate-beschrijving).
-const BLOCKED_IDS    = new Set(['rawg-1018411']);
+//
+// Toegevoegd 2026-07-25: wiki-assassin-s-creed-black-flag-resynced — lege
+// duplicaat van assassins-creed-back-flag-resynced (RAWG-bron, rijker record,
+// alleen titel-typo "Back"->"Black" gefixed en vergrendeld via manual.title).
+// Blokkeren op id i.p.v. titel, want de titel is na de fix identiek aan het
+// RAWG-record en zou anders zelf tegen de titel-matchregel aanlopen.
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced']);
 const BLOCKED_APPIDS = new Set(['4840340']);
 const BLOCKED_TITLES = new Set(['royale battle']); // normalizeTitle-vorm
 

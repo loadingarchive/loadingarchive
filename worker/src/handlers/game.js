@@ -27,7 +27,10 @@ function sanitizeRequirementsHtml(html) {
       const t = tag.toLowerCase();
       if (!REQS_SAFE_TAGS.has(t)) return '';
       return match.startsWith('</') ? `</${t}>` : `<${t}>`;
-    });
+    })
+    // Steam's own HTML already opens with a "Minimum:"/"Recommended:" label —
+    // redundant since .req-label renders that same word as the column header.
+    .replace(/^\s*<(strong|b)>\s*(minimum|recommended)s?:?\s*<\/\1>\s*(<br\s*\/?>)?\s*/i, '');
 }
 
 const PLATFORM_FULL = {
@@ -148,7 +151,7 @@ function renderPage(g) {
   const totalSlides = carSlides.length;
 
   const ptagsHtml = (g.platforms || [])
-    .map(p => `<span class="ptag">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
+    .map(p => `<span class="ptag ${esc(p)}">${esc(p === 'XSX' ? 'XSX/S' : p)}</span>`)
     .join('');
 
   const antSvg = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg>`;

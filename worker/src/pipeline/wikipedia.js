@@ -38,6 +38,7 @@ function cleanWikitext(s) {
   s = s.replace(/\[\[([^\]]+)\]\]/g, "$1");
   s = decodeHtmlEntities(s);
   s = s.replace(/colspan="\d+"\s*\|/g, "");
+  s = s.replace(/rowspan="\d+"\s*\|/g, "");
   s = s.replace(/\s+/g, " ").trim();
   return s.replace(/^\|+/, "").trim();
 }

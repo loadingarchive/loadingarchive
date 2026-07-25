@@ -65,7 +65,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 .sg-monthnav-demo .month-nav-inner { position: static; }
 .sg-sidenav-demo { display: flex; justify-content: center; padding: 20px 0; }
 .sg-sidenav-demo .side-nav { position: static; width: auto; }
-.sg-sidenav-demo .side-nav-inner { position: static; height: 220px; width: 50px; }
+.sg-sidenav-demo .side-nav-inner { position: static; }
 </style>
 </head>
 <body>
@@ -188,17 +188,17 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
     <div class="sg-card-grid">
       <div class="game-card">
         <div class="card-date">
-          <span class="card-date-text">Release date / <span>Aug 13, 2026</span></span>
+          <span class="card-date-text"><svg class="released-icon" width="9" height="9" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5" fill="currentColor"/><path d="M2.8 5.1L4.2 6.5L7.2 3.3" stroke="#181A20" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Released / <span>Jul 9, 2026</span></span>
           <span class="card-actions">
             <button class="card-action-btn card-action-anticipated" aria-label="Anticipated game">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></svg>
             </button>
           </span>
         </div>
-        <div class="card-cover"><img src="/favicon.png" alt="" style="object-fit:contain;background:#0E1015;padding:30px"></div>
+        <div class="card-cover"><img src="/favicon.png" alt="" class="card-cover-fallback"></div>
         <div class="card-body">
           <div class="card-title"><a href="#">Duskfade</a></div>
-          <div class="ptags"><span class="ptag">PC</span><span class="ptag">PS5</span><span class="ptag">XSX/S</span></div>
+          <div class="ptags"><span class="ptag PC">PC</span><span class="ptag PS5">PS5</span><span class="ptag XSX">XSX/S</span></div>
           <div class="card-footer">
             <div class="card-genre"><span class="mlabel">Genre /</span> Action, Adventure</div>
             <div class="card-footer-right"><a class="bekijk-btn" href="#">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a></div>
@@ -215,10 +215,10 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
             </button>
           </span>
         </div>
-        <div class="card-cover"><img src="/favicon.png" alt="" style="object-fit:contain;background:#0E1015;padding:30px"></div>
+        <div class="card-cover"><img src="/favicon.png" alt="" class="card-cover-fallback"></div>
         <div class="card-body">
           <div class="card-title"><a href="#">Metal Gear Solid: Master Collection Vol. 2</a></div>
-          <div class="ptags"><span class="ptag">NS</span><span class="ptag">NS2</span><span class="ptag">PS5</span><span class="ptag">XSX/S</span><span class="ptag">PC</span></div>
+          <div class="ptags"><span class="ptag NS">NS</span><span class="ptag NS2">NS2</span><span class="ptag PS5">PS5</span><span class="ptag XSX">XSX/S</span><span class="ptag PC">PC</span></div>
           <div class="card-footer">
             <div class="card-genre"><span class="mlabel">Genre /</span> Action, Stealth</div>
             <div class="card-footer-right"><a class="bekijk-btn" href="#">View game <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1 7 5 3 9"/></svg></a></div>
@@ -292,7 +292,7 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
     <div class="sg-block-label">.ptag: platform tag (card, detail page) <span class="sg-spec">card: 600 · 8px, detail page: 700 · 9px</span></div>
     <div class="sg-badge-row">
-      <span class="ptag">PC</span><span class="ptag">PS5</span><span class="ptag">XSX/S</span><span class="ptag">NS2</span>
+      <span class="ptag PC">PC</span><span class="ptag PS5">PS5</span><span class="ptag XSX">XSX/S</span><span class="ptag NS2">NS2</span>
     </div>
 
     <div class="sg-block-label">.badge: pill with icon (game detail page) <span class="sg-spec">600 · 10px</span></div>
@@ -325,6 +325,14 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
     </div>
   </section>
 
+  <!-- ============ WEEK DIVIDER ============ -->
+  <section class="sg-section">
+    <div class="sg-section-head"><h2>Week divider</h2><span>.week-divider: full-width section head between weeks in the homepage grid, same 7-day buckets as the side nav</span></div>
+    <div class="sg-demo">
+      <div class="week-divider">Week 1 · Jul 1–7</div>
+    </div>
+  </section>
+
   <!-- ============ MONTH NAV ============ -->
   <section class="sg-section">
     <div class="sg-section-head"><h2>Floating month nav</h2><span>.month-nav-wrap: homepage only, fixed to viewport bottom</span></div>
@@ -345,17 +353,15 @@ h1 { font-size: clamp(26px,4vw,36px); font-weight: 800; letter-spacing: -0.03em;
 
   <!-- ============ SIDE NAV ============ -->
   <section class="sg-section">
-    <div class="sg-section-head"><h2>Side nav</h2><span>.side-nav: homepage calendar drag-rail, desktop only</span></div>
+    <div class="sg-section-head"><h2>Side nav</h2><span>.side-nav: homepage week-jump buttons, desktop only — click scrolls to the matching .week-divider</span></div>
     <div class="sg-demo sg-sidenav-demo">
       <div class="side-nav">
         <div class="side-nav-inner">
-          <div style="position:absolute;right:0;top:0;bottom:0;width:1.5px;background:var(--border)"></div>
-          <div style="position:absolute;right:0;top:0;width:18px;height:1.5px;background:var(--border)"></div>
-          <div style="position:absolute;right:0;top:40px;width:10px;height:1.5px;background:var(--border)"></div>
-          <div style="position:absolute;right:0;top:80px;width:18px;height:1.5px;background:var(--border)"></div>
-          <div style="position:absolute;right:0;top:120px;width:10px;height:1.5px;background:var(--border)"></div>
-          <div style="position:absolute;right:0;top:160px;width:18px;height:1.5px;background:var(--border)"></div>
-          <div class="sn-label" style="top:80px">W2/D3</div>
+          <button class="sn-week-btn active">W1</button>
+          <button class="sn-week-btn">W2</button>
+          <button class="sn-week-btn">W3</button>
+          <button class="sn-week-btn">W4</button>
+          <button class="sn-week-btn">W5</button>
         </div>
       </div>
     </div>

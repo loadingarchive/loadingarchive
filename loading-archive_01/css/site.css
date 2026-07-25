@@ -83,7 +83,7 @@ a { color: inherit; }
 
 /* ── SIDE NAV (homepage calendar rail) ───────────────────────── */
 .side-nav {
-  position: absolute; left: -70px; top: 80px; bottom: 140px;
+  position: absolute; left: -56px; top: 80px; bottom: 140px;
   width: 50px; flex-shrink: 0;
 }
 .side-nav-inner {
@@ -152,6 +152,7 @@ a { color: inherit; }
   position: relative;
 }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-cover-fallback { object-fit: contain !important; background: var(--bg); padding: 30px; opacity: 0.5; }
 .cover-steam-tag {
   position: absolute; top: 7px; right: 7px;
   display: inline-flex; align-items: center; gap: 4px;
