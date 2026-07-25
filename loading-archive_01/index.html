@@ -22,9 +22,6 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.png">
-<!-- Hero-achtergrond is het LCP-element; als CSS-background wordt hij pas na
-     de CSS-parse ontdekt — preload met hoge prioriteit haalt seconden van LCP af. -->
-<link rel="preload" as="image" href="assets/header-bg.jpg" fetchpriority="high">
 <!-- Shared design tokens + repeating components (nav, footer, game card,
      badges, month nav, side nav) — single source of truth, see /styleguide -->
 <link rel="stylesheet" href="/css/site.css">
@@ -46,13 +43,30 @@
   gtag('config', 'G-BL25QH6B7L');
 </script>
 <style>
-/* HERO */
+/* HERO — pure CSS-gradient, nagebouwd op de kleuren van de oude
+   assets/header-bg.jpg (nog wel in gebruik als og:image/twitter:image,
+   die moeten platforms als losse afbeelding kunnen tonen). Geen losse
+   asset meer nodig voor de hero zelf: scheelt een HTTP-request + decode
+   en schaalt exact naar elke hero-hoogte (ook de 300px mobiele versie). */
 .hero {
-  background: url('assets/header-bg.jpg') center center / cover no-repeat;
+  background: linear-gradient(180deg,
+    #0F1015 0%, #15151F 8%, #191D2A 17%, #21263A 25%, #2B314B 33%,
+    #343D5C 42%, #3F4867 50%, #4D5672 58%, #5E647A 67%, #6F7584 75%,
+    #82828D 83%, #929294 92%, #9A9997 100%);
   height: 600px;
   display: flex; flex-direction: column;
   position: relative;
   padding-top: 68px;
+  overflow: hidden;
+}
+/* Filmkorrel-textuur (de oude jpg had die van nature) — inline SVG-turbulence
+   i.p.v. een losse noise-afbeelding, dus nog steeds geen extra asset. */
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.09;
+  pointer-events: none;
 }
 .tagline {
   text-align: center;
