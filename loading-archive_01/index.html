@@ -259,7 +259,12 @@
   /* Maandnav */
   .month-nav-label { display: none; }
   .month-nav-inner { padding: 14px 16px; }
-  .months { margin-left: 0; justify-content: center; }
+  /* Fade aan beide kanten als hint dat de rij scrolbaar is, zelfde aanpak als .platform-bar */
+  .months {
+    margin-left: 0; justify-content: center;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  }
 }
 </style>
 </head>
@@ -561,7 +566,7 @@ function buildPlatformBar() {
   const catBtn = document.createElement('button');
   catBtn.className = 'pbar-chip cat' + (activeCats.size > 0 ? ' active' : '');
   catBtn.id = 'catBtn';
-  const catLabel = activeCats.size > 0 ? 'Categorie (' + activeCats.size + ')' : 'Categorie';
+  const catLabel = activeCats.size > 0 ? 'Category (' + activeCats.size + ')' : 'Category';
   catBtn.innerHTML = '<span>' + catLabel + '</span><span>▾</span>';
   catBtn.onclick = (e) => { e.stopPropagation(); toggleCatDropdown(); };
 
