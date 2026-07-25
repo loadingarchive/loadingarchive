@@ -179,6 +179,7 @@ a { color: inherit; }
 }
 .card-date-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-date-text span { color: #fff; }
+.released-icon { color: var(--score-green); vertical-align: -1px; margin-right: 4px; }
 .card-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .card-action-btn {
   background: none; border: none; color: var(--dim);

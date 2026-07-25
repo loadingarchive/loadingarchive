@@ -126,6 +126,17 @@
 }
 @media (max-width: 600px) { .game-grid { grid-template-columns: 1fr; } }
 
+/* WEEK DIVIDER — sectiekop tussen weken in de maandlijst */
+.week-divider {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 12px;
+  font-size: var(--xs); font-weight: 600; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 4px 0;
+}
+.week-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.week-divider:first-child { margin-top: 0; }
+
 /* Global fixed tooltip — rendered outside any overflow:hidden context */
 #site-tooltip {
   position: fixed;
@@ -731,8 +742,27 @@ function getAdSlot(i) {
   return adCard;
 }
 
+function daysInMonth(monthIdx) { return new Date(YEAR, monthIdx + 1, 0).getDate(); }
+
+// Zelfde week-indeling als de side-nav (blokken van 7 dagen vanaf de 1e),
+// puur als leesbare sectiekop in de lijst — geen kalenderweek-standaard.
+function weekLabel(monthIdx, weekIdx) {
+  const total = daysInMonth(monthIdx);
+  const start = weekIdx * 7 + 1;
+  const end   = Math.min(start + 6, total);
+  const mShort = MONTHS[monthIdx].slice(0, 3);
+  return `Week ${weekIdx + 1} · ${mShort} ${start}–${end}`;
+}
+
+function buildWeekDivider(label) {
+  const el = document.createElement('div');
+  el.className = 'week-divider';
+  el.textContent = label;
+  return el;
+}
+
 function renderGames() {
-  [...gameGrid.querySelectorAll('.game-card, .ad-card')].forEach(el => el.remove());
+  [...gameGrid.querySelectorAll('.game-card, .ad-card, .week-divider')].forEach(el => el.remove());
   emptyState.classList.remove('show');
 
   const games = getFiltered().sort((a, b) => tbaMode ? 0 : (a.date || '').localeCompare(b.date || ''));
@@ -740,7 +770,15 @@ function renderGames() {
 
   const adPositions = ADS_ENABLED ? [5, 11] : [];
   let adIdx = 0;
+  let lastWeek = -1;
   games.forEach((g, i) => {
+    if (!tbaMode && g.date) {
+      const week = Math.floor((parseDate(g.date).getDate() - 1) / 7);
+      if (week !== lastWeek) {
+        gameGrid.appendChild(buildWeekDivider(weekLabel(activeMonth, week)));
+        lastWeek = week;
+      }
+    }
     gameGrid.appendChild(buildCard(g));
     if (adPositions.includes(i + 1)) {
       gameGrid.appendChild(getAdSlot(adIdx++));
@@ -784,10 +822,14 @@ function buildCard(g) {
 
   const ptagsHtml = g.platforms.map(platformTag).join('');
   const genreHtml = g.genre.map(gi => `<span>${gi}</span>`).join(' ');
+  const released     = !!g.date && parseDate(g.date) <= new Date();
+  const releasedIcon = released
+    ? `<svg class="released-icon" width="9" height="9" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5" fill="currentColor"/><path d="M2.8 5.1L4.2 6.5L7.2 3.3" stroke="#181A20" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : '';
 
   card.innerHTML = `
     <div class="card-date">
-      <span class="card-date-text">Release date / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
+      <span class="card-date-text">${releasedIcon}${released ? 'Released' : 'Release date'} / <span>${g.date ? formatDate(g.date) : 'TBA'}</span></span>
       <span class="card-actions">
         ${rereleaseButtonHtml(g)}
         ${g.anticipated ? `<button class="card-action-btn card-action-anticipated" data-tooltip="Anticipated" aria-label="Anticipated game"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#antClip)"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.90647 0H4.73109L4.60851 0.125415L2.05006 2.74284C0.427325 4.403 0.427321 7.09075 2.05006 8.75092C3.67799 10.4164 6.32138 10.4164 7.9493 8.75092C9.28888 7.38046 9.52105 5.31258 8.65334 3.70021L8.40463 3.23802L8.01088 3.5851C7.73497 3.82834 7.37838 3.97365 6.98888 3.97365C6.12955 3.97365 5.4168 3.25828 5.4168 2.35573L5.41634 0.41657L5.41626 0H4.90647Z" fill="currentColor"/></g><defs><clipPath id="antClip"><rect width="10" height="10" fill="white"/></clipPath></defs></svg></button>` : ''}
