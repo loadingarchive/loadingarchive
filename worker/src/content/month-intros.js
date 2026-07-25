@@ -36,7 +36,7 @@ export const MONTH_INTROS = {
     `Elsewhere: EA Sports UFC 6 on the 19th, Hell Let Loose gets its Vietnam standalone on the 18th, and Nintendo's retro drip-feed delivers Donkey Kong 64 and the original Star Fox to Switch Online.`,
   ],
   '2026-07': [
-    `July is quieter in volume (113 games) but unusually rich in curiosities. <strong>EA Sports College Football 27</strong> (July 9) is the commercial heavyweight, while the same day delivers two very different remakes: Ubisoft's <strong>Assassin's Creed Black Flag Resynced</strong> and, improbably, a new <strong>Backyard Baseball</strong>. Sword Art Online fans get the ambitious <strong>Echoes of Aincrad</strong>, and <strong>Palworld</strong> finally reaches PlayStation and Xbox on July 10, a port of a game you've likely already seen everywhere.`,
+    `July is quieter in volume (112 games) but unusually rich in curiosities. <strong>EA Sports College Football 27</strong> (July 9) is the commercial heavyweight, while the same day delivers two very different remakes: Ubisoft's <strong>Assassin's Creed Black Flag Resynced</strong> and, improbably, a new <strong>Backyard Baseball</strong>. Sword Art Online fans get the ambitious <strong>Echoes of Aincrad</strong>, and <strong>Palworld</strong> finally reaches PlayStation and Xbox on July 10, a port of a game you've likely already seen everywhere.`,
     `Mid-month is indie-dense: Moss: The Forgotten Relic, the chaotic co-op sequel Heave Ho 2, and Ratatan, the spiritual successor to Patapon, all cluster around July 16. We've flagged twenty games as anticipated this month, the highest ratio of the year.`,
   ],
   '2026-08': [
