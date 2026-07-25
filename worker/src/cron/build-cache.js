@@ -19,6 +19,15 @@ import extraGamesBundle from '../../../api/data/extra-games.json';
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
+// Steam's 'nl' (Netherlands) locale formats EUR prices as "79,99€" (symbool
+// achteraan). De rest van de site (USD "$69.99", GBP "£69.99") zet het symbool
+// vooraan — dit normaliseert EUR-strings naar diezelfde "€79,99"-vorm.
+function euroSymbolFirst(str) {
+  if (!str) return str;
+  const m = String(str).trim().match(/^([^\s€]+)\s*€$/);
+  return m ? `€${m[1]}` : str;
+}
+
 function makeMonthEntry(year, month) {
   const y = year;
   const m = pad(month);
@@ -414,8 +423,8 @@ async function updateDailyPrices(env) {
     const priceInitial  = isFree ? null   : (usd?.initial_formatted   ?? null);
     const discount      = isFree ? 0      : (usd?.discount_percent    ?? 0);
 
-    const priceEur      = isFree ? 'Free' : eurFailed ? (entry.price_eur         ?? null) : (eur?.final_formatted   ?? null);
-    const priceInitEur  = isFree ? null   : eurFailed ? (entry.price_initial_eur ?? null) : (eur?.initial_formatted ?? null);
+    const priceEur      = isFree ? 'Free' : eurFailed ? (entry.price_eur         ?? null) : euroSymbolFirst(eur?.final_formatted   ?? null);
+    const priceInitEur  = isFree ? null   : eurFailed ? (entry.price_initial_eur ?? null) : euroSymbolFirst(eur?.initial_formatted ?? null);
     const priceGbp      = isFree ? 'Free' : gbpFailed ? (entry.price_gbp         ?? null) : (gbp?.final_formatted   ?? null);
     const priceInitGbp  = isFree ? null   : gbpFailed ? (entry.price_initial_gbp ?? null) : (gbp?.initial_formatted ?? null);
 

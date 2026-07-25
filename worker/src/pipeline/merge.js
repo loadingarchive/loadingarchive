@@ -3,6 +3,7 @@ import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails, ex
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
 import { fetchNintendoCover } from './nintendo.js';
 import { upsertGameToD1 } from './d1.js';
+import { isBlockedGame } from './blocklist.js';
 
 const RERELEASE_GAP_DAYS = 60;
 
@@ -233,7 +234,7 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
 
   const filtered  = extraGames.filter(g => g.date && g.date >= dateFrom && g.date <= dateTo);
   const newExtras = withoutAlreadyCovered(filtered, rawgGames);
-  const all       = [...rawgGames, ...newExtras].filter(g => !isJapanOnly(g.title));
+  const all       = [...rawgGames, ...newExtras].filter(g => !isJapanOnly(g.title) && !isBlockedGame(g));
 
   const backfilled  = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
   const withCovers  = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
@@ -249,7 +250,7 @@ export async function runTbaPipeline(rawgKey, extraGames, env, slugOwners) {
   const rawgResults = await fetchRawgTbaGames(rawgKey);
   const extraTba    = extraGames.filter(g => !g.date);
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
-  const all         = [...rawgResults, ...newExtras].filter(g => !isJapanOnly(g.title));
+  const all         = [...rawgResults, ...newExtras].filter(g => !isJapanOnly(g.title) && !isBlockedGame(g));
 
   const backfilled   = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
   const withCovers   = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
