@@ -14,9 +14,14 @@ import { normalizeTitle } from './utils.js';
 // alleen titel-typo "Back"->"Black" gefixed en vergrendeld via manual.title).
 // Blokkeren op id i.p.v. titel, want de titel is na de fix identiek aan het
 // RAWG-record en zou anders zelf tegen de titel-matchregel aanlopen.
-const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced']);
-const BLOCKED_APPIDS = new Set(['4840340']);
-const BLOCKED_TITLES = new Set(['royale battle']); // normalizeTitle-vorm
+//
+// Toegevoegd 2026-07-25: Last Guest at Sunset (rawg-1019167, appid 4822430) —
+// op gebruikersverzoek verwijderd na een handmatige review; de Steam-listing
+// zelf verifieerde als een echte, actieve game (eigen site, uitgebreide
+// beschrijving, live winkelpagina), maar is desondanks niet gewenst op de site.
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167']);
+const BLOCKED_APPIDS = new Set(['4840340', '4822430']);
+const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset']); // normalizeTitle-vorm
 
 export function isBlockedGame(g) {
   // TBA-records hebben id "rawg-tba-{n}", gedateerde "rawg-{n}".
