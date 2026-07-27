@@ -86,7 +86,11 @@ function notFound() {
 function renderPage(g) {
   const title  = esc(g.title);
   const slug   = esc(g.slug || '');
-  const date   = fmtDate(g.date);
+  const date     = fmtDate(g.date);
+  const released = !!g.date && g.date <= new Date().toISOString().slice(0, 10);
+  const releasedIcon = released
+    ? `<svg class="released-icon" width="9" height="9" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5" fill="currentColor"/><path d="M2.8 5.1L4.2 6.5L7.2 3.3" stroke="#181A20" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : '';
   const shots  = (g.screenshots || []).filter(Boolean);
   const genres = g.genre || [];
   const plats  = (g.platforms || []).map(p => PLATFORM_FULL[p] || p);
@@ -404,7 +408,7 @@ ${totalSlides > 0 ? `
   <div class="main-grid">
   <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Loading Archive</a> / <a href="/releases/${monthKey}">${esc(monthLabel)}</a> / ${title}</nav>
   <div class="meta-row">
-    <div class="meta-date">Release date / <strong>${date}</strong></div>
+    <div class="meta-date">${releasedIcon}${released ? 'Released' : 'Release date'} / <strong>${date}</strong></div>
     ${metaBadges ? `<div class="meta-badges">${metaBadges}</div>` : ''}
   </div>
 
