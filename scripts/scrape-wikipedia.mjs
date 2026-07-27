@@ -12,8 +12,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   isoDate, parseSteamDate, decodeHtmlEntities,
-  normalizeTitle, titlesAreCloseEnough, fetchSteamAppDetails, mapWithConcurrency,
-} from "../api/games.js";
+  normalizeTitle, titlesAreCloseEnough, mapWithConcurrency,
+} from "../worker/src/pipeline/utils.js";
+import { fetchSteamAppDetails } from "../worker/src/pipeline/steam.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARTICLE_URL = "https://en.wikipedia.org/wiki/List_of_video_games_released_in_2026";
