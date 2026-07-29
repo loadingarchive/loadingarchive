@@ -19,9 +19,13 @@ import { normalizeTitle } from './utils.js';
 // op gebruikersverzoek verwijderd na een handmatige review; de Steam-listing
 // zelf verifieerde als een echte, actieve game (eigen site, uitgebreide
 // beschrijving, live winkelpagina), maar is desondanks niet gewenst op de site.
-const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167']);
+//
+// Toegevoegd 2026-07-29: Summer In The City - Season One (rawg-1019279) —
+// op gebruikersverzoek verwijderd wegens vermoedelijke 18+ content (geen
+// Steam-appid bekend, dus geen appid-match mogelijk).
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279']);
 const BLOCKED_APPIDS = new Set(['4840340', '4822430']);
-const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset']); // normalizeTitle-vorm
+const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one']); // normalizeTitle-vorm
 
 export function isBlockedGame(g) {
   // TBA-records hebben id "rawg-tba-{n}", gedateerde "rawg-{n}".
