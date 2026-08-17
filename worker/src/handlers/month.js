@@ -31,8 +31,16 @@ function shiftMonth(key, delta) {
 }
 
 function fmtDay(dateStr) { // "2026-07-09" → "Jul 9"
-  const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  try {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  } catch {
+    // Een niet-parsebare dateStr zou hier ongevangen een RangeError gooien en
+    // de hele maandpagina laten crashen (dit draait in een .map() zonder
+    // eigen try/catch in renderPage) — geef in plaats daarvan de rauwe,
+    // geescapete waarde terug zodat alleen deze rij afwijkt.
+    return esc(dateStr);
+  }
 }
 
 // RAWG serveert covers op volledige resolutie; de rij-thumbnail is maar 92px

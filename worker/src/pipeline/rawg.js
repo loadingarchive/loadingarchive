@@ -11,6 +11,18 @@ function isAdultContent(g) {
   return false;
 }
 
+// RAWG's `released` komt anders dan bij Wikipedia/Steam niet via isoDate()
+// binnen (die bouwen altijd een gegarandeerd schone 'YYYY-MM-DD' op uit
+// numerieke componenten) — dit is de enige bron die rechtstreeks een
+// API-veld doorzet. Valideer het formaat zodat een afwijkende waarde (lege
+// string, ander formaat, API-bug) nooit als g.date de pipeline in komt en
+// verderop ongesanitized in HTML terecht kan komen (fmtDate()-fallback in
+// handlers/game.js, fmtDay() in handlers/month.js).
+const RAWG_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function validRawgDate(released) {
+  return typeof released === "string" && RAWG_DATE_RE.test(released) ? released : null;
+}
+
 function mapRawgGame(g, idx, idPrefix) {
   const platforms = [...new Set(
     (g.platforms || [])
@@ -25,7 +37,7 @@ function mapRawgGame(g, idx, idPrefix) {
   return {
     id:         `${idPrefix}-${g.id ?? idx}`,
     title:      g.name,
-    date:       g.released || null,
+    date:       validRawgDate(g.released),
     platforms,
     genre:      (g.genres || []).map(genre => genre.name).slice(0, 2),
     dev:        "",

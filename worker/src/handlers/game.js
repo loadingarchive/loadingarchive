@@ -44,7 +44,11 @@ function fmtDate(str) {
   try {
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       .format(new Date(str + 'T12:00:00Z'));
-  } catch { return str; }
+  } catch {
+    // str kon niet als datum geparsed worden — geef hem terug, maar escaped:
+    // de aanroepers plakken deze waarde direct (ongeescaped) in <title>/tekst.
+    return esc(str);
+  }
 }
 
 function scoreClass(n) {
@@ -406,7 +410,7 @@ ${totalSlides > 0 ? `
   </a>
 
   <div class="main-grid">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Loading Archive</a> / <a href="/releases/${monthKey}">${esc(monthLabel)}</a> / ${title}</nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Loading Archive</a> / <a href="/releases/${esc(monthKey)}">${esc(monthLabel)}</a> / ${title}</nav>
   <div class="meta-row">
     <div class="meta-date">${releasedIcon}${released ? 'Released' : 'Release date'} / <strong>${date}</strong></div>
     ${metaBadges ? `<div class="meta-badges">${metaBadges}</div>` : ''}
