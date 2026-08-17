@@ -275,7 +275,9 @@ a { color: inherit; }
 .pbar-chip.active.XSX { background: rgba(44,162,67,0.2); border-color: var(--plat-xbox); }
 .pbar-chip.active.XBO .dot,
 .pbar-chip.active.XSX .dot { background: var(--plat-xbox); }
-.pbar-sep { color: var(--dimmer); font-size: var(--xs); user-select: none; }
+/* NEW: neutraal wit — bewust géén groen (zou botsen met de Xbox-familiekleur) */
+.pbar-chip.active.NEW { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.55); }
+.pbar-chip.active.NEW .dot { background: #fff; }
 .pbar-chip.active.ANTICIPATED { background: rgba(144,116,62,0.2); border-color: var(--gold); }
 .pbar-chip.active.ANTICIPATED .dot { background: linear-gradient(90deg, #90743E, #C89856); }
 .pbar-chip.active.PORT { background: rgba(26,159,255,0.15); border-color: var(--blue); }

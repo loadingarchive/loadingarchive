@@ -116,19 +116,41 @@
 .list-search::placeholder { color: rgba(153,156,163,0.5); }
 .list-search:focus { border-color: var(--border); }
 
-/* Desktop: platform-chips en categorie-knop in één rij, categorie zwevend
-   rechts. Mobiel (zie media query onderin) valt terug op gestapeld. */
+/* Desktop: filtergroepen (platform + type) en categorie-knop in één rij,
+   categorie zwevend rechts. Mobiel (zie media query onderin) stapelt elke
+   groep als eigen scrollbare rij.
+   Filtermodel: opt-in — niets geselecteerd = alles zichtbaar. Binnen een
+   groep geldt een unie (PC + PS5 = op één van beide), groepen onderling
+   snijden (platform ∩ type ∩ categorie). */
+.filter-block { margin-bottom: 32px; }
 .filter-row {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 12px; margin-bottom: 32px;
+  gap: 12px;
 }
-.filter-row .platform-bar,
 .filter-row .cat-row { margin-bottom: 0; }
 
-.platform-bar {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 6px;
+.filter-groups {
+  display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap;
 }
+.chip-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fbar-label {
+  font-size: var(--xs); font-weight: 600; color: var(--dimmer);
+  user-select: none; flex-shrink: 0; margin-right: 2px;
+}
+
+/* Teller + clear-knop; alleen zichtbaar wanneer een filter iets vernauwt */
+.filter-summary {
+  display: none; align-items: center; gap: 14px;
+  font-size: var(--xs); color: var(--dim); margin-top: 12px;
+}
+.filter-summary.show { display: flex; }
+.filter-clear {
+  font-size: var(--xs); font-weight: 600; color: #fff;
+  background: none; border: none; cursor: pointer; padding: 0;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.filter-clear:hover { color: var(--blue-hover); }
+
 .pbar-chip.cat { color: var(--dim); border-color: var(--border); }
 .pbar-chip.cat.active { color: #fff; background: rgba(41,43,49,0.6); border-color: var(--border); }
 
@@ -239,30 +261,28 @@
   .list-search { font-size: 16px; padding: 11px 14px; }
   .list-toolbar { margin-bottom: 26px; }
 
-  /* Categorie terug naar eigen rij onder de platform-chips (desktop zet ze
-     via .filter-row naast elkaar, zie basisregel). Marges hier herhalen met
+  /* Categorie terug naar eigen rij onder de filtergroepen (desktop zet ze
+     via .filter-row naast elkaar, zie basisregel). Marge hier herhalen met
      dezelfde selector-specificiteit als de desktop-regel (.filter-row .x),
      anders wint de desktop margin:0 ondanks de latere media query. */
   .filter-row { display: block; }
-  .filter-row .platform-bar { margin-bottom: 14px; }
-  .filter-row .cat-row      { margin-bottom: 16px; }
+  .filter-groups { display: block; }
+  .filter-row .cat-row { margin-bottom: 0; }
 
-  /* Platform chips: één scrollbare rij met fade aan beide kanten */
-  .platform-bar {
+  /* Elke filtergroep: eigen scrollbare rij met fade aan beide kanten */
+  .chip-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 2px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     -webkit-mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent);
     mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent);
   }
-  .platform-bar::-webkit-scrollbar { display: none; }
+  .chip-bar::-webkit-scrollbar { display: none; }
   .pbar-chip { flex-shrink: 0; }
-  .pbar-sep  { flex-shrink: 0; }
-  /* Extra ruimte tussen Anticipated en Port */
-  .pbar-chip.PORT { margin-left: 8px; }
+  .filter-summary { margin-top: 4px; }
 
   /* Categorie: full-width rij, tekst links, pijl rechts */
   .cat-row { justify-content: flex-start; }
@@ -337,9 +357,15 @@
       <input class="list-search" id="searchInput" type="text" placeholder="Search game...">
     </div>
 
-    <div class="filter-row">
-      <div class="platform-bar" id="platformBar"></div>
-      <div class="cat-row" id="catRow"></div>
+    <div class="filter-block">
+      <div class="filter-row">
+        <div class="filter-groups">
+          <div class="chip-bar" id="platformBar"></div>
+          <div class="chip-bar" id="typeBar"></div>
+        </div>
+        <div class="cat-row" id="catRow"></div>
+      </div>
+      <div class="filter-summary" id="filterSummary"></div>
     </div>
 
     <div class="game-grid" id="gameGrid">
@@ -439,18 +465,46 @@ const CATEGORY_DEFS = [
 const gameGrid   = document.getElementById('gameGrid');
 const emptyState = document.getElementById('emptyState');
 
+// Type-chips: opt-in isolatie. "New" = geen re-release (dekt het oude
+// "verberg ports/remakes"-gebruik in opt-in vorm); binnen de groep unie.
+const TYPE_DEFS = [
+  { key:'new',         label:'New',         cls:'NEW',         tip:'Brand-new games — no ports or remakes' },
+  { key:'anticipated', label:'Anticipated', cls:'ANTICIPATED', tip:'Highly anticipated titles' },
+  { key:'port',        label:'Port',        cls:'PORT',        tip:'Same game arriving on a new platform' },
+  { key:'remake',      label:'Remake',      cls:'REMAKE',      tip:'Visually or technically rebuilt re-release' },
+];
+const TYPE_KEYS = TYPE_DEFS.map(t => t.key);
+
 let activeCats = new Set();
 let catDropdownOpen = false;
 let GAMES = [];
 let activeMonth = new Date().getMonth();
 let tbaMode = false;
 const ALL_PLATFORMS = ['PC', 'NS', 'NS2', 'PS4', 'PS5', 'XBO', 'XSX'];
-let activePlatforms = new Set(ALL_PLATFORMS); // all on by default (opt-out)
-let showAnticipated = true;
-let showPorts = true;
-let showRemakes = true;
+// Opt-in: lege sets = geen filter actief, alles zichtbaar.
+let activePlatforms = new Set();
+let activeTypes = new Set();
 let searchSeq = 0;
 let loadSeq = 0;
+
+// Filterstatus overleeft een reload binnen dezelfde sessie; een vers bezoek
+// start schoon (daarom sessionStorage, niet localStorage).
+function saveFilters() {
+  try {
+    sessionStorage.setItem('la_filters', JSON.stringify({
+      p: [...activePlatforms], t: [...activeTypes], c: [...activeCats],
+    }));
+  } catch (_) {}
+}
+(function restoreFilters() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('la_filters') || 'null');
+    if (!s) return;
+    (s.p || []).forEach(k => { if (ALL_PLATFORMS.includes(k)) activePlatforms.add(k); });
+    (s.t || []).forEach(k => { if (TYPE_KEYS.includes(k)) activeTypes.add(k); });
+    (s.c || []).forEach(k => { if (CATEGORY_DEFS.includes(k)) activeCats.add(k); });
+  } catch (_) {}
+}());
 
 function mapGame(g, idx) {
   return {
@@ -509,8 +563,40 @@ function formatDate(str) { return parseDate(str).toLocaleDateString('en-US', { m
 function formatDateShort(str) { return parseDate(str).toLocaleDateString('en-US', { month:'short', year:'numeric' }); }
 function toggleSet(set, key) {
   set.has(key) ? set.delete(key) : set.add(key);
-  buildPlatformBar();
+  saveFilters();
+  buildFilterBar();
   renderGames();
+}
+
+function anyFilterActive() {
+  return activePlatforms.size > 0 || activeTypes.size > 0 || activeCats.size > 0
+    || document.getElementById('searchInput').value.trim() !== '';
+}
+
+function clearAllFilters() {
+  activePlatforms.clear();
+  activeTypes.clear();
+  activeCats.clear();
+  document.getElementById('searchInput').value = '';
+  searchSeq++; // annuleer een eventuele lopende cross-month zoekactie
+  saveFilters();
+  buildFilterBar();
+  renderGames();
+}
+
+// Teller + clear-knop onder de filterbalk; alleen zichtbaar als er iets
+// gefilterd wordt, zodat "waarom zie ik zo weinig?" altijd beantwoord is.
+function updateFilterSummary(shownCount) {
+  const el = document.getElementById('filterSummary');
+  if (!anyFilterActive() || GAMES.length === 0) {
+    el.classList.remove('show');
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `<span>${shownCount} of ${GAMES.length} games shown</span>` +
+    `<button class="filter-clear" type="button">Clear filters</button>`;
+  el.querySelector('.filter-clear').onclick = clearAllFilters;
+  el.classList.add('show');
 }
 
 async function fetchAndRenderGames(url, loadingText) {
@@ -548,44 +634,31 @@ async function loadTba() {
   await fetchAndRenderGames('/api/games?tba=1&cb=3', 'Loading announced games...');
 }
 
-function buildPlatformBar() {
+function buildFilterBar() {
   const bar = document.getElementById('platformBar');
-  bar.innerHTML = '';
+  bar.innerHTML = '<span class="fbar-label">Platform /</span>';
 
   PLATFORM_DEFS.forEach(p => {
     const btn = document.createElement('button');
     btn.className = `pbar-chip ${p.cls}` + (activePlatforms.has(p.key) ? ' active' : '');
     btn.innerHTML = `<span class="dot"></span>${p.label}`;
-    btn.onclick = () => {
-      activePlatforms.has(p.key) ? activePlatforms.delete(p.key) : activePlatforms.add(p.key);
-      buildPlatformBar();
-      renderGames();
-    };
+    btn.setAttribute('aria-pressed', activePlatforms.has(p.key));
+    btn.onclick = () => toggleSet(activePlatforms, p.key);
     bar.appendChild(btn);
   });
 
-  const sep = document.createElement('span');
-  sep.className = 'pbar-sep';
-  sep.textContent = '|';
-  bar.appendChild(sep);
+  const tbar = document.getElementById('typeBar');
+  tbar.innerHTML = '<span class="fbar-label">Show /</span>';
 
-  const anticipatedBtn = document.createElement('button');
-  anticipatedBtn.className = 'pbar-chip ANTICIPATED' + (showAnticipated ? ' active' : '');
-  anticipatedBtn.innerHTML = `<span class="dot"></span>Anticipated`;
-  anticipatedBtn.onclick = () => { showAnticipated = !showAnticipated; buildPlatformBar(); renderGames(); };
-  bar.appendChild(anticipatedBtn);
-
-  const portBtn = document.createElement('button');
-  portBtn.className = 'pbar-chip PORT' + (showPorts ? ' active' : '');
-  portBtn.innerHTML = `<span class="dot"></span>Port`;
-  portBtn.onclick = () => { showPorts = !showPorts; buildPlatformBar(); renderGames(); };
-  bar.appendChild(portBtn);
-
-  const remakeBtn = document.createElement('button');
-  remakeBtn.className = 'pbar-chip REMAKE' + (showRemakes ? ' active' : '');
-  remakeBtn.innerHTML = `<span class="dot"></span>Remake`;
-  remakeBtn.onclick = () => { showRemakes = !showRemakes; buildPlatformBar(); renderGames(); };
-  bar.appendChild(remakeBtn);
+  TYPE_DEFS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = `pbar-chip ${t.cls}` + (activeTypes.has(t.key) ? ' active' : '');
+    btn.innerHTML = `<span class="dot"></span>${t.label}`;
+    btn.dataset.tooltip = t.tip;
+    btn.setAttribute('aria-pressed', activeTypes.has(t.key));
+    btn.onclick = () => toggleSet(activeTypes, t.key);
+    tbar.appendChild(btn);
+  });
 
   const catWrap = document.createElement('div');
   catWrap.className = 'cat-wrap';
@@ -670,24 +743,31 @@ function setTba() {
   loadTba();
 }
 
+// Opt-in faceted filtering: binnen een groep unie, groepen onderling
+// doorsnede. Lege groep = die dimensie filtert niet.
 function getFiltered() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   return GAMES.filter(g => {
     if (q && !matchesSearch(g.title, q)) return false;
-    // Anticipated: deactivated chip = hide anticipated games
-    if (!showAnticipated && g.anticipated) return false;
-    // Port/Remake: rerelease zonder type (oude records) telt als port.
-    if (g.rerelease) {
-      const isRemake = g.rerelease.type === 'remake';
-      if (isRemake && !showRemakes) return false;
-      if (!isRemake && !showPorts) return false;
+
+    // Platforms (unie): alleen filteren als er iets geselecteerd is
+    if (activePlatforms.size > 0) {
+      if (!(g.platforms || []).some(p => activePlatforms.has(p))) return false;
     }
-    // Platforms: show if game has no platforms, or has at least one active platform
-    const gamePlats = g.platforms || [];
-    if (gamePlats.length > 0 && activePlatforms.size < ALL_PLATFORMS.length) {
-      if (!gamePlats.some(p => activePlatforms.has(p))) return false;
+
+    // Type (unie): rerelease zonder type (oude records) telt als port.
+    if (activeTypes.size > 0) {
+      const isRemake = !!g.rerelease && g.rerelease.type === 'remake';
+      const isPort   = !!g.rerelease && !isRemake;
+      const match =
+        (activeTypes.has('new')         && !g.rerelease)  ||
+        (activeTypes.has('anticipated') && g.anticipated) ||
+        (activeTypes.has('port')        && isPort)        ||
+        (activeTypes.has('remake')      && isRemake);
+      if (!match) return false;
     }
-    // Categories (opt-in: only filter when something is selected)
+
+    // Categories (unie)
     if (activeCats.size > 0) {
       const gameGenres = g.genre.map(gen => gen.toLowerCase());
       if (![...activeCats].some(cat => gameGenres.some(gen => gen.includes(cat.toLowerCase())))) return false;
@@ -782,7 +862,24 @@ function renderGames() {
   emptyState.classList.remove('show');
 
   const games = getFiltered().sort((a, b) => tbaMode ? 0 : (a.date || '').localeCompare(b.date || ''));
-  if (!games.length) { emptyState.classList.add('show'); return; }
+  updateFilterSummary(games.length);
+
+  if (!games.length) {
+    // Onderscheid "geen data" van "je filters verbergen alles" — met in het
+    // tweede geval een directe clear-actie in plaats van een dood spoor.
+    const p = emptyState.querySelector('p');
+    const s = emptyState.querySelector('span');
+    if (GAMES.length > 0 && anyFilterActive()) {
+      p.textContent = 'No games match your filters';
+      s.innerHTML = '<button class="filter-clear" type="button">Clear all filters</button>';
+      s.querySelector('.filter-clear').onclick = clearAllFilters;
+    } else {
+      p.textContent = 'No releases listed yet';
+      s.textContent = 'Data syncs in from RAWG & Steam.';
+    }
+    emptyState.classList.add('show');
+    return;
+  }
 
   const adPositions = ADS_ENABLED ? [5, 11] : [];
   let adIdx = 0;
@@ -925,7 +1022,7 @@ document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach(a => {
   a.setAttribute('href', a.getAttribute('href').replace(/\/releases\/\d{4}-/, '/releases/' + YEAR + '-'));
 });
 document.getElementById('searchInput').addEventListener('input', onSearchInput);
-buildPlatformBar();
+buildFilterBar();
 buildMonthNav();
 loadGames(activeMonth);
 
