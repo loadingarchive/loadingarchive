@@ -117,7 +117,9 @@ a { color: inherit; }
 }
 .month-nav-label { font-size: var(--xs); color: #fff; font-weight: 500; flex-shrink: 0; padding-right: 20px; }
 .months {
-  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  /* gap 8px: 13 pills incl. ’jj-jaarsuffix + TBA moeten op desktop zonder
+     scrollen in de 1020px-balk passen */
+  display: flex; align-items: center; gap: 8px; margin-left: auto;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .months::-webkit-scrollbar { display: none; }

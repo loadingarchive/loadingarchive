@@ -1,4 +1,4 @@
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+import { MONTH_RE } from '../months-window.js';
 
 // Data verandert maar 1× per dag (nightly cron); 5 minuten edge-cache scheelt
 // een KV-read per request voor populaire maanden. Zet op Cloudflare's edge via

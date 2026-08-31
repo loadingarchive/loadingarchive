@@ -273,15 +273,24 @@ export async function dedupeActiveGames(env) {
  * via RAWG/extra-games terugkomen. Zet via:
  *   node scripts/set-manual.mjs <slug> protected true
  *
+ * Alleen games binnen het rollende venster (of zonder datum) zijn kandidaat:
+ * maanden vóór het venster worden niet meer door de pipeline verwerkt en
+ * maanden ná het venster (bv. handmatig geseed) evenmin — daar verloopt
+ * last_seen gegarandeerd, dus die releases zijn bevroren zodat hun
+ * detailpagina's blijven bestaan. Games zonder release_date (TBA) draaien
+ * wél dagelijks mee en blijven gewoon soft-delete-kandidaat.
+ *
  * Retourneert het aantal verborgen games.
  */
-export async function softDeleteStaleGames(env, olderThanDays = 7) {
+export async function softDeleteStaleGames(env, olderThanDays = 7, windowFrom = null, windowTo = null) {
   const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
 
   const { results } = await env.GAMES_D1
     .prepare(`SELECT slug, json_extract(raw_json, '$.manual.protected') AS protected_flag
-              FROM games WHERE status = 'active' AND last_seen < ?1`)
-    .bind(cutoff)
+              FROM games WHERE status = 'active' AND last_seen < ?1
+                AND (?2 IS NULL OR release_date IS NULL
+                     OR (release_date >= ?2 AND (?3 IS NULL OR release_date <= ?3)))`)
+    .bind(cutoff, windowFrom, windowTo)
     .all();
   if (!results.length) return 0;
 

@@ -14,6 +14,7 @@ import {
   loadSlugOwners,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
+import { rollingMonths, windowStartDate, windowEndDate, allMonthKeysThroughWindow } from '../months-window.js';
 
 // ---- helpers ----
 
@@ -77,12 +78,16 @@ async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo,
 // plus TBA, prijzen en KV-rebuilds — schoot daar ruim overheen, waardoor de
 // laatste stappen stil konden falen.
 //
-//   0 3 * * *   → runMonthsCron(1, 6)                 maanden jan–jun
-//   45 3 * * *  → runMonthsCron(7, 12, withTba)       maanden jul–dec + TBA
+// De maanden komen uit het rollende venster (months-window.js): vorige maand
+// t/m 10 maanden vooruit, over jaargrenzen heen. fromIdx/toIdx zijn indexen
+// in dat venster (0-based), zodat de twee invocaties elk 6 maanden pakken.
+//
+//   0 3 * * *   → runMonthsCron(0, 5)                 venster-maanden 1–6
+//   45 3 * * *  → runMonthsCron(6, 11, withTba)       venster-maanden 7–12 + TBA
 //   30 4 * * *  → runMaintenanceCron                  soft-delete, KV, sitemap,
 //                                                     appid-backfill, prijzen
 
-export async function runMonthsCron(env, fromMonth, toMonth, { withTba = false } = {}) {
+export async function runMonthsCron(env, fromIdx, toIdx, { withTba = false } = {}) {
   const rawgKey    = env.RAWG_API_KEY;
   const extraGames = await loadExtraGames(env);
 
@@ -91,11 +96,11 @@ export async function runMonthsCron(env, fromMonth, toMonth, { withTba = false }
   // één maand-run. De map wordt gemuteerd terwijl elke maand verwerkt wordt.
   const slugOwners = await loadSlugOwners(env);
 
-  const y = new Date().getFullYear();
-  console.log(`Months cron: maanden ${fromMonth}–${toMonth}${withTba ? ' + TBA' : ''}`);
+  const window = rollingMonths();
+  console.log(`Months cron: venster-index ${fromIdx}–${toIdx}${withTba ? ' + TBA' : ''}`);
 
-  for (let m = fromMonth; m <= toMonth; m++) {
-    const month = makeMonthEntry(y, m);
+  for (let i = fromIdx; i <= toIdx && i < window.length; i++) {
+    const month = makeMonthEntry(window[i].year, window[i].month);
     try {
       await processMonth(rawgKey, extraGames, env, month, slugOwners);
     } catch (e) {
@@ -120,9 +125,12 @@ export async function runMaintenanceCron(env) {
   const rawgKey = env.RAWG_API_KEY;
   console.log('Maintenance cron');
 
-  // Soft-delete: games die 7+ dagen niet meer in de pipeline voorkwamen → 'hidden'
+  // Soft-delete: games die 7+ dagen niet meer in de pipeline voorkwamen → 'hidden'.
+  // Alleen binnen het rollende venster — maanden buiten het venster (vóór én
+  // ná) worden niet door de pipeline verwerkt (last_seen loopt daar per
+  // definitie af), die games zijn bevroren en moeten hun detailpagina houden.
   try {
-    const hidden = await softDeleteStaleGames(env, 7);
+    const hidden = await softDeleteStaleGames(env, 7, windowStartDate(), windowEndDate());
     if (hidden > 0) console.log(`  Soft-delete: ${hidden} game(s) op 'hidden' gezet`);
   } catch (e) {
     console.error('  Soft-delete mislukt —', e.message);
@@ -187,24 +195,37 @@ export async function runMaintenanceCron(env) {
  * het subrequest-budget, gebruik in productie de gesplitste triggers.
  */
 export async function runDailyCron(env) {
-  await runMonthsCron(env, 1, 6);
-  await runMonthsCron(env, 7, 12, { withTba: true });
+  await runMonthsCron(env, 0, 5);
+  await runMonthsCron(env, 6, 11, { withTba: true });
   await runMaintenanceCron(env);
 }
 
 async function generateSitemap(env) {
-  const year   = new Date().getFullYear();
-  const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+  // Alle maanden vanaf SITE_START t/m het einde van het rollende venster:
+  // bevroren maanden blijven bestaan (en indexeerbaar), nieuwe venstermaanden
+  // komen er automatisch bij.
+  const months = allMonthKeysThroughWindow();
 
+  // Verre venstermaanden kunnen nog leeg zijn (RAWG heeft dan nog geen
+  // maand-precieze datums); hun /releases/-pagina geeft 404, dus die horen
+  // niet in de sitemap. Zodra de cron er games voor vindt, komen ze erbij.
+  const monthsWithGames = [];
+  const monthCounts = {};
   const allGames = [];
   for (const m of months) {
     const data = await env.GAMES_KV.get(`games:${m}`, 'json');
-    if (data?.results) {
+    monthCounts[m] = data?.results?.length ?? 0;
+    if (data?.results?.length) {
+      monthsWithGames.push(m);
       for (const g of data.results) {
         if (g.slug) allGames.push({ slug: g.slug, date: g.date });
       }
     }
   }
+
+  // Compacte index {"2026-07": 179, ...} zodat month.js voor prev/next-links
+  // niet de volledige buurmaand-payloads hoeft te lezen en parsen.
+  await env.GAMES_KV.put('config:month-counts', JSON.stringify(monthCounts));
 
   // TBA-games hebben geen release_date (dus geen maand-KV), maar wel een
   // live detailpagina — anders missen ze in de sitemap tot ze een datum krijgen.
@@ -220,7 +241,7 @@ async function generateSitemap(env) {
 
   // SSR maand-overzichten + trending — hoge prioriteit, dit zijn de
   // programmatic-SEO landingspagina's ("july 2026 game releases" etc.)
-  const monthUrls = months.map(m =>
+  const monthUrls = monthsWithGames.map(m =>
     `  <url><loc>${base}/releases/${m}</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`
   );
   monthUrls.push(`  <url><loc>${base}/releases/tba</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
@@ -245,17 +266,23 @@ ${allGames.map(({ slug, date }) =>
 
 // ---- seed specific months (used by temporary seeding endpoint) ----
 
+/** Retourneert per maand `{ month, ok, error? }` zodat de aanroeper (het
+ *  seed-endpoint) mislukkingen niet als succes rapporteert. */
 export async function seedMonths(env, months) {
   const rawgKey    = env.RAWG_API_KEY;
   const extraGames = await loadExtraGames(env);
   const slugOwners = await loadSlugOwners(env);
+  const outcomes = [];
   for (const month of months) {
     try {
       await processMonth(rawgKey, extraGames, env, month, slugOwners);
+      outcomes.push({ month: month.label, ok: true });
     } catch (e) {
       console.error(`  ${month.label}: seed mislukt —`, e.message);
+      outcomes.push({ month: month.label, ok: false, error: e.message });
     }
   }
+  return outcomes;
 }
 
 /**

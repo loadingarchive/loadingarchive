@@ -440,6 +440,28 @@
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const YEAR = new Date().getFullYear();
 
+// Rollend maandvenster: WINDOW_BACK maanden terug t/m WINDOW_AHEAD vooruit,
+// over jaargrenzen heen. Spiegel van worker/src/months-window.js (constanten
+// daar synchroon houden!) — de nachtelijke cron vult exact deze maanden met
+// data. Opgebouwd in UTC omdat de worker/cron ook in UTC rekenen; met lokale
+// tijd zou het venster rond een maandwissel één maand verschoven zijn en de
+// laatste pill naar een maand zonder KV wijzen. Verder terug bladeren kan
+// via de SSR-pagina's (/releases/YYYY-MM), niet via deze balk.
+const WINDOW_BACK = 1, WINDOW_AHEAD = 10;
+const MONTH_WINDOW = (() => {
+  const now = new Date();
+  const list = [];
+  for (let off = -WINDOW_BACK; off <= WINDOW_AHEAD; off++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + off, 1));
+    list.push({
+      y: d.getUTCFullYear(),
+      m: d.getUTCMonth(), // 0-based, index in MONTHS
+      key: d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'),
+    });
+  }
+  return list;
+})();
+
 // AdSense-account is nog niet goedgekeurd — ad-slots leveren tot die tijd
 // alleen lege/gebroken vakken op. Zet op true zodra de site is goedgekeurd.
 const ADS_ENABLED = false;
@@ -478,7 +500,7 @@ const TYPE_KEYS = TYPE_DEFS.map(t => t.key);
 let activeCats = new Set();
 let catDropdownOpen = false;
 let GAMES = [];
-let activeMonth = new Date().getMonth();
+let activeIdx = WINDOW_BACK; // index in MONTH_WINDOW van de huidige maand
 let tbaMode = false;
 const ALL_PLATFORMS = ['PC', 'NS', 'NS2', 'PS4', 'PS5', 'XBO', 'XSX'];
 // Opt-in: lege sets = geen filter actief, alles zichtbaar.
@@ -624,9 +646,8 @@ async function fetchAndRenderGames(url, loadingText) {
   renderGames();
 }
 
-async function loadGames(monthIdx) {
-  const m = String(monthIdx + 1).padStart(2, "0");
-  await fetchAndRenderGames(`/api/games?month=${YEAR}-${m}&cb=3`, 'Loading releases...');
+async function loadGames(idx) {
+  await fetchAndRenderGames(`/api/games?month=${MONTH_WINDOW[idx].key}&cb=3`, 'Loading releases...');
   buildWeekJumpNav();
 }
 
@@ -705,13 +726,19 @@ document.addEventListener('click', () => {
   }
 });
 
+// Label in de balk: afgekorte maandnaam + ’jj — altijd, ook voor het lopende
+// jaar, zodat alle pills consistent zijn nu het venster de jaargrens over kan.
+function monthPillLabel(e) {
+  return MONTHS[e.m].slice(0, 3) + ' ’' + String(e.y).slice(2);
+}
+
 function buildMonthNav() {
   const nav = document.getElementById('monthNav');
   nav.innerHTML = '';
-  MONTHS.forEach((m, i) => {
+  MONTH_WINDOW.forEach((e, i) => {
     const btn = document.createElement('button');
-    btn.className = 'mnav' + (!tbaMode && i === activeMonth ? ' active' : '');
-    btn.textContent = m;
+    btn.className = 'mnav' + (!tbaMode && i === activeIdx ? ' active' : '');
+    btn.textContent = monthPillLabel(e);
     btn.onclick = () => setMonth(i);
     nav.appendChild(btn);
     const sep = document.createElement('span');
@@ -728,8 +755,9 @@ function buildMonthNav() {
 
 function setMonth(i) {
   tbaMode = false;
-  activeMonth = i;
-  document.getElementById('heroPill').textContent = MONTHS[i] + ' ' + YEAR;
+  activeIdx = i;
+  const e = MONTH_WINDOW[i];
+  document.getElementById('heroPill').textContent = MONTHS[e.m] + ' ' + e.y;
   document.getElementById('sideNav').style.display = '';
   buildMonthNav();
   loadGames(i);
@@ -797,11 +825,11 @@ async function searchAcrossMonths() {
   emptyText.textContent = `Searching upcoming months for "${document.getElementById('searchInput').value}"...`;
 
   try {
-    for (let i = activeMonth + 1; i < MONTHS.length; i++) {
+    for (let i = activeIdx + 1; i < MONTH_WINDOW.length; i++) {
       if (mySeq !== searchSeq) return;
       let monthResults = [];
       try {
-        const res = await fetch(`/api/games?month=${YEAR}-${String(i + 1).padStart(2, '0')}&cb=3`, { cache: 'no-store' });
+        const res = await fetch(`/api/games?month=${MONTH_WINDOW[i].key}&cb=3`, { cache: 'no-store' });
         const data = await res.json();
         monthResults = data.results || [];
       } catch (e) { /* skip on fetch error */ }
@@ -837,15 +865,18 @@ function getAdSlot(i) {
   return adCard;
 }
 
-function daysInMonth(monthIdx) { return new Date(YEAR, monthIdx + 1, 0).getDate(); }
+function daysInMonth(idx) {
+  const e = MONTH_WINDOW[idx];
+  return new Date(e.y, e.m + 1, 0).getDate();
+}
 
 // Zelfde week-indeling als de side-nav (blokken van 7 dagen vanaf de 1e),
 // puur als leesbare sectiekop in de lijst — geen kalenderweek-standaard.
-function weekLabel(monthIdx, weekIdx) {
-  const total = daysInMonth(monthIdx);
+function weekLabel(idx, weekIdx) {
+  const total = daysInMonth(idx);
   const start = weekIdx * 7 + 1;
   const end   = Math.min(start + 6, total);
-  const mShort = MONTHS[monthIdx].slice(0, 3);
+  const mShort = MONTHS[MONTH_WINDOW[idx].m].slice(0, 3);
   return `Week ${weekIdx + 1} · ${mShort} ${start}–${end}`;
 }
 
@@ -888,7 +919,7 @@ function renderGames() {
     if (!tbaMode && g.date) {
       const week = Math.floor((parseDate(g.date).getDate() - 1) / 7);
       if (week !== lastWeek) {
-        gameGrid.appendChild(buildWeekDivider(weekLabel(activeMonth, week), week));
+        gameGrid.appendChild(buildWeekDivider(weekLabel(activeIdx, week), week));
         lastWeek = week;
       }
     }
@@ -984,13 +1015,13 @@ function buildWeekJumpNav() {
   inner.innerHTML = '';
   if (tbaMode) return;
 
-  const totalWeeks = Math.ceil(daysInMonth(activeMonth) / 7);
+  const totalWeeks = Math.ceil(daysInMonth(activeIdx) / 7);
   for (let w = 0; w < totalWeeks; w++) {
     const btn = document.createElement('button');
     btn.className = 'sn-week-btn' + (w === 0 ? ' active' : '');
     btn.textContent = 'W' + (w + 1);
-    btn.dataset.tooltip = weekLabel(activeMonth, w);
-    btn.setAttribute('aria-label', 'Jump to ' + weekLabel(activeMonth, w));
+    btn.dataset.tooltip = weekLabel(activeIdx, w);
+    btn.setAttribute('aria-label', 'Jump to ' + weekLabel(activeIdx, w));
     btn.onclick = () => {
       document.getElementById('week-divider-' + w)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
@@ -1014,17 +1045,25 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 // Init
-document.getElementById('heroPill').textContent = MONTHS[activeMonth] + ' ' + YEAR;
+const initEntry = MONTH_WINDOW[activeIdx];
+document.getElementById('heroPill').textContent = MONTHS[initEntry.m] + ' ' + initEntry.y;
 document.getElementById('navYearLink').textContent = YEAR;
 document.getElementById('footerYear').innerHTML = '&copy; Loading Archive ' + YEAR;
-// Footer maand-links naar het lopende jaar laten wijzen (statische HTML is 2026)
-document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach(a => {
-  a.setAttribute('href', a.getAttribute('href').replace(/\/releases\/\d{4}-/, '/releases/' + YEAR + '-'));
+// Footer maand-links herschrijven naar het rollende venster (de statische
+// HTML blijft voor crawlers zonder JS gewoon naar bestaande, bevroren
+// /releases/-pagina's wijzen). Positioneel gekoppeld: er staan 12 statische
+// anchors — groeit het venster ooit voorbij 12 maanden, voeg dan ook
+// anchors toe in #footerMonths.
+document.querySelectorAll('#footerMonths a[href^="/releases/2"]').forEach((a, i) => {
+  const e = MONTH_WINDOW[i];
+  if (!e) return;
+  a.setAttribute('href', '/releases/' + e.key);
+  a.textContent = MONTHS[e.m] + ' ' + e.y;
 });
 document.getElementById('searchInput').addEventListener('input', onSearchInput);
 buildFilterBar();
 buildMonthNav();
-loadGames(activeMonth);
+loadGames(activeIdx);
 
 // Tooltip for data-tooltip elements (mouseover/out bubbles, works on dynamic cards)
 (function () {

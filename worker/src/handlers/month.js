@@ -1,5 +1,6 @@
 import { siteFooterHtml } from '../ui/footer.js';
 import { MONTH_INTROS } from '../content/month-intros.js';
+import { SITE_START, MONTH_RE, windowEndKey, windowStartDate } from '../months-window.js';
 
 function esc(str) {
   if (str == null) return '';
@@ -14,7 +15,6 @@ function jsonForScript(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const PLATFORM_LABEL = { PC:'PC', PS4:'PS4', PS5:'PS5', XBO:'XBO', XSX:'XSX/S', NS:'NS', NS2:'NS2' };
@@ -60,16 +60,49 @@ export async function handleMonthPage(monthKey, env) {
   const isTba = monthKey === 'tba';
   if (!isTba && !MONTH_RE.test(monthKey)) return notFound();
 
-  const raw = await env.GAMES_KV.get(isTba ? 'games:tba' : `games:${monthKey}`);
-  if (!raw) return notFound();
+  // Venstermaanden kunnen nog leeg zijn of zelfs nog geen KV-key hebben
+  // (vlak na een maandwissel, vóór de nachtcron) maar de maandbalk en footer
+  // linken er wel heen — render dan een "nog geen releases"-pagina met
+  // noindex i.p.v. een 404. Lege maanden búiten het venster blijven 404.
+  const inWindow = !isTba
+    && monthKey >= windowStartDate().slice(0, 7)
+    && monthKey <= windowEndKey();
 
-  let payload;
-  try { payload = JSON.parse(raw); } catch { return notFound(); }
+  const raw = await env.GAMES_KV.get(isTba ? 'games:tba' : `games:${monthKey}`);
+  if (!raw && !inWindow) return notFound();
+
+  let payload = { results: [] };
+  if (raw) {
+    try { payload = JSON.parse(raw); } catch { return notFound(); }
+  }
   const games = payload.results || [];
-  if (!games.length) return notFound();
+  if (!games.length && !inWindow) return notFound();
 
   const label = isTba ? 'Announced Games (TBA)' : monthLabel(monthKey);
-  const html  = renderPage(monthKey, label, games, isTba);
+
+  // Prev/next alleen tonen als de buurmaand écht games heeft: naar lege
+  // (noindex-)maanden moet geen interne link wijzen. De maintenance-cron
+  // schrijft daarvoor een compacte counts-index; alleen als een maand daar
+  // (nog) niet in staat valt dit terug op het lezen van de volledige
+  // buurmaand-KV.
+  let neighbors = { prevOk: false, nextOk: false };
+  if (!isTba) {
+    const counts = await env.GAMES_KV.get('config:month-counts', 'json');
+    const hasGames = async (key) => {
+      if (counts && key in counts) return counts[key] > 0;
+      const data = await env.GAMES_KV.get(`games:${key}`, 'json');
+      return !!data?.results?.length;
+    };
+    const prevKey = shiftMonth(monthKey, -1);
+    const nextKey = shiftMonth(monthKey, 1);
+    const [prevOk, nextOk] = await Promise.all([
+      prevKey >= SITE_START     ? hasGames(prevKey) : false,
+      nextKey <= windowEndKey() ? hasGames(nextKey) : false,
+    ]);
+    neighbors = { prevOk, nextOk };
+  }
+
+  const html  = renderPage(monthKey, label, games, isTba, neighbors);
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',
@@ -113,24 +146,28 @@ function renderRow(g) {
     : `<div class="rel-row">${inner}</div>`;
 }
 
-function renderPage(monthKey, label, games, isTba) {
+function renderPage(monthKey, label, games, isTba, neighbors = { prevOk: false, nextOk: false }) {
   const base      = 'https://www.loadingarchive.com';
   const canonical = `${base}/releases/${monthKey}`;
-  const year      = new Date().getFullYear();
+  // Breadcrumb-jaar: voor maandpagina's het jaar van de maand zelf (een
+  // 2027-pagina moet niet "2026" tonen), voor TBA het lopende jaar.
+  const year      = isTba ? new Date().getFullYear() : parseInt(monthKey.slice(0, 4), 10);
 
   const title    = isTba
     ? `Announced Games Without a Release Date (TBA) | Loading Archive`
     : `${label} Game Releases: PC, PS5, Xbox, Switch | Loading Archive`;
   const metaDesc = isTba
     ? `All ${games.length} announced video games without a confirmed release date, with platforms, genres and details.`
-    : `All ${games.length} video games releasing in ${label} with exact dates, platforms, genres, prices and trailers for PC, PlayStation 5, Xbox Series X/S and Nintendo Switch.`;
+    : games.length
+      ? `All ${games.length} video games releasing in ${label} with exact dates, platforms, genres, prices and trailers for PC, PlayStation 5, Xbox Series X/S and Nintendo Switch.`
+      : `${label} video game release calendar — release dates are still being announced, check back soon.`;
 
   const prevKey = isTba ? null : shiftMonth(monthKey, -1);
   const nextKey = isTba ? null : shiftMonth(monthKey, 1);
-  // Alleen binnen het lopende jaar linken — daarbuiten bestaat geen KV-cache.
-  const yearOf  = k => parseInt(k.slice(0, 4), 10);
-  const prevOk  = prevKey && yearOf(prevKey) === yearOf(monthKey);
-  const nextOk  = nextKey && yearOf(nextKey) === yearOf(monthKey);
+  // Of de buurmaand linkbaar is (bestaat + heeft games, ook over de
+  // jaargrens) bepaalt handleMonthPage — die kan bij de KV.
+  const prevOk  = neighbors.prevOk;
+  const nextOk  = neighbors.nextOk;
 
   const jsonLd = [
     {
@@ -163,6 +200,7 @@ function renderPage(monthKey, label, games, isTba) {
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(metaDesc)}">
 <link rel="canonical" href="${canonical}">
+${games.length ? '' : '<meta name="robots" content="noindex">'}
 <meta property="og:type"        content="website">
 <meta property="og:title"       content="${esc(title)}">
 <meta property="og:description" content="${esc(metaDesc)}">
@@ -240,7 +278,9 @@ a.rel-row:hover{border-color:rgba(255,255,255,0.12)}
   </div>` : ''}
 
   <div class="rel-list">
-    ${games.map(renderRow).join('\n    ')}
+    ${games.length
+      ? games.map(renderRow).join('\n    ')
+      : '<p class="page-meta">No releases listed for this month yet — dates sync in daily from RAWG &amp; Steam as they get announced.</p>'}
   </div>
 
   ${(!isTba && (prevOk || nextOk)) ? `
