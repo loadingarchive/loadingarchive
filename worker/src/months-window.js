@@ -7,16 +7,15 @@
  * maand af en komt er één bij. Gedeeld door de cron (welke maanden de
  * pipeline verwerkt), de sitemap en de SSR-maandpagina's (prev/next-grens).
  *
- * Maanden vóór het venster worden bevroren: hun KV en D1-records blijven
- * bestaan (detailpagina's en /releases/-pagina's blijven live), maar de
- * pipeline raakt ze niet meer aan en softDeleteStaleGames slaat ze over.
+ * Harde regel (gebruikersbeleid 2026-08-31): maanden die uit het venster
+ * vallen worden door de maintenance-cron definitief verwijderd (D1 + KV,
+ * zie purgeGamesBefore in pipeline/d1.js). Alleen manual.protected-games
+ * overleven dat — de site bevat dus uitsluitend het rollende venster + TBA.
  */
 
 export const WINDOW_BACK  = 1;
 export const WINDOW_AHEAD = 10; // totaal: 1 terug + huidige + 10 vooruit = 12
 
-// Eerste maand die ooit is gepubliceerd — ondergrens voor prev-links/sitemap.
-export const SITE_START = '2026-01';
 
 // Gedeelde validatie voor "YYYY-MM"-parameters (API, SSR-routes, seed).
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -34,6 +33,11 @@ export function rollingMonths(now = new Date()) {
 /** `{ year: 2027, month: 3 }` → `"2027-03"` (sorteerbaar als string). */
 export function toMonthKey({ year, month }) {
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/** Eerste maand van het venster als "YYYY-MM" — de oudste die nog bestaat. */
+export function windowStartKey(now = new Date()) {
+  return toMonthKey(rollingMonths(now)[0]);
 }
 
 /** Laatste maand van het venster als "YYYY-MM". */
@@ -59,15 +63,3 @@ export function windowEndDate(now = new Date()) {
   return `${toMonthKey(last)}-${String(lastDay).padStart(2, '0')}`;
 }
 
-/** Alle maand-keys van SITE_START t/m het einde van het venster (voor de sitemap). */
-export function allMonthKeysThroughWindow(now = new Date()) {
-  const [startY, startM] = SITE_START.split('-').map(Number);
-  const end = windowEndKey(now);
-  const keys = [];
-  for (let y = startY, m = startM; ; m === 12 ? (y++, m = 1) : m++) {
-    const key = toMonthKey({ year: y, month: m });
-    if (key > end) break;
-    keys.push(key);
-  }
-  return keys;
-}

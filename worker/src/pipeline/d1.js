@@ -183,6 +183,53 @@ export async function hideGames(env, slugs) {
 }
 
 /**
+ * Hard-delete-beleid (gebruikerskeuze 2026-08-31): maanden die uit het
+ * rollende venster vallen worden definitief verwijderd — de D1-rijen, hun
+ * game:{slug} KV-records én de games:{YYYY-MM} maand-KV's. Draait dagelijks
+ * in de maintenance-cron; doet meestal niets en ruimt bij een maandwissel
+ * de afgevallen maand op (~100–250 games, past ruim in het subrequest-budget).
+ *
+ * Games met raw_json.manual.protected = true worden overgeslagen en
+ * gerapporteerd: die zijn met de hand toegevoegd en verdwijnen alleen door
+ * een bewuste actie, nooit stilletjes via beleid. Hun maand-KV gaat wél weg
+ * (de maand is uit het venster), maar hun detailpagina blijft bestaan.
+ *
+ * De DELETE is per slug gechunkt (max 100 bound params per D1-statement)
+ * i.p.v. één DELETE-op-datum, juist zodat protected rijen blijven staan.
+ *
+ * Retourneert { deleted: [slugs], months: [keys], skippedProtected: [slugs] }.
+ */
+export async function purgeGamesBefore(env, beforeDate) {
+  const { results } = await env.GAMES_D1
+    .prepare(`SELECT slug, release_date,
+                     json_extract(raw_json, '$.manual.protected') AS protected_flag
+              FROM games WHERE release_date < ?1`)
+    .bind(beforeDate)
+    .all();
+
+  const toDelete          = results.filter(r => !r.protected_flag);
+  const skippedProtected  = results.filter(r => r.protected_flag).map(r => r.slug);
+  const months = [...new Set(results.map(r => (r.release_date || '').slice(0, 7)))].filter(Boolean);
+  const slugs  = toDelete.map(r => r.slug);
+
+  for (let i = 0; i < slugs.length; i += HIDE_CHUNK_SIZE) {
+    const chunk        = slugs.slice(i, i + HIDE_CHUNK_SIZE);
+    const placeholders = chunk.map((_, j) => `?${j + 1}`).join(',');
+    await env.GAMES_D1
+      .prepare(`DELETE FROM games WHERE slug IN (${placeholders})`)
+      .bind(...chunk)
+      .run();
+  }
+
+  await Promise.all([
+    ...slugs.map(slug => env.GAMES_KV.delete(`game:${slug}`)),
+    ...months.map(m => env.GAMES_KV.delete(`games:${m}`)),
+  ]);
+
+  return { deleted: slugs, months, skippedProtected };
+}
+
+/**
  * Vangnet tegen duplicaten: vindt actieve games die hetzelfde spel zijn —
  * zelfde Steam-appid (over maandgrenzen heen, net als de reclaim in
  * assignSlugs), of zelfde genormaliseerde titel + release-maand — en verbergt

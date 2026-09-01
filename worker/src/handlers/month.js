@@ -1,6 +1,6 @@
 import { siteFooterHtml } from '../ui/footer.js';
 import { MONTH_INTROS } from '../content/month-intros.js';
-import { SITE_START, MONTH_RE, windowEndKey, windowStartDate } from '../months-window.js';
+import { MONTH_RE, windowStartKey, windowEndKey } from '../months-window.js';
 
 function esc(str) {
   if (str == null) return '';
@@ -65,7 +65,7 @@ export async function handleMonthPage(monthKey, env) {
   // linken er wel heen — render dan een "nog geen releases"-pagina met
   // noindex i.p.v. een 404. Lege maanden búiten het venster blijven 404.
   const inWindow = !isTba
-    && monthKey >= windowStartDate().slice(0, 7)
+    && monthKey >= windowStartKey()
     && monthKey <= windowEndKey();
 
   const raw = await env.GAMES_KV.get(isTba ? 'games:tba' : `games:${monthKey}`);
@@ -96,8 +96,8 @@ export async function handleMonthPage(monthKey, env) {
     const prevKey = shiftMonth(monthKey, -1);
     const nextKey = shiftMonth(monthKey, 1);
     const [prevOk, nextOk] = await Promise.all([
-      prevKey >= SITE_START     ? hasGames(prevKey) : false,
-      nextKey <= windowEndKey() ? hasGames(nextKey) : false,
+      prevKey >= windowStartKey() ? hasGames(prevKey) : false,
+      nextKey <= windowEndKey()   ? hasGames(nextKey) : false,
     ]);
     neighbors = { prevOk, nextOk };
   }
@@ -260,8 +260,9 @@ a.rel-row:hover{border-color:rgba(255,255,255,0.12)}
         <span>Loading Archive</span>
       </a>
       <div class="nav-right">
-        <a href="/">${year}</a>
+        <a href="/">Releases</a>
         <a href="/trending">Trending</a>
+        <a href="/events">Events</a>
         <a href="/contact">Contact</a>
       </div>
     </div>

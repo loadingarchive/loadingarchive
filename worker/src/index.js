@@ -3,8 +3,10 @@ import { handleTrailer }      from './handlers/trailer.js';
 import { handleGamePage }     from './handlers/game.js';
 import { handleTrendingPage } from './handlers/trending.js';
 import { handleMonthPage }    from './handlers/month.js';
+import { handleEventsPage }   from './handlers/events.js';
 import { runDailyCron, runMonthsCron, runMaintenanceCron, runWeeklyWikipediaCron, runHourlyCron, seedMonths, makeMonthEntry } from './cron/build-cache.js';
-import { MONTH_RE } from './months-window.js';
+import { fetchAndStoreEvents } from './pipeline/igdb.js';
+import { MONTH_RE, windowStartKey } from './months-window.js';
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -43,6 +45,15 @@ async function handleSeed(request, env) {
   if (!months.length) {
     return Response.json({ error: 'months=YYYY-MM[,YYYY-MM] vereist' }, { status: 400 });
   }
+  // Maanden vóór het venster worden door het purge-beleid dezelfde nacht
+  // weer verwijderd — seeden daarvan is dus zinloos en verwarrend.
+  const tooOld = months.filter(m => m < windowStartKey());
+  if (tooOld.length) {
+    return Response.json(
+      { error: `Maand(en) vóór het venster (${windowStartKey()}) worden 's nachts gepurged: ${tooOld.join(', ')}` },
+      { status: 400 }
+    );
+  }
   if (months.length > SEED_MAX_MONTHS) {
     return Response.json(
       { error: `Max ${SEED_MAX_MONTHS} maanden per aanroep (subrequest-budget) — splits het verzoek op` },
@@ -56,6 +67,22 @@ async function handleSeed(request, env) {
   const outcomes = await seedMonths(env, entries);
   const failed = outcomes.filter(o => !o.ok);
   return Response.json({ outcomes }, { status: failed.length ? 502 : 200 });
+}
+
+// Admin: events-KV direct verversen vanuit IGDB (bv. vlak na een deploy of
+// als een showcase net is aangekondigd) i.p.v. op de uur-cron te wachten.
+// Zelfde sleutelbeleid als het seed-endpoint: zonder geldige key een 404.
+async function handleRefreshEvents(request, env) {
+  const key = request.headers.get('x-seed-key');
+  if (!env.SEED_KEY || !key || !(await keysMatch(key, env.SEED_KEY))) {
+    return new Response('Not found', { status: 404 });
+  }
+  try {
+    const { total } = await fetchAndStoreEvents(env);
+    return Response.json({ ok: true, total });
+  } catch (e) {
+    return Response.json({ ok: false, error: e.message }, { status: 502 });
+  }
 }
 
 export default {
@@ -75,8 +102,10 @@ export default {
     // Vereist de SEED_KEY-secret; zonder geldige key doet de route alsof
     // hij niet bestaat.
     if (pathname === '/api/admin/seed') return withSecurityHeaders(await handleSeed(request, env));
+    if (pathname === '/api/admin/refresh-events') return withSecurityHeaders(await handleRefreshEvents(request, env));
     if (pathname === '/api/trailer') return withSecurityHeaders(await handleTrailer(request, env));
     if (pathname === '/trending')    return withSecurityHeaders(await handleTrendingPage(env));
+    if (pathname === '/events')      return withSecurityHeaders(await handleEventsPage(env));
 
     if (pathname.startsWith('/game/')) {
       const slug = pathname.slice(6).replace(/\/$/, '');

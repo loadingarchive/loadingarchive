@@ -160,8 +160,9 @@ function renderPage(games, generatedAt) {
         <span>Loading Archive</span>
       </a>
       <div class="nav-right">
-        <a href="/">${new Date().getFullYear()}</a>
+        <a href="/">Releases</a>
         <a href="/trending" class="nav-active">Trending</a>
+        <a href="/events">Events</a>
         <a href="/contact">Contact</a>
       </div>
     </div>

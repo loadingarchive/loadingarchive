@@ -329,8 +329,9 @@
           <span>Loading Archive</span>
         </a>
         <div class="nav-right">
-          <a href="#" id="navYearLink">2026</a>
+          <a href="/" class="nav-active">Releases</a>
           <a href="/trending">Trending</a>
+          <a href="/events">Events</a>
           <a href="/contact">Contact</a>
         </div>
       </div>
@@ -398,25 +399,30 @@
          Google vanaf de homepage naar elke SSR /releases/-pagina brengt
          (de JS-maandbalk hierboven filtert alleen client-side en linkt
          nergens naartoe). -->
+    <!-- Momentopname van het rollende venster bij de laatste deploy; de JS
+         hieronder herschrijft deze links bij elke paginalaad naar het actuele
+         venster. Crawlers zonder JS zien dus hooguit licht verouderde (maar
+         bestaande) maanden. -->
     <nav class="footer-months-sr" aria-label="Browse releases by month" id="footerMonths">
-      <a href="/releases/2026-01">January</a>
-      <a href="/releases/2026-02">February</a>
-      <a href="/releases/2026-03">March</a>
-      <a href="/releases/2026-04">April</a>
-      <a href="/releases/2026-05">May</a>
-      <a href="/releases/2026-06">June</a>
-      <a href="/releases/2026-07">July</a>
-      <a href="/releases/2026-08">August</a>
-      <a href="/releases/2026-09">September</a>
-      <a href="/releases/2026-10">October</a>
-      <a href="/releases/2026-11">November</a>
-      <a href="/releases/2026-12">December</a>
+      <a href="/releases/2026-07">July 2026</a>
+      <a href="/releases/2026-08">August 2026</a>
+      <a href="/releases/2026-09">September 2026</a>
+      <a href="/releases/2026-10">October 2026</a>
+      <a href="/releases/2026-11">November 2026</a>
+      <a href="/releases/2026-12">December 2026</a>
+      <a href="/releases/2027-01">January 2027</a>
+      <a href="/releases/2027-02">February 2027</a>
+      <a href="/releases/2027-03">March 2027</a>
+      <a href="/releases/2027-04">April 2027</a>
+      <a href="/releases/2027-05">May 2027</a>
+      <a href="/releases/2027-06">June 2027</a>
     </nav>
     <div class="footer-bottom">
       <span class="footer-copy" id="footerYear">&copy; Loading Archive 2026</span>
       <nav class="footer-links" aria-label="Site links">
         <a href="/releases/tba">TBA</a>
         <a href="/trending">Trending</a>
+        <a href="/events">Events</a>
         <a href="/about">About</a>
         <a href="/privacy">Privacy</a>
         <a href="/contact">Contact</a>
@@ -1047,7 +1053,6 @@ window.addEventListener('scroll', () => {
 // Init
 const initEntry = MONTH_WINDOW[activeIdx];
 document.getElementById('heroPill').textContent = MONTHS[initEntry.m] + ' ' + initEntry.y;
-document.getElementById('navYearLink').textContent = YEAR;
 document.getElementById('footerYear').innerHTML = '&copy; Loading Archive ' + YEAR;
 // Footer maand-links herschrijven naar het rollende venster (de statische
 // HTML blijft voor crawlers zonder JS gewoon naar bestaande, bevroren

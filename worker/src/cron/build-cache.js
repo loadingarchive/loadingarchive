@@ -1,6 +1,7 @@
 import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
+import { fetchAndStoreEvents } from '../pipeline/igdb.js';
 import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
 import {
@@ -11,10 +12,11 @@ import {
   rebuildAllGamePagesKv,
   softDeleteStaleGames,
   dedupeActiveGames,
+  purgeGamesBefore,
   loadSlugOwners,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
-import { rollingMonths, windowStartDate, windowEndDate, allMonthKeysThroughWindow } from '../months-window.js';
+import { rollingMonths, toMonthKey, windowStartDate, windowEndDate } from '../months-window.js';
 
 // ---- helpers ----
 
@@ -125,6 +127,17 @@ export async function runMaintenanceCron(env) {
   const rawgKey = env.RAWG_API_KEY;
   console.log('Maintenance cron');
 
+  // Harde regel (gebruikersbeleid 2026-08-31): maanden die uit het rollende
+  // venster zijn gevallen worden definitief verwijderd — D1 + KV. Doet
+  // dagelijks meestal niets; ruimt na een maandwissel de afgevallen maand op.
+  try {
+    const { deleted, months, skippedProtected } = await purgeGamesBefore(env, windowStartDate());
+    if (deleted.length) console.log(`  Purge: ${deleted.length} game(s) uit ${months.join(', ')} definitief verwijderd`);
+    if (skippedProtected.length) console.log(`  Purge: overgeslagen wegens manual.protected: ${skippedProtected.join(', ')}`);
+  } catch (e) {
+    console.error('  Purge mislukt —', e.message);
+  }
+
   // Soft-delete: games die 7+ dagen niet meer in de pipeline voorkwamen → 'hidden'.
   // Alleen binnen het rollende venster — maanden buiten het venster (vóór én
   // ná) worden niet door de pipeline verwerkt (last_seen loopt daar per
@@ -201,10 +214,9 @@ export async function runDailyCron(env) {
 }
 
 async function generateSitemap(env) {
-  // Alle maanden vanaf SITE_START t/m het einde van het rollende venster:
-  // bevroren maanden blijven bestaan (en indexeerbaar), nieuwe venstermaanden
-  // komen er automatisch bij.
-  const months = allMonthKeysThroughWindow();
+  // Alleen het rollende venster: maanden daarbuiten zijn definitief
+  // verwijderd (purge-beleid) en horen dus niet in de sitemap.
+  const months = rollingMonths().map(toMonthKey);
 
   // Verre venstermaanden kunnen nog leeg zijn (RAWG heeft dan nog geen
   // maand-precieze datums); hun /releases/-pagina geeft 404, dus die horen
@@ -246,6 +258,7 @@ async function generateSitemap(env) {
   );
   monthUrls.push(`  <url><loc>${base}/releases/tba</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
   monthUrls.push(`  <url><loc>${base}/trending</loc><lastmod>${today}</lastmod><changefreq>hourly</changefreq><priority>0.8</priority></url>`);
+  monthUrls.push(`  <url><loc>${base}/events</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
   // Statische trust-pagina's (AdSense/E-E-A-T): about, privacy, contact
   monthUrls.push(`  <url><loc>${base}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`);
   monthUrls.push(`  <url><loc>${base}/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>`);
@@ -495,6 +508,15 @@ export async function runHourlyCron(env) {
     console.log(`  Trending: ${total} games in KV`);
   } catch (e) {
     console.error('  Trending mislukt —', e.message);
+  }
+
+  // Gaming events (IGDB) — lichtgewicht (1-2 fetches; token zit in KV), dus
+  // hij mag elk uur mee zodat net aangekondigde showcases snel op /events staan.
+  try {
+    const { total } = await fetchAndStoreEvents(env);
+    console.log(`  Events: ${total} events in KV`);
+  } catch (e) {
+    console.error('  Events mislukt —', e.message);
   }
 }
 
