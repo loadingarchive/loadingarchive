@@ -70,15 +70,32 @@ async function igdbQuery(env, token, endpoint, body) {
   return r.json();
 }
 
+// Hostname i.p.v. ruwe substring-match voor de nieuwere social-checks
+// hieronder — "x.com" als substring zou anders ook op bv. "vertex.com"
+// matchen. Faalt een URL te parsen, dan gewoon geen match (valt terug op
+// 'website').
+function hostnameOf(url) {
+  try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; }
+}
+
 // event_networks.network_type verwijst naar de network_types-tabel; de namen
 // daar zijn vrije tekst ("YouTube", "Twitch", …) — normaliseer naar een vaste
-// set zodat de frontend er iconen aan kan hangen.
+// set zodat de frontend er losse iconen/labels aan kan hangen. Zonder dit
+// belanden bv. een X-profiel én een eigen site allebei onder het generieke
+// "Website"-label — verwarrend als een event meerdere van dat soort links heeft.
 function normalizeNetwork(name, url) {
   const n = (name || '').toLowerCase();
   const u = (url  || '').toLowerCase();
-  if (n.includes('youtube') || u.includes('youtube.') || u.includes('youtu.be')) return 'youtube';
-  if (n.includes('twitch')  || u.includes('twitch.tv')) return 'twitch';
-  if (n.includes('steam')   || u.includes('steampowered.com')) return 'steam';
+  const h = hostnameOf(url);
+  if (n.includes('youtube')   || u.includes('youtube.') || u.includes('youtu.be')) return 'youtube';
+  if (n.includes('twitch')    || u.includes('twitch.tv')) return 'twitch';
+  if (n.includes('steam')     || u.includes('steampowered.com')) return 'steam';
+  if (n.includes('twitter') || n === 'x' || h === 'x.com' || h === 'twitter.com') return 'twitter';
+  if (n.includes('discord')   || h === 'discord.gg' || h === 'discord.com') return 'discord';
+  if (n.includes('facebook')  || h === 'facebook.com' || h === 'fb.com') return 'facebook';
+  if (n.includes('instagram') || h === 'instagram.com') return 'instagram';
+  if (n.includes('tiktok')    || h === 'tiktok.com') return 'tiktok';
+  if (n.includes('reddit')    || h === 'reddit.com') return 'reddit';
   return 'website';
 }
 
@@ -132,8 +149,8 @@ export async function fetchAndStoreEvents(env) {
       streams.push({ url: e.live_stream_url, network: normalizeNetwork(null, e.live_stream_url) });
     }
     // YouTube/Twitch vooraan — dat zijn de links die bezoekers zoeken.
-    const order = { youtube: 0, twitch: 1, steam: 2, website: 3 };
-    streams.sort((a, b) => order[a.network] - order[b.network]);
+    const order = { youtube: 0, twitch: 1, steam: 2, twitter: 3, discord: 4, facebook: 5, instagram: 6, tiktok: 7, reddit: 8, website: 9 };
+    streams.sort((a, b) => (order[a.network] ?? 99) - (order[b.network] ?? 99));
 
     // Games die IGDB aan dit event koppelt ("announced/featured at"). Voor
     // toekomstige events meestal nog leeg (IGDB tagt pas ná de show); voor
