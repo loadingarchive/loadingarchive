@@ -81,6 +81,23 @@ a { color: inherit; }
 .nav-right a:hover { color: #fff; }
 .nav-right a.nav-active { color: #fff; font-weight: 600; }
 
+/* Hamburger: alleen mobiel; de links klappen als kolom onder de nav-card uit */
+.nav-burger {
+  display: none; background: none; border: none;
+  color: var(--dim); cursor: pointer; padding: 6px; line-height: 0;
+}
+.nav-burger:hover, .nav-card.menu-open .nav-burger { color: #fff; }
+@media (max-width: 640px) {
+  .nav-burger { display: block; }
+  .nav-top { flex-wrap: wrap; }
+  .nav-card .nav-right { display: none; }
+  .nav-card.menu-open .nav-right {
+    display: flex; width: 100%; flex-direction: column; align-items: stretch;
+    gap: 2px; padding: 12px 0 4px; margin-top: 12px; border-top: 1px solid var(--border);
+  }
+  .nav-card.menu-open .nav-right a { font-size: 13px; padding: 10px 2px; }
+}
+
 /* ── SIDE NAV (homepage calendar rail) ───────────────────────── */
 .side-nav {
   position: absolute; left: -56px; top: 80px; bottom: 140px;

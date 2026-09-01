@@ -113,7 +113,7 @@ function renderPage(events) {
 <script type="application/ld+json">${renderJsonLd(events)}</script>
 <style>
 /* PAGE */
-.page-wrap{max-width:860px;width:100%;margin:0 auto;padding:100px 20px 60px;flex:1}
+.page-wrap{max-width:1060px;width:100%;margin:0 auto;padding:100px 20px 60px;flex:1}
 .page-header{margin-bottom:28px}
 .page-title{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:5px}
 .page-meta{font-size:11px;color:var(--dim)}
@@ -187,6 +187,9 @@ function renderPage(events) {
         </svg>
         <span>Loading Archive</span>
       </a>
+      <button class="nav-burger" aria-label="Menu" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.closest('.nav-card').classList.toggle('menu-open'))">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
       <div class="nav-right">
         <a href="/">Releases</a>
         <a href="/trending">Trending</a>
