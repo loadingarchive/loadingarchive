@@ -12,16 +12,19 @@
  */
 
 import { isWithinRetention } from '../events-window.js';
+import { isBlockedEvent } from './event-blocklist.js';
 
 const TOKEN_KV_KEY  = 'config:igdb-token';
 const EVENTS_KV_KEY = 'config:events';
 
-// Hoe lang vóór nu een event nog "recent" is voor de IGDB-query zelf: net
-// gestarte streams blijven zo als LIVE zichtbaar, en IGDB krijgt een kans om
-// deze events kort na afloop nog te taggen met aangekondigde games. Events
-// die hierbuiten vallen blijven wél op de site (zie merge hieronder) — ze
-// worden alleen niet meer actief ververst.
-const LOOKBACK_SECONDS = 12 * 3600;
+// Hoe lang na de start van een event we 'm nog actief blijven verversen via
+// de IGDB-query (incl. zijn games-lijst) — IGDB tagt aangekondigde games
+// meestal pas ná de show, soms met een paar dagen vertraging. 5 dagen geeft
+// curators de tijd om reveals te taggen voordat we stoppen met verversen.
+// Events die hierbuiten vallen blijven wél op de site staan (zie merge
+// hieronder, retentie is 30 dagen) — hun games-lijst bevriest dan op de
+// laatst bekende stand.
+const LOOKBACK_SECONDS = 5 * 24 * 3600;
 
 /**
  * Client-credentials token, gecachet in KV. Twitch-tokens leven ~60 dagen;
@@ -178,18 +181,20 @@ export async function fetchAndStoreEvents(env) {
       streams,
       games,
     };
-  }).filter(e => e.startTime);
+  }).filter(e => e.startTime && !isBlockedEvent(e));
 
   // Merge met de vorige KV-snapshot: IGDB's query zelf kijkt maar
   // LOOKBACK_SECONDS terug, maar afgelopen events moeten nog RETENTION_MS
   // (30 dagen) op de site bereikbaar blijven. Verse data wint altijd per id
   // (nieuwe/bijgewerkte games, gewijzigde tijden); oudere events die buiten
   // deze fetch vallen blijven staan met hun laatst bekende gegevens zolang
-  // ze binnen de retentieperiode zitten.
+  // ze binnen de retentieperiode zitten. isBlockedEvent() ook hier toepassen
+  // zodat een net geblokkeerd event ook meteen uit een bestaande snapshot
+  // verdwijnt, niet pas als het buiten de retentie valt.
   const prev = await env.GAMES_KV.get(EVENTS_KV_KEY, 'json');
   const byId = new Map();
   for (const ev of prev?.events || []) {
-    if (isWithinRetention(ev)) byId.set(ev.id, ev);
+    if (isWithinRetention(ev) && !isBlockedEvent(ev)) byId.set(ev.id, ev);
   }
   for (const ev of events) byId.set(ev.id, ev);
   const merged = [...byId.values()].sort((a, b) => a.startTime - b.startTime);
