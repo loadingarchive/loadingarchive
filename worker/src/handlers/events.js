@@ -1,4 +1,5 @@
 import { siteFooterHtml } from '../ui/footer.js';
+import { isEventLive, isEventPast, isWithinRetention } from '../events-window.js';
 
 function esc(str) {
   if (str == null) return '';
@@ -8,10 +9,6 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
-// Events zonder end_time krijgen dit als aangenomen duur — bepaalt hoelang
-// een event als LIVE getoond wordt en wanneer hij van de pagina valt.
-const ASSUMED_DURATION_MS = 4 * 3600 * 1000;
 
 const NETWORK_META = {
   youtube: { label: 'YouTube', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#FF0000" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>' },
@@ -30,9 +27,8 @@ function fmtUtc(unixSeconds) {
 }
 
 function renderCard(ev, now) {
-  const startMs = ev.startTime * 1000;
-  const endMs   = ev.endTime ? ev.endTime * 1000 : startMs + ASSUMED_DURATION_MS;
-  const isLive  = now >= startMs && now < endMs;
+  const isLive = isEventLive(ev, now);
+  const isPast = isEventPast(ev, now);
 
   const links = (ev.streams || []).map(s => {
     const meta = NETWORK_META[s.network] || NETWORK_META.website;
@@ -43,19 +39,22 @@ function renderCard(ev, now) {
     ? `<img class="ev-logo" src="${esc(ev.logo)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('ev-noimg');this.remove()">`
     : '';
 
-  return `<article class="ev-card${isLive ? ' ev-live' : ''}${ev.logo ? '' : ' ev-noimg'}">
+  const gameCount = (ev.games || []).length;
+
+  return `<article class="ev-card${isLive ? ' ev-live' : ''}${isPast ? ' ev-past' : ''}${ev.logo ? '' : ' ev-noimg'}">
+    <a class="ev-card-overlay" href="/events/${esc(ev.slug)}" aria-label="${esc(ev.name)} — event details"></a>
     <div class="ev-media">${media}<span class="ev-media-fallback" aria-hidden="true">${esc((ev.name || '?').slice(0, 1))}</span></div>
     <div class="ev-body">
       <div class="ev-head">
         <h2 class="ev-name">${esc(ev.name)}</h2>
-        ${isLive ? '<span class="ev-badge-live">● LIVE</span>' : ''}
+        ${isLive ? '<span class="ev-badge-live">● LIVE</span>' : isPast ? '<span class="ev-badge-past">Ended</span>' : ''}
       </div>
       <div class="ev-time" data-start="${ev.startTime}" data-end="${ev.endTime || ''}">
         <span class="ev-time-abs">${fmtUtc(ev.startTime)}</span>
         <span class="ev-time-rel"></span>
       </div>
       ${ev.description ? `<p class="ev-desc">${esc(ev.description)}</p>` : ''}
-      ${links ? `<div class="ev-links">${links}</div>` : ''}
+      <div class="ev-links">${links}${gameCount ? `<span class="ev-link ev-link-games">${gameCount} game${gameCount === 1 ? '' : 's'} announced</span>` : ''}</div>
     </div>
   </article>`;
 }
@@ -75,16 +74,18 @@ function renderJsonLd(events) {
       ...(ev.logo ? { image: ev.logo } : {}),
       location: {
         '@type': 'VirtualLocation',
-        url: ev.streams?.[0]?.url || 'https://www.loadingarchive.com/events',
+        url: ev.streams?.[0]?.url || `https://www.loadingarchive.com/events/${ev.slug}`,
       },
+      url: `https://www.loadingarchive.com/events/${ev.slug}`,
     },
   }));
   return JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: items });
 }
 
-function renderPage(events) {
+function renderPage(upcoming, past) {
   const now = Date.now();
-  const cards = events.map(ev => renderCard(ev, now)).join('');
+  const upcomingCards = upcoming.map(ev => renderCard(ev, now)).join('');
+  const pastCards     = past.map(ev => renderCard(ev, now)).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -110,17 +111,19 @@ function renderPage(events) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
-<script type="application/ld+json">${renderJsonLd(events)}</script>
+<script type="application/ld+json">${renderJsonLd(upcoming)}</script>
 <style>
 /* PAGE */
 .page-wrap{max-width:1060px;width:100%;margin:0 auto;padding:100px 20px 60px;flex:1}
 .page-header{margin-bottom:28px}
 .page-title{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:5px}
 .page-meta{font-size:11px;color:var(--dim)}
+.page-meta + .page-meta{margin-top:4px}
 
 /* CARDS */
 .ev-list{display:flex;flex-direction:column;gap:12px}
 .ev-card{
+  position:relative;
   display:flex;gap:16px;
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:14px;overflow:hidden;
@@ -128,6 +131,20 @@ function renderPage(events) {
 }
 .ev-card:hover{border-color:rgba(255,255,255,0.08)}
 .ev-card.ev-live{border-color:rgba(255,70,85,0.35)}
+.ev-card.ev-past{opacity:0.72}
+.ev-card.ev-past:hover{opacity:1}
+.ev-badge-past{
+  font-size:10px;font-weight:700;letter-spacing:0.04em;color:var(--dim);
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);
+  border-radius:99px;padding:2px 8px;
+}
+/* Hele kaart klikbaar naar de detailpagina, behalve de stream-knoppen
+   (die krijgen een hogere z-index zodat ze boven de overlay blijven). */
+.ev-card-overlay{position:absolute;inset:0;z-index:1}
+.ev-card-overlay:focus-visible{outline:2px solid #1A9FFF;outline-offset:-2px}
+.ev-media{z-index:2}
+.ev-links{position:relative;z-index:2;pointer-events:none}
+.ev-links a{pointer-events:auto}
 
 /* MEDIA */
 .ev-media{position:relative;width:150px;height:84px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.04);flex-shrink:0}
@@ -162,9 +179,14 @@ function renderPage(events) {
   border-radius:8px;padding:5px 10px;transition:border-color 0.15s,color 0.15s;
 }
 .ev-link:hover{color:#fff;border-color:rgba(255,255,255,0.18)}
+.ev-link-games{color:var(--dim);pointer-events:none;background:transparent;border-style:dashed}
 
 /* EMPTY */
 .ev-empty{text-align:center;color:var(--dim);font-size:13px;line-height:1.7;padding:60px 20px}
+
+/* SECTIONS */
+.ev-section-title{font-size:13px;font-weight:700;color:var(--dim);letter-spacing:0.04em;text-transform:uppercase;margin:36px 0 14px}
+.ev-section-title:first-child{margin-top:0}
 
 /* RESPONSIVE */
 @media(max-width:560px){
@@ -205,11 +227,16 @@ function renderPage(events) {
   <div class="page-header">
     <h1 class="page-title">Upcoming Gaming Events</h1>
     <div class="page-meta">Showcases, Directs and award shows — times shown in <span id="tzName">UTC</span> · Source: IGDB</div>
+    <div class="page-meta">Ended events stay listed for 30 days so you can still check what got announced.</div>
   </div>
 
-  ${cards
-    ? `<div class="ev-list">${cards}</div>`
+  ${upcomingCards
+    ? `<div class="ev-list">${upcomingCards}</div>`
     : `<div class="ev-empty">No upcoming events announced right now.<br>New showcases usually get announced a few days ahead — check back soon.</div>`}
+
+  ${pastCards ? `
+  <h2 class="ev-section-title">Recently ended</h2>
+  <div class="ev-list">${pastCards}</div>` : ''}
 </main>
 
 <!-- FOOTER -->
@@ -263,14 +290,15 @@ export async function handleEventsPage(env) {
   const data = await env.GAMES_KV.get('config:events', 'json');
   const now  = Date.now();
 
-  // Afgelopen events (einde — of aangenomen einde — in het verleden) niet
-  // meer tonen; de KV bewaart ze even zodat net-gestarte streams LIVE tonen.
-  const events = (data?.events || []).filter(ev => {
-    const endMs = ev.endTime ? ev.endTime * 1000 : ev.startTime * 1000 + ASSUMED_DURATION_MS;
-    return endMs > now;
-  });
+  // Vangnet: de pipeline (igdb.js) laat events al vallen na RETENTION_MS,
+  // maar filter hier defensief nogmaals voor het geval de KV nog een oud
+  // record bevat (bv. vlak na het instellen van deze grens).
+  const all      = (data?.events || []).filter(ev => isWithinRetention(ev, now));
+  const upcoming = all.filter(ev => !isEventPast(ev, now));
+  const past     = all.filter(ev => isEventPast(ev, now))
+    .sort((a, b) => b.startTime - a.startTime); // meest recent afgelopen eerst
 
-  const html = renderPage(events);
+  const html = renderPage(upcoming, past);
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html;charset=UTF-8',

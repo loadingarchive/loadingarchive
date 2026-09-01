@@ -2,6 +2,7 @@ import { runMonthPipeline, runTbaPipeline } from '../pipeline/merge.js';
 import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
 import { fetchAndStoreEvents } from '../pipeline/igdb.js';
+import { isWithinRetention, isEventPast } from '../events-window.js';
 import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
 import { reconcileTbaDates } from '../pipeline/tba-reconcile.js';
@@ -268,6 +269,17 @@ async function generateSitemap(env) {
   monthUrls.push(`  <url><loc>${base}/releases/tba</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
   monthUrls.push(`  <url><loc>${base}/trending</loc><lastmod>${today}</lastmod><changefreq>hourly</changefreq><priority>0.8</priority></url>`);
   monthUrls.push(`  <url><loc>${base}/events</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`);
+
+  // Individuele event-pagina's — inclusief afgelopen events binnen de
+  // retentieperiode (30 dagen, zie events-window.js) zodat hun pagina's
+  // vindbaar blijven zolang ze op de site staan. Lagere prioriteit voor
+  // afgelopen events: minder relevant voor nieuwe bezoekers dan aankomende.
+  const eventsData = await env.GAMES_KV.get('config:events', 'json');
+  const now = Date.now();
+  for (const ev of (eventsData?.events || []).filter(ev => isWithinRetention(ev, now))) {
+    const priority = isEventPast(ev, now) ? 0.4 : 0.6;
+    monthUrls.push(`  <url><loc>${base}/events/${ev.slug}</loc><changefreq>hourly</changefreq><priority>${priority}</priority></url>`);
+  }
   // Statische trust-pagina's (AdSense/E-E-A-T): about, privacy, contact
   monthUrls.push(`  <url><loc>${base}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`);
   monthUrls.push(`  <url><loc>${base}/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>`);

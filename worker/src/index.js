@@ -4,6 +4,7 @@ import { handleGamePage }     from './handlers/game.js';
 import { handleTrendingPage } from './handlers/trending.js';
 import { handleMonthPage }    from './handlers/month.js';
 import { handleEventsPage }   from './handlers/events.js';
+import { handleEventPage }    from './handlers/event.js';
 import { runDailyCron, runMonthsCron, runMaintenanceCron, runWeeklyWikipediaCron, runHourlyCron, seedMonths, makeMonthEntry } from './cron/build-cache.js';
 import { fetchAndStoreEvents } from './pipeline/igdb.js';
 import { MONTH_RE, windowStartKey } from './months-window.js';
@@ -106,6 +107,11 @@ export default {
     if (pathname === '/api/trailer') return withSecurityHeaders(await handleTrailer(request, env));
     if (pathname === '/trending')    return withSecurityHeaders(await handleTrendingPage(env));
     if (pathname === '/events')      return withSecurityHeaders(await handleEventsPage(env));
+
+    if (pathname.startsWith('/events/')) {
+      const slug = pathname.slice(8).replace(/\/$/, '');
+      if (slug) return withSecurityHeaders(await handleEventPage(slug, env));
+    }
 
     if (pathname.startsWith('/game/')) {
       const slug = pathname.slice(6).replace(/\/$/, '');

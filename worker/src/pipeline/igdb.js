@@ -11,11 +11,16 @@
  * om naar de lokale tijdzone van de bezoeker.
  */
 
+import { isWithinRetention } from '../events-window.js';
+
 const TOKEN_KV_KEY  = 'config:igdb-token';
 const EVENTS_KV_KEY = 'config:events';
 
-// Hoe lang vóór nu een event nog "recent" is en meegaat in de KV: net
-// gestarte streams blijven zo als LIVE zichtbaar op de pagina.
+// Hoe lang vóór nu een event nog "recent" is voor de IGDB-query zelf: net
+// gestarte streams blijven zo als LIVE zichtbaar, en IGDB krijgt een kans om
+// deze events kort na afloop nog te taggen met aangekondigde games. Events
+// die hierbuiten vallen blijven wél op de site (zie merge hieronder) — ze
+// worden alleen niet meer actief ververst.
 const LOOKBACK_SECONDS = 12 * 3600;
 
 /**
@@ -83,10 +88,23 @@ function logoUrl(imageId) {
   return imageId ? `https://images.igdb.com/igdb/image/upload/t_screenshot_med/${imageId}.jpg` : null;
 }
 
+function coverUrl(imageId) {
+  // t_cover_big = 264×374 — portrait boxart formaat voor de "announced
+  // games"-grid op de event-pagina.
+  return imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg` : null;
+}
+
+// Games hangen aan een event los van onze eigen RAWG/Steam-database (andere
+// bron, andere id's) — geen poging tot matchen met /game/:slug, dat geeft
+// valse positieven op titel-only. Deze lijst linkt uit naar IGDB's eigen
+// gamepagina; per event maximaal dit aantal (grote shows als E3-retrospectief
+// kunnen tientallen games hebben, meer is niet zinvol op één pagina).
+const MAX_GAMES_PER_EVENT = 60;
+
 /**
  * Haalt aankomende (en net gestarte) events op en schrijft ze naar KV.
- * Eén IGDB-call: geneste velden (event_logo.image_id, event_networks.*)
- * worden door IGDB's expander in dezelfde response meegeleverd.
+ * Eén IGDB-call: geneste velden (event_logo.image_id, event_networks.*,
+ * games.*) worden door IGDB's expander in dezelfde response meegeleverd.
  */
 export async function fetchAndStoreEvents(env) {
   const token = await getIgdbToken(env);
@@ -94,7 +112,8 @@ export async function fetchAndStoreEvents(env) {
 
   const rows = await igdbQuery(env, token, 'events',
     `fields name,slug,description,start_time,end_time,time_zone,live_stream_url,
-            event_logo.image_id,event_networks.url,event_networks.network_type.name;
+            event_logo.image_id,event_networks.url,event_networks.network_type.name,
+            games.name,games.slug,games.url,games.cover.image_id,games.first_release_date;
      where start_time != null & start_time > ${since};
      sort start_time asc;
      limit 100;`);
@@ -116,6 +135,21 @@ export async function fetchAndStoreEvents(env) {
     const order = { youtube: 0, twitch: 1, steam: 2, website: 3 };
     streams.sort((a, b) => order[a.network] - order[b.network]);
 
+    // Games die IGDB aan dit event koppelt ("announced/featured at"). Voor
+    // toekomstige events meestal nog leeg (IGDB tagt pas ná de show); voor
+    // net afgelopen events (binnen LOOKBACK_SECONDS) kan dit al gevuld zijn.
+    const games = (e.games || [])
+      .filter(g => g.name)
+      .slice(0, MAX_GAMES_PER_EVENT)
+      .map(g => ({
+        name:        g.name,
+        url:         g.url || null,          // IGDB's eigen gamepagina
+        cover:       coverUrl(g.cover?.image_id),
+        releaseDate: g.first_release_date
+          ? new Date(g.first_release_date * 1000).toISOString().slice(0, 10)
+          : null,
+      }));
+
     return {
       id:          e.id,
       name:        e.name || 'Untitled event',
@@ -125,10 +159,25 @@ export async function fetchAndStoreEvents(env) {
       endTime:     e.end_time || null,
       logo:        logoUrl(e.event_logo?.image_id),
       streams,
+      games,
     };
   }).filter(e => e.startTime);
 
-  const payload = { generatedAt: new Date().toISOString(), events };
+  // Merge met de vorige KV-snapshot: IGDB's query zelf kijkt maar
+  // LOOKBACK_SECONDS terug, maar afgelopen events moeten nog RETENTION_MS
+  // (30 dagen) op de site bereikbaar blijven. Verse data wint altijd per id
+  // (nieuwe/bijgewerkte games, gewijzigde tijden); oudere events die buiten
+  // deze fetch vallen blijven staan met hun laatst bekende gegevens zolang
+  // ze binnen de retentieperiode zitten.
+  const prev = await env.GAMES_KV.get(EVENTS_KV_KEY, 'json');
+  const byId = new Map();
+  for (const ev of prev?.events || []) {
+    if (isWithinRetention(ev)) byId.set(ev.id, ev);
+  }
+  for (const ev of events) byId.set(ev.id, ev);
+  const merged = [...byId.values()].sort((a, b) => a.startTime - b.startTime);
+
+  const payload = { generatedAt: new Date().toISOString(), events: merged };
   await env.GAMES_KV.put(EVENTS_KV_KEY, JSON.stringify(payload));
-  return { total: events.length };
+  return { total: merged.length, fresh: events.length };
 }
