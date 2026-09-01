@@ -4,6 +4,7 @@ import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
 import { fetchAndStoreEvents } from '../pipeline/igdb.js';
 import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
+import { reconcileTbaDates } from '../pipeline/tba-reconcile.js';
 import {
   queryActiveMonthGames,
   queryActiveTbaGames,
@@ -199,6 +200,14 @@ export async function runMaintenanceCron(env) {
     await updateDailyPrices(env);
   } catch (e) {
     console.error('  Prijsupdate mislukt —', e.message);
+  }
+
+  // TBA-games die inmiddels een echte releasedatum hebben (of al uit zijn)
+  // de datum geven zodat ze uit de TBA-lijst naar hun maand verhuizen.
+  try {
+    await reconcileTbaDates(env);
+  } catch (e) {
+    console.error('  TBA-datumcheck mislukt —', e.message);
   }
 }
 

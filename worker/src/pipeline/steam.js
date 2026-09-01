@@ -23,6 +23,28 @@ export async function fetchSteamAppDetails(appid) {
 }
 
 /**
+ * Lichte release-datum-check (filters=release_date houdt de response klein).
+ * Retourneert { comingSoon, date } of null bij fetch-fouten — de aanroeper
+ * mag een null niet als "geen datum" interpreteren.
+ */
+export async function fetchSteamReleaseDate(appid) {
+  try {
+    const r = await fetch(
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=release_date`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    const rd = data?.[appid]?.data?.release_date;
+    if (!rd) return null;
+    return { comingSoon: rd.coming_soon === true, date: rd.date || '' };
+  } catch (e) {
+    console.error('Steam release_date failed', appid, e.message);
+    return null;
+  }
+}
+
+/**
  * Destilleert de detailvelden uit een reeds opgehaald Steam appdetails-object.
  * Losgetrokken uit fetchSteamGameDetails zodat de pipeline een al gefetcht
  * app-object kan hergebruiken i.p.v. hetzelfde endpoint nogmaals aan te roepen.

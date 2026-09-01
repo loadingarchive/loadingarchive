@@ -133,6 +133,14 @@ async function enrichWithSteam(entry) {
 
   if (app) {
     const steamDate = parseSteamDate(app.release_date?.date);
+    // Steam zegt expliciet "al uitgebracht" met een datum vóór 2025 → dit is
+    // geen aankomende release maar een oude game (of de PC-versie van een
+    // console-port). Helemaal niet opnemen: als dateloos record zou hij
+    // eeuwig als "TBA" op de site blijven staan.
+    if (steamDate && steamDate < "2025-01-01" && app.release_date?.coming_soon === false) {
+      console.log(`  Wikipedia: "${entry.title}" al uitgebracht op Steam (${steamDate}) — overgeslagen`);
+      return null;
+    }
     const plausible = !steamDate || steamDate >= "2025-01-01";
     if (plausible) {
       platforms   = [...new Set([...platforms, "PC"])];
