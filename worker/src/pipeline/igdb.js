@@ -86,7 +86,14 @@ function hostnameOf(url) {
 // set zodat de frontend er losse iconen/labels aan kan hangen. Zonder dit
 // belanden bv. een X-profiel én een eigen site allebei onder het generieke
 // "Website"-label — verwarrend als een event meerdere van dat soort links heeft.
-function normalizeNetwork(name, url) {
+// YouTube/Twitch vooraan — dat zijn de links die bezoekers zoeken. Gedeeld
+// export zodat een herclassificatie-script dezelfde volgorde aanhoudt.
+export const STREAM_ORDER = { youtube: 0, twitch: 1, steam: 2, twitter: 3, discord: 4, facebook: 5, instagram: 6, tiktok: 7, reddit: 8, website: 9 };
+
+// Geëxporteerd zodat een eenmalig herclassificatie-script (bv. na het
+// toevoegen van een nieuw netwerktype) bestaande KV-data opnieuw kan labelen
+// zonder een volledige IGDB-herfetch nodig te hebben.
+export function normalizeNetwork(name, url) {
   const n = (name || '').toLowerCase();
   const u = (url  || '').toLowerCase();
   const h = hostnameOf(url);
@@ -151,9 +158,7 @@ export async function fetchAndStoreEvents(env) {
     if (e.live_stream_url && !seen.has(e.live_stream_url)) {
       streams.push({ url: e.live_stream_url, network: normalizeNetwork(null, e.live_stream_url) });
     }
-    // YouTube/Twitch vooraan — dat zijn de links die bezoekers zoeken.
-    const order = { youtube: 0, twitch: 1, steam: 2, twitter: 3, discord: 4, facebook: 5, instagram: 6, tiktok: 7, reddit: 8, website: 9 };
-    streams.sort((a, b) => (order[a.network] ?? 99) - (order[b.network] ?? 99));
+    streams.sort((a, b) => (STREAM_ORDER[a.network] ?? 99) - (STREAM_ORDER[b.network] ?? 99));
 
     // Games die IGDB aan dit event koppelt ("announced/featured at"). Voor
     // toekomstige events meestal nog leeg (IGDB tagt pas ná de show); voor
