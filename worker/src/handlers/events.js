@@ -226,11 +226,14 @@ initDominoRow('footerDominoRow');
 (function () {
   var tzEl = document.getElementById('tzName');
   try {
-    var abs = new Intl.DateTimeFormat(undefined, {
+    // Vaste 'en-US'-locale: de site is Engels, dus ook de datums — alleen de
+    // tíjdzone volgt de bezoeker (geen locale meegeven zou bv. Nederlandse
+    // maandnamen tonen).
+    var abs = new Intl.DateTimeFormat('en-US', {
       weekday: 'short', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short'
     });
-    var rel = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+    var rel = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
     if (tzEl) tzEl.textContent = 'your local time (' + (Intl.DateTimeFormat().resolvedOptions().timeZone || 'local') + ')';
 
     document.querySelectorAll('.ev-time').forEach(function (el) {
