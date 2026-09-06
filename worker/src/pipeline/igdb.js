@@ -121,6 +121,28 @@ function coverUrl(imageId) {
   return imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg` : null;
 }
 
+// IGDB's website_type-tabel (vaste enum-waarden, geen aparte lookup nodig):
+// 1=official 2=wikia 3=wikipedia 4=facebook 5=twitter 6=twitch 8=instagram
+// 9=youtube 10=iphone 11=ipad 12=android 13=steam 14=reddit 15=itch
+// 16=epicgames 17=gog 18=discord. Voorkeur: de eigen site, anders een
+// winkelpagina — social links zijn al op event-niveau te zien.
+const WEBSITE_PRIORITY = [1, 13, 17, 16, 15];
+function pickWebsite(websites) {
+  if (!websites?.length) return null;
+  for (const cat of WEBSITE_PRIORITY) {
+    const hit = websites.find(w => w.category === cat && w.url);
+    if (hit) return hit.url;
+  }
+  return websites.find(w => w.url)?.url || null;
+}
+
+// involved_companies is een los koppel-record per bedrijf met eigen
+// developer/publisher-vlaggen (een studio kan beide zijn, of alleen een van
+// de twee) — pak de eerste match per rol.
+function pickCompany(companies, role) {
+  return companies?.find(c => c[role] && c.company?.name)?.company.name || null;
+}
+
 // Games hangen aan een event los van onze eigen RAWG/Steam-database (andere
 // bron, andere id's) — geen poging tot matchen met /game/:slug, dat geeft
 // valse positieven op titel-only. Deze lijst linkt uit naar IGDB's eigen
@@ -137,10 +159,26 @@ export async function fetchAndStoreEvents(env) {
   const token = await getIgdbToken(env);
   const since = Math.floor(Date.now() / 1000) - LOOKBACK_SECONDS;
 
+  // Vooraf ophalen (i.p.v. pas ná de merge hieronder) zodat we per game een
+  // eerder vastgelegde trailer kunnen terugzetten wanneer IGDB er zelf geen
+  // heeft — dekt zowel handmatige curatie (scripts/set-event-trailers.mjs)
+  // als een auto-trailer die IGDB in een latere fetch weer kwijt is.
+  const prev = await env.GAMES_KV.get(EVENTS_KV_KEY, 'json');
+  const prevTrailerByGame = new Map();
+  for (const ev of prev?.events || []) {
+    for (const g of ev.games || []) {
+      if (g.trailer) prevTrailerByGame.set(`${ev.id}|${g.name}`, g.trailer);
+    }
+  }
+
   const rows = await igdbQuery(env, token, 'events',
     `fields name,slug,description,start_time,end_time,time_zone,live_stream_url,
             event_logo.image_id,event_networks.url,event_networks.network_type.name,
-            games.name,games.slug,games.url,games.cover.image_id,games.first_release_date;
+            games.name,games.slug,games.url,games.cover.image_id,games.first_release_date,
+            games.videos.video_id,games.summary,games.genres.name,games.platforms.abbreviation,
+            games.platforms.name,games.websites.url,games.websites.category,
+            games.involved_companies.developer,games.involved_companies.publisher,
+            games.involved_companies.company.name;
      where start_time != null & start_time > ${since};
      sort start_time asc;
      limit 100;`);
@@ -168,11 +206,23 @@ export async function fetchAndStoreEvents(env) {
       .slice(0, MAX_GAMES_PER_EVENT)
       .map(g => ({
         name:        g.name,
-        url:         g.url || null,          // IGDB's eigen gamepagina
+        // Kale gamekaarten linken nergens meer naartoe — g.url (IGDB's eigen
+        // gamepagina) blijft alleen bewaard voor eventuele toekomstige
+        // toepassing, wordt niet meer als klikbare link gebruikt.
+        url:         g.url || null,
+        // Eerste IGDB-video als trailer (video_id = kaal YouTube-ID); mist
+        // IGDB die, dan valt terug op wat er al stond (auto of handmatig).
+        trailer:     g.videos?.[0]?.video_id || prevTrailerByGame.get(`${e.id}|${g.name}`) || null,
         cover:       coverUrl(g.cover?.image_id),
         releaseDate: g.first_release_date
           ? new Date(g.first_release_date * 1000).toISOString().slice(0, 10)
           : null,
+        summary:     g.summary || null,
+        genres:      (g.genres || []).map(x => x.name).filter(Boolean),
+        platforms:   (g.platforms || []).map(x => x.abbreviation || x.name).filter(Boolean),
+        developer:   pickCompany(g.involved_companies, 'developer'),
+        publisher:   pickCompany(g.involved_companies, 'publisher'),
+        website:     pickWebsite(g.websites),
       }));
 
     return {
@@ -188,15 +238,15 @@ export async function fetchAndStoreEvents(env) {
     };
   }).filter(e => e.startTime && !isBlockedEvent(e));
 
-  // Merge met de vorige KV-snapshot: IGDB's query zelf kijkt maar
-  // LOOKBACK_SECONDS terug, maar afgelopen events moeten nog RETENTION_MS
-  // (30 dagen) op de site bereikbaar blijven. Verse data wint altijd per id
-  // (nieuwe/bijgewerkte games, gewijzigde tijden); oudere events die buiten
-  // deze fetch vallen blijven staan met hun laatst bekende gegevens zolang
-  // ze binnen de retentieperiode zitten. isBlockedEvent() ook hier toepassen
-  // zodat een net geblokkeerd event ook meteen uit een bestaande snapshot
-  // verdwijnt, niet pas als het buiten de retentie valt.
-  const prev = await env.GAMES_KV.get(EVENTS_KV_KEY, 'json');
+  // Merge met de vorige KV-snapshot (hierboven al opgehaald voor de
+  // trailer-lookup): IGDB's query zelf kijkt maar LOOKBACK_SECONDS terug,
+  // maar afgelopen events moeten nog RETENTION_MS (30 dagen) op de site
+  // bereikbaar blijven. Verse data wint altijd per id (nieuwe/bijgewerkte
+  // games, gewijzigde tijden); oudere events die buiten deze fetch vallen
+  // blijven staan met hun laatst bekende gegevens zolang ze binnen de
+  // retentieperiode zitten. isBlockedEvent() ook hier toepassen zodat een
+  // net geblokkeerd event ook meteen uit een bestaande snapshot verdwijnt,
+  // niet pas als het buiten de retentie valt.
   const byId = new Map();
   for (const ev of prev?.events || []) {
     if (isWithinRetention(ev) && !isBlockedEvent(ev)) byId.set(ev.id, ev);

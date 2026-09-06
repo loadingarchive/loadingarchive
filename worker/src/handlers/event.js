@@ -56,19 +56,41 @@ function notFound() {
   );
 }
 
+// g.trailer is ofwel een kaal YouTube-ID (auto, via IGDB's games.videos) of
+// een volledige YouTube-URL (handmatige curatie, scripts/set-event-trailers.mjs)
+// — deze haalt in beide gevallen het 11-tekens video-ID eruit voor de player.
+function youtubeId(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const m = s.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
 function renderGameCard(g) {
   const date = fmtDate(g.releaseDate);
   const media = g.cover
     ? `<img class="eg-cover" src="${esc(g.cover)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('eg-noimg');this.remove()">`
     : '';
+  const ytId = youtubeId(g.trailer);
+  const playBadge = ytId ? `<span class="eg-play" aria-hidden="true">▶</span>` : '';
   const inner = `
-    <div class="eg-media${g.cover ? '' : ' eg-noimg'}">${media}<span class="eg-media-fallback" aria-hidden="true">${esc((g.name || '?').slice(0, 1))}</span></div>
+    <div class="eg-media${g.cover ? '' : ' eg-noimg'}">${media}${playBadge}<span class="eg-media-fallback" aria-hidden="true">${esc((g.name || '?').slice(0, 1))}</span></div>
     <div class="eg-name">${esc(g.name)}</div>
     ${date ? `<div class="eg-date">${date}</div>` : ''}`;
 
-  return g.url
-    ? `<a class="eg-card" href="${esc(g.url)}" target="_blank" rel="noopener">${inner}</a>`
-    : `<div class="eg-card">${inner}</div>`;
+  // Elke kaart opent de detail-lightbox i.p.v. te linken naar een andere
+  // site (was voorheen IGDB's eigen gamepagina, of een YouTube-tab) — ook
+  // zonder trailer is er meestal wel genre/platform/dev-uitgever/summary te
+  // tonen. De payload gaat als JSON in een data-attribuut mee (esc() maakt
+  // 'm attribuut-veilig, de lightbox-JS doet JSON.parse op dataset.game).
+  const payload = JSON.stringify({
+    name: g.name, yt: ytId, summary: g.summary || null,
+    genres: g.genres || [], platforms: g.platforms || [],
+    developer: g.developer || null, publisher: g.publisher || null,
+    website: g.website || null,
+  });
+  return `<button type="button" class="eg-card" data-game="${esc(payload)}">${inner}</button>`;
 }
 
 function renderJsonLd(ev) {
@@ -190,18 +212,60 @@ ${ogImg ? `<meta name="twitter:image" content="${esc(ogImg)}">` : ''}
 .section-title{font-size:15px;font-weight:700;margin-bottom:16px;letter-spacing:-0.01em}
 .eg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
 .eg-card{
-  display:block;text-decoration:none;color:inherit;
+  display:block;width:100%;text-align:left;font:inherit;color:inherit;
   background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:10px;transition:border-color 0.15s;
+  padding:10px;cursor:pointer;transition:border-color 0.15s;
+  -webkit-appearance:none;appearance:none;
 }
-a.eg-card:hover{border-color:rgba(255,255,255,0.18)}
+.eg-card:hover{border-color:rgba(255,255,255,0.18)}
 .eg-media{position:relative;width:100%;aspect-ratio:3/4;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);margin-bottom:8px}
 .eg-cover{width:100%;height:100%;object-fit:cover;display:block}
 .eg-media-fallback{display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:rgba(255,255,255,0.12)}
 .eg-media.eg-noimg .eg-media-fallback{display:flex}
+.eg-play{
+  position:absolute;bottom:6px;right:6px;
+  display:flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,0.65);color:#fff;font-size:9px;
+  padding-left:1px; /* optisch centreren van ▶ */
+}
+.eg-card:hover .eg-play{background:#1A9FFF}
 .eg-name{font-size:12px;font-weight:600;line-height:1.35;margin-bottom:4px}
 .eg-date{font-size:10px;color:var(--dim)}
 .eg-empty{text-align:center;color:var(--dim);font-size:13px;line-height:1.7;padding:40px 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+
+/* GAME DETAIL LIGHTBOX — houdt de klik binnen de site (geen navigatie naar
+   YouTube/IGDB); trailer + summary/genre/platform/dev-uitgever/website. */
+.eg-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.eg-modal[hidden]{display:none}
+.eg-modal-backdrop{position:absolute;inset:0;background:rgba(6,7,10,0.85)}
+.eg-modal-box{
+  position:relative;z-index:1;width:100%;max-width:640px;max-height:86vh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.eg-modal-frame{position:relative;width:100%;aspect-ratio:16/9;background:#000}
+.eg-modal-frame[hidden]{display:none}
+.eg-modal-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.eg-modal-close{
+  position:absolute;top:10px;right:10px;z-index:2;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.15);border-radius:8px;
+  color:#fff;font-size:16px;cursor:pointer;
+}
+.eg-modal-close:hover{background:rgba(0,0,0,0.75)}
+.eg-modal-body{padding:20px 44px 20px 20px}
+.eg-modal-title{font-size:17px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px}
+.eg-modal-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.eg-modal-tags[hidden]{display:none}
+.eg-tag{font-size:10px;font-weight:600;color:#c8d0da;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:99px;padding:3px 9px}
+.eg-modal-credits{font-size:12px;color:var(--dim);margin-bottom:10px}
+.eg-modal-credits[hidden]{display:none}
+.eg-modal-summary{font-size:13px;line-height:1.65;color:#c8d0da;margin-bottom:14px}
+.eg-modal-summary[hidden]{display:none}
+.eg-modal-site{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#1A9FFF;text-decoration:none}
+.eg-modal-site:hover{color:#5BBFFF}
+.eg-modal-site[hidden]{display:none}
 
 /* RESPONSIVE */
 @media(max-width:560px){
@@ -265,6 +329,22 @@ a.eg-card:hover{border-color:rgba(255,255,255,0.18)}
   ${gamesHtml}
 </main>
 
+<!-- GAME DETAIL LIGHTBOX -->
+<div class="eg-modal" id="egModal" hidden>
+  <div class="eg-modal-backdrop" data-eg-close></div>
+  <div class="eg-modal-box">
+    <button type="button" class="eg-modal-close" data-eg-close aria-label="Close">✕</button>
+    <div class="eg-modal-frame" id="egModalFrame" hidden></div>
+    <div class="eg-modal-body">
+      <h3 class="eg-modal-title" id="egModalTitle"></h3>
+      <div class="eg-modal-tags" id="egModalTags" hidden></div>
+      <p class="eg-modal-credits" id="egModalCredits" hidden></p>
+      <p class="eg-modal-summary" id="egModalSummary" hidden></p>
+      <a class="eg-modal-site" id="egModalSite" href="#" target="_blank" rel="noopener" hidden>Visit website ↗</a>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 ${siteFooterHtml('footerDominoRow')}
 
@@ -297,6 +377,80 @@ initDominoRow('footerDominoRow');
       }
     });
   } catch (e) { /* oude browser: UTC-fallback blijft staan */ }
+})();
+
+// Game-detail lightbox: kaarten navigeren nergens meer naartoe, alles (trailer
+// + summary/genre/platform/dev-uitgever/website) toont hier inline. Iframe
+// wordt pas bij openen aangemaakt en bij sluiten weer verwijderd (i.p.v. src
+// leegmaken) zodat de video ook echt stopt met afspelen.
+(function () {
+  var modal    = document.getElementById('egModal');
+  var frame    = document.getElementById('egModalFrame');
+  var title    = document.getElementById('egModalTitle');
+  var tagsEl   = document.getElementById('egModalTags');
+  var credits  = document.getElementById('egModalCredits');
+  var summary  = document.getElementById('egModalSummary');
+  var siteLink = document.getElementById('egModalSite');
+  if (!modal || !frame) return;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function openGame(g) {
+    if (g.yt) {
+      frame.hidden = false;
+      frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(g.yt) +
+        '?autoplay=1&rel=0" title="' + escHtml(g.name || 'Trailer') +
+        '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+    } else {
+      frame.hidden = true;
+      frame.innerHTML = '';
+    }
+
+    title.textContent = g.name || '';
+
+    var tags = [].concat(g.platforms || [], g.genres || []);
+    tagsEl.innerHTML = tags.map(function (t) { return '<span class="eg-tag">' + escHtml(t) + '</span>'; }).join('');
+    tagsEl.hidden = tags.length === 0;
+
+    var creditParts = [];
+    if (g.developer) creditParts.push('Developer: ' + g.developer);
+    if (g.publisher && g.publisher !== g.developer) creditParts.push('Publisher: ' + g.publisher);
+    credits.textContent = creditParts.join(' · ');
+    credits.hidden = creditParts.length === 0;
+
+    summary.textContent = g.summary || '';
+    summary.hidden = !g.summary;
+
+    if (g.website) {
+      siteLink.href = g.website;
+      siteLink.hidden = false;
+    } else {
+      siteLink.hidden = true;
+    }
+
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    frame.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('.eg-card[data-game]').forEach(function (card) {
+    card.addEventListener('click', function () {
+      try { openGame(JSON.parse(card.dataset.game)); } catch (e) { /* corrupte payload, negeer klik */ }
+    });
+  });
+  modal.querySelectorAll('[data-eg-close]').forEach(function (el) {
+    el.addEventListener('click', closeModal);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
 })();
 </script>
 </body>
