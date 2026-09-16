@@ -3,7 +3,7 @@ import { scrapeWikipedia } from '../pipeline/wikipedia.js';
 import { fetchAndStoreTrending } from '../pipeline/steamspy.js';
 import { fetchAndStoreEvents } from '../pipeline/igdb.js';
 import { isWithinRetention, isEventPast } from '../events-window.js';
-import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
+import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED, ADULT_CONTENT_BLOCKED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
 import { fetchRawgStoreSteamAppId } from '../pipeline/rawg.js';
 import { reconcileTbaDates } from '../pipeline/tba-reconcile.js';
@@ -18,6 +18,7 @@ import {
   purgeGamesBefore,
   loadSlugOwners,
   putGamesListKv,
+  hideGames,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
 import { rollingMonths, toMonthKey, windowStartDate, windowEndDate, makeMonthEntry } from '../months-window.js';
@@ -109,7 +110,7 @@ export async function runMonthsCron(env, fromIdx, toIdx, { withTba = false } = {
     try {
       await runTbaPipeline(rawgKey, extraGames, env, slugOwners);
       const tbaResults = await queryActiveTbaGames(env);
-      await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
+      await putGamesListKv(env, 'games:tba', tbaResults);
       await rebuildTbaGamePagesKv(env);
       console.log(`  TBA: ${tbaResults.length} games in KV`);
     } catch (e) {
@@ -345,6 +346,19 @@ async function backfillSteamAppids(rawgKey, env) {
 
     if (!steamAppid) continue;
 
+    const app = await fetchSteamAppDetails(steamAppid);
+    if (app === ADULT_CONTENT_BLOCKED) {
+      // Dit spel stond al actief (wiki-/extra-games-bron zonder appid) en
+      // blijkt nu, nu we zijn Steam-pagina vinden, 18+ te zijn — zelfde
+      // beleid als de drop tijdens ingest (rawg.js/merge.js/wikipedia.js),
+      // maar hier moet het al-live record ook echt verborgen worden i.p.v.
+      // alleen de verrijking over te slaan (anders blijft het onverrijkt
+      // maar zichtbaar staan).
+      console.log(`Steam 18+ filter: "${row.name}" verborgen (adult content_descriptors, ontdekt tijdens appid-backfill)`);
+      await hideGames(env, [row.slug]);
+      continue;
+    }
+
     // Steam details ophalen voor cover, screenshots, etc.
     // Handmatig gemarkeerde velden (entry.manual) blijven onaangeroerd.
     const entry  = JSON.parse(row.raw_json || '{}');
@@ -352,7 +366,6 @@ async function backfillSteamAppids(rawgKey, env) {
     entry.steam = steamAppid;
     if (!manual.trailer) entry.trailer = entry.trailer || `steam:${steamAppid}`;
 
-    const app = await fetchSteamAppDetails(steamAppid);
     if (app) {
       if (!manual.cover)       entry.cover       = app.header_image || entry.cover;
       if (!manual.screenshots) entry.screenshots = (app.screenshots || []).slice(0, 3).map(s => s.path_full);
