@@ -37,8 +37,11 @@ function cleanWikitext(s) {
   s = s.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2");
   s = s.replace(/\[\[([^\]]+)\]\]/g, "$1");
   s = decodeHtmlEntities(s);
-  s = s.replace(/colspan="\d+"\s*\|/g, "");
-  s = s.replace(/rowspan="\d+"\s*\|/g, "");
+  // Eén cel kan zowel rowspan als colspan hebben (bv. `rowspan="3" colspan="2" |`)
+  // — die delen dezelfde afsluitende "|". Los elk apart stripten (met een eigen
+  // "|"-eis) laat de tweede altijd staan; hier strippen we de hele aaneengesloten
+  // reeks span-attributen in één match, gevolgd door precies één "|".
+  s = s.replace(/(?:(?:rowspan|colspan)="\d+"\s*)+\|/g, "");
   s = s.replace(/\s+/g, " ").trim();
   return s.replace(/^\|+/, "").trim();
 }
