@@ -5,9 +5,9 @@ import { handleTrendingPage } from './handlers/trending.js';
 import { handleMonthPage }    from './handlers/month.js';
 import { handleEventsPage }   from './handlers/events.js';
 import { handleEventPage }    from './handlers/event.js';
-import { runDailyCron, runMonthsCron, runMaintenanceCron, runWeeklyWikipediaCron, runHourlyCron, seedMonths, makeMonthEntry } from './cron/build-cache.js';
+import { runDailyCron, runMonthsCron, runMaintenanceCron, runWeeklyWikipediaCron, runHourlyCron, seedMonths } from './cron/build-cache.js';
 import { fetchAndStoreEvents } from './pipeline/igdb.js';
-import { MONTH_RE, windowStartKey } from './months-window.js';
+import { MONTH_RE, windowStartKey, makeMonthEntry } from './months-window.js';
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',

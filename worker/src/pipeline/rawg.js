@@ -1,5 +1,5 @@
 import { PLATFORM_MAP, mapWithConcurrency } from './utils.js';
-import { fetchSteamAppDetails } from './steam.js';
+import { fetchSteamAppDetails, ADULT_CONTENT_BLOCKED } from './steam.js';
 
 // Laag B: client-side 18+ filter op RAWG-velden
 const ADULT_ESRB_SLUGS = new Set(['adults-only']);
@@ -49,27 +49,41 @@ function mapRawgGame(g, idx, idPrefix) {
   };
 }
 
+/**
+ * RAWG's dedicated stores endpoint — vangnet als de hoofdlijst zelf geen
+ * Steam-URL meegeeft. Gedeeld met backfillSteamAppids (cron/build-cache.js)
+ * zodat een fix aan deze lookup niet in twee losse kopieën uit elkaar loopt.
+ * `rawgId` mag zowel kaal numeriek zijn als "rawg-123"/"rawg-tba-123".
+ */
+export async function fetchRawgStoreSteamAppId(rawgId, rawgKey) {
+  const rawgNumId = String(rawgId ?? '').replace(/^rawg(-tba)?-/, '');
+  if (!rawgNumId || !/^\d+$/.test(rawgNumId)) return null;
+  try {
+    const r = await fetch(
+      `https://api.rawg.io/api/games/${rawgNumId}/stores?key=${rawgKey}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    const steamEntry = (data.results || []).find(s => s.store_id === 1);
+    return steamEntry?.url?.match(/\/app\/(\d+)/)?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
 async function enrichRawgGameWithSteam(rg, rawgKey) {
   // If RAWG list didn't include a Steam URL, try the dedicated stores endpoint
   if (!rg.steam && rawgKey) {
-    const rawgNumId = rg.id.replace(/^rawg(-tba)?-/, '');
-    if (rawgNumId && /^\d+$/.test(rawgNumId)) {
-      try {
-        const r = await fetch(
-          `https://api.rawg.io/api/games/${rawgNumId}/stores?key=${rawgKey}`,
-          { signal: AbortSignal.timeout(5000) }
-        );
-        if (r.ok) {
-          const data = await r.json();
-          const steamEntry = (data.results || []).find(s => s.store_id === 1);
-          const m = steamEntry?.url?.match(/\/app\/(\d+)/);
-          if (m) rg = { ...rg, steam: m[1], trailer: rg.trailer || `steam:${m[1]}` };
-        }
-      } catch { /* silently skip */ }
-    }
+    const steamId = await fetchRawgStoreSteamAppId(rg.id, rawgKey);
+    if (steamId) rg = { ...rg, steam: steamId, trailer: rg.trailer || `steam:${steamId}` };
   }
   if (!rg.steam) return rg;
   const app = await fetchSteamAppDetails(rg.steam);
+  if (app === ADULT_CONTENT_BLOCKED) {
+    console.log(`Steam 18+ filter: dropped "${rg.title}" (adult content_descriptors)`);
+    return null;
+  }
   if (!app) return rg;
 
   // Laag B: Steam required_age check — drop het spel als Steam het als 18+ markeert

@@ -1,5 +1,5 @@
 import { normalizeTitle, titlesAreCloseEnough, daysBetween, mapWithConcurrency, parseSteamDate, generateSlug, isJapanOnly } from './utils.js';
-import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails, extractSteamDetails } from './steam.js';
+import { fetchSteamAppDetails, findExistingSteamAppId, fetchSteamGameDetails, extractSteamDetails, ADULT_CONTENT_BLOCKED } from './steam.js';
 import { fetchRawgGames, fetchRawgTbaGames, enrichRawgCoverWithScreenshot } from './rawg.js';
 import { fetchNintendoCover } from './nintendo.js';
 import { upsertGameToD1 } from './d1.js';
@@ -15,16 +15,29 @@ function withoutAlreadyCovered(extraGames, existingResults) {
   });
 }
 
+// Retourneert null om de game te laten droppen (adult content) — de
+// aanroepers (runMonthPipeline/runTbaPipeline) filteren die eruit. Games via
+// RAWG zijn hier al tegen gecheckt in enrichRawgGameWithSteam (rawg.js) —
+// game.steamApp is dan al gezet en dus al schoon — maar Wikipedia-/extra-
+// games-bronnen komen hier voor het eerst langs een Steam 18+-check, dus dit
+// pad moet dezelfde twee lagen toepassen als de RAWG-pipeline.
 async function backfillFromExistingSteamPage(game) {
   const appid = game.steam ?? await findExistingSteamAppId(game.title);
   if (!appid) return game;
   // Hergebruik het app-object dat rawg.js al ophaalde; alleen fetchen als
   // deze game via een ander pad binnenkwam (extra-games/Wikipedia).
   const app   = game.steamApp ?? await fetchSteamAppDetails(appid);
+  if (app === ADULT_CONTENT_BLOCKED) {
+    console.log(`Steam 18+ filter: dropped "${game.title}" (adult content_descriptors)`);
+    return null;
+  }
   if (!app)   return game;
 
-  // Laag B: skip Steam-verrijking als Steam het als 18+ markeert (game blijft wel)
-  if (Number(app.required_age) >= 18) return game;
+  // Laag B: drop het spel als Steam het als 18+ markeert (zelfde beleid als rawg.js)
+  if (Number(app.required_age) >= 18) {
+    console.log(`Steam 18+ filter: dropped "${game.title}" (required_age=${app.required_age})`);
+    return null;
+  }
 
   const originalDate = parseSteamDate(app.release_date?.date);
   const isRerelease  = originalDate && game.date && originalDate < game.date
@@ -173,7 +186,12 @@ async function saveGameToD1(game, env) {
     id:                   game.id,
     slug:                 game.slug,
     title:                game.title,
-    date:                 game.date,
+    // Val terug op de bestaande datum als deze run er geen teruggeeft (bv. een
+    // TBA-cron-run die dezelfde slug via Steam-appid reclaimt vóórdat RAWG's
+    // eigen tba-vlag is bijgewerkt) — anders wist dat een net gereconcilieerde
+    // releasedatum weer terug naar TBA. Een echte nieuwe datum wint gewoon,
+    // net als bij dev/rerelease/trailer hieronder.
+    date:                 game.date                          || existing?.date                  || null,
     platforms:            game.platforms,
     genre:                game.genre,
     dev:                  game.dev                          || existing?.dev                    || null,
@@ -236,7 +254,7 @@ export async function runMonthPipeline(rawgKey, dateFrom, dateTo, extraGames, en
   const newExtras = withoutAlreadyCovered(filtered, rawgGames);
   const all       = [...rawgGames, ...newExtras].filter(g => !isJapanOnly(g.title) && !isBlockedGame(g));
 
-  const backfilled  = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
+  const backfilled  = (await mapWithConcurrency(all, 10, backfillFromExistingSteamPage)).filter(Boolean);
   const withCovers  = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
   const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 
@@ -252,7 +270,7 @@ export async function runTbaPipeline(rawgKey, extraGames, env, slugOwners) {
   const newExtras   = withoutAlreadyCovered(extraTba, rawgResults);
   const all         = [...rawgResults, ...newExtras].filter(g => !isJapanOnly(g.title) && !isBlockedGame(g));
 
-  const backfilled   = await mapWithConcurrency(all, 10, backfillFromExistingSteamPage);
+  const backfilled   = (await mapWithConcurrency(all, 10, backfillFromExistingSteamPage)).filter(Boolean);
   const withCovers   = await mapWithConcurrency(backfilled, 6, g => enrichRawgCoverWithScreenshot(rawgKey, g));
   const withNintendo = await mapWithConcurrency(withCovers, 4, enrichWithNintendoCover);
 

@@ -1,5 +1,5 @@
 import { isoDate, decodeHtmlEntities, normalizeTitle, titlesAreCloseEnough, mapWithConcurrency, parseSteamDate, isJapanOnly } from './utils.js';
-import { fetchSteamAppDetails } from './steam.js';
+import { fetchSteamAppDetails, ADULT_CONTENT_BLOCKED } from './steam.js';
 
 const RAW_URL = "https://en.wikipedia.org/w/index.php?title=List_of_video_games_released_in_2026&action=raw";
 
@@ -129,6 +129,11 @@ async function findSteamAppIdByName(title) {
 async function enrichWithSteam(entry) {
   const appid = await findSteamAppIdByName(entry.title);
   const app   = appid ? await fetchSteamAppDetails(appid) : null;
+
+  if (app === ADULT_CONTENT_BLOCKED) {
+    console.log(`  Wikipedia: "${entry.title}" Steam 18+ filter — overgeslagen`);
+    return null;
+  }
 
   let platforms = entry.platforms.filter(p => p !== "PC");
   let { date, genre, dev } = entry;

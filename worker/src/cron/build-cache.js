@@ -5,6 +5,7 @@ import { fetchAndStoreEvents } from '../pipeline/igdb.js';
 import { isWithinRetention, isEventPast } from '../events-window.js';
 import { fetchSteamAppDetails, fetchSteamPriceMulti, findExistingSteamAppId, PRICE_FETCH_FAILED } from '../pipeline/steam.js';
 import { mapWithConcurrency } from '../pipeline/utils.js';
+import { fetchRawgStoreSteamAppId } from '../pipeline/rawg.js';
 import { reconcileTbaDates } from '../pipeline/tba-reconcile.js';
 import {
   queryActiveMonthGames,
@@ -16,13 +17,12 @@ import {
   dedupeActiveGames,
   purgeGamesBefore,
   loadSlugOwners,
+  putGamesListKv,
 } from '../pipeline/d1.js';
 import extraGamesBundle from '../../../api/data/extra-games.json';
-import { rollingMonths, toMonthKey, windowStartDate, windowEndDate } from '../months-window.js';
+import { rollingMonths, toMonthKey, windowStartDate, windowEndDate, makeMonthEntry } from '../months-window.js';
 
 // ---- helpers ----
-
-function pad(n) { return String(n).padStart(2, '0'); }
 
 // Steam's 'nl' (Netherlands) locale formats EUR prices as "79,99€" (symbool
 // achteraan). De rest van de site (USD "$69.99", GBP "£69.99") zet het symbool
@@ -31,13 +31,6 @@ function euroSymbolFirst(str) {
   if (!str) return str;
   const m = String(str).trim().match(/^([^\s€]+)\s*€$/);
   return m ? `€${m[1]}` : str;
-}
-
-function makeMonthEntry(year, month) {
-  const y = year;
-  const m = pad(month);
-  const lastDay = new Date(y, month, 0).getDate();
-  return { kvKey: `games:${y}-${m}`, dateFrom: `${y}-${m}-01`, dateTo: `${y}-${m}-${lastDay}`, label: `${y}-${m}` };
 }
 
 /** Load extra-games from KV (updated by weekly Wikipedia cron), fall back to bundle. */
@@ -66,7 +59,7 @@ async function processMonth(rawgKey, extraGames, env, { kvKey, dateFrom, dateTo,
   const results = await queryActiveMonthGames(env, dateFrom, dateTo);
 
   // Stap 3a: maand-KV (gebruikt door /api/games?month=YYYY-MM)
-  await env.GAMES_KV.put(kvKey, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
+  await putGamesListKv(env, kvKey, results);
 
   // Stap 3b: individuele game:{slug} KV (gebruikt door /game/:slug)
   const pageCount = await rebuildGamePagesKv(env, dateFrom, dateTo);
@@ -161,12 +154,12 @@ export async function runMaintenanceCron(env) {
       for (const mon of months) {
         if (mon === 'tba') {
           const results = await queryActiveTbaGames(env);
-          await env.GAMES_KV.put('games:tba', JSON.stringify({ results, generatedAt: new Date().toISOString() }));
+          await putGamesListKv(env, 'games:tba', results);
         } else {
           const [y, m] = mon.split('-').map(Number);
           const { kvKey, dateFrom, dateTo } = makeMonthEntry(y, m);
           const results = await queryActiveMonthGames(env, dateFrom, dateTo);
-          await env.GAMES_KV.put(kvKey, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
+          await putGamesListKv(env, kvKey, results);
         }
       }
     }
@@ -231,11 +224,18 @@ async function generateSitemap(env) {
   // Verre venstermaanden kunnen nog leeg zijn (RAWG heeft dan nog geen
   // maand-precieze datums); hun /releases/-pagina geeft 404, dus die horen
   // niet in de sitemap. Zodra de cron er games voor vindt, komen ze erbij.
+  // Alle KV-reads parallel (i.s.p.v. één voor één) — dit zijn ~12 onafhankelijke
+  // gets, sequentieel scheelt dat onnodige latency in de maintenance-cron.
+  const [monthsData, tbaData] = await Promise.all([
+    Promise.all(months.map(m => env.GAMES_KV.get(`games:${m}`, 'json'))),
+    env.GAMES_KV.get('games:tba', 'json'),
+  ]);
+
   const monthsWithGames = [];
   const monthCounts = {};
   const allGames = [];
-  for (const m of months) {
-    const data = await env.GAMES_KV.get(`games:${m}`, 'json');
+  months.forEach((m, i) => {
+    const data = monthsData[i];
     monthCounts[m] = data?.results?.length ?? 0;
     if (data?.results?.length) {
       monthsWithGames.push(m);
@@ -243,7 +243,7 @@ async function generateSitemap(env) {
         if (g.slug) allGames.push({ slug: g.slug, date: g.date });
       }
     }
-  }
+  });
 
   // Compacte index {"2026-07": 179, ...} zodat month.js voor prev/next-links
   // niet de volledige buurmaand-payloads hoeft te lezen en parsen.
@@ -251,7 +251,6 @@ async function generateSitemap(env) {
 
   // TBA-games hebben geen release_date (dus geen maand-KV), maar wel een
   // live detailpagina — anders missen ze in de sitemap tot ze een datum krijgen.
-  const tbaData = await env.GAMES_KV.get('games:tba', 'json');
   if (tbaData?.results) {
     for (const g of tbaData.results) {
       if (g.slug) allGames.push({ slug: g.slug, date: g.date });
@@ -336,24 +335,8 @@ async function backfillSteamAppids(rawgKey, env) {
 
   let fixed = 0;
   for (const row of results) {
-    const rawgNumId = row.rawg_id?.replace(/^rawg(-tba)?-/, '');
-    let steamAppid  = null;
-
     // Stap 1: RAWG stores endpoint
-    if (rawgNumId && /^\d+$/.test(rawgNumId)) {
-      try {
-        const r = await fetch(
-          `https://api.rawg.io/api/games/${rawgNumId}/stores?key=${rawgKey}`,
-          { signal: AbortSignal.timeout(5000) }
-        );
-        if (r.ok) {
-          const data = await r.json();
-          const steamEntry = (data.results || []).find(s => s.store_id === 1);
-          const m = steamEntry?.url?.match(/\/app\/(\d+)/);
-          if (m) steamAppid = m[1];
-        }
-      } catch { /* ignore */ }
-    }
+    let steamAppid = await fetchRawgStoreSteamAppId(row.rawg_id, rawgKey);
 
     // Stap 2: Steam store search op naam als fallback
     if (!steamAppid) {
@@ -375,7 +358,9 @@ async function backfillSteamAppids(rawgKey, env) {
       if (!manual.screenshots) entry.screenshots = (app.screenshots || []).slice(0, 3).map(s => s.path_full);
       if (!manual.short_description && !entry.short_description) entry.short_description = app.short_description || null;
       if (!manual.dev   && !entry.dev)   entry.dev   = app.developers?.[0] || null;
-      if (!manual.price && !entry.price) entry.price = app.is_free ? 'Free' : (app.price_overview?.final_formatted || null);
+      // Ports/re-releases tonen bewust geen prijs (hoort bij de oude PC-
+      // release) — zelfde beleid als saveGameToD1 (merge.js) en updateDailyPrices.
+      if (!manual.price && !entry.price && !entry.rerelease) entry.price = app.is_free ? 'Free' : (app.price_overview?.final_formatted || null);
     }
 
     const now  = new Date().toISOString();
@@ -421,13 +406,20 @@ async function ensurePriceCheckColumn(db) {
 // aan de beurt komt.
 const PRICE_UPDATE_DAILY_CAP = 150;
 const PRICE_UPDATE_NEAR_TERM_DAYS = 30;
+// Near-term games krijgen voorrang maar mogen nooit de hele dagcap opsouperen:
+// anders komen far-term games tijdens een drukke releaseperiode (>100
+// near-term games die update nodig hebben) NOOIT meer aan de beurt. Dit
+// garandeert far-term altijd minstens DAILY_CAP - NEAR_TERM_CAP = 50 slots.
+const PRICE_UPDATE_NEAR_TERM_CAP = 100;
 
 /**
  * Haalt dagelijks de actuele prijs + korting op van Steam.
- * Eén query met totale cap: games rond hun releasedatum (±30 dagen) eerst —
- * daar veranderen prijzen het vaakst — daarna de rest, beide groepen intern
- * geroteerd op price_checked_at (oudste eerst) zodat elke game periodiek aan
- * de beurt komt zonder het subrequest-budget van de invocation te overschrijden.
+ * Twee aparte queries i.p.v. één gecombineerde ORDER BY/LIMIT: games rond hun
+ * releasedatum (±30 dagen) krijgen voorrang (daar veranderen prijzen het
+ * vaakst) maar zijn zelf gecapt op PRICE_UPDATE_NEAR_TERM_CAP, zodat de rest
+ * van de dagcap altijd naar far-term games gaat — anders verhongeren die
+ * structureel zodra er meer near-term games zijn dan de dagcap. Beide groepen
+ * intern geroteerd op price_checked_at (oudste eerst).
  * Slaat discount_percent en price_initial op in raw_json + KV.
  */
 async function updateDailyPrices(env) {
@@ -437,15 +429,28 @@ async function updateDailyPrices(env) {
   const nearFrom = new Date(now.getTime() - PRICE_UPDATE_NEAR_TERM_DAYS * 86400_000).toISOString().slice(0, 10);
   const nearTo   = new Date(now.getTime() + PRICE_UPDATE_NEAR_TERM_DAYS * 86400_000).toISOString().slice(0, 10);
 
-  const { results } = await env.GAMES_D1
+  const { results: nearResults } = await env.GAMES_D1
     .prepare(`SELECT slug, steam_appid, raw_json FROM games
               WHERE status = 'active' AND steam_appid IS NOT NULL
-              ORDER BY CASE WHEN release_date IS NOT NULL AND release_date BETWEEN ?1 AND ?2 THEN 0 ELSE 1 END,
-                       COALESCE(price_checked_at, '') ASC
+                AND release_date IS NOT NULL AND release_date BETWEEN ?1 AND ?2
+              ORDER BY COALESCE(price_checked_at, '') ASC
               LIMIT ?3`)
-    .bind(nearFrom, nearTo, PRICE_UPDATE_DAILY_CAP)
+    .bind(nearFrom, nearTo, PRICE_UPDATE_NEAR_TERM_CAP)
     .all();
 
+  const farLimit = PRICE_UPDATE_DAILY_CAP - nearResults.length;
+  const farResults = farLimit > 0
+    ? (await env.GAMES_D1
+        .prepare(`SELECT slug, steam_appid, raw_json FROM games
+                  WHERE status = 'active' AND steam_appid IS NOT NULL
+                    AND NOT (release_date IS NOT NULL AND release_date BETWEEN ?1 AND ?2)
+                  ORDER BY COALESCE(price_checked_at, '') ASC
+                  LIMIT ?3`)
+        .bind(nearFrom, nearTo, farLimit)
+        .all()).results
+    : [];
+
+  const results = [...nearResults, ...farResults];
   if (!results.length) return;
   console.log(`  Prijsupdate: ${results.length} games controleren`);
 
@@ -517,8 +522,6 @@ async function updateDailyPrices(env) {
 
   console.log(`  Prijsupdate: ${updated} games bijgewerkt`);
 }
-
-export { makeMonthEntry };
 
 // ---- hourly: trending update ----
 

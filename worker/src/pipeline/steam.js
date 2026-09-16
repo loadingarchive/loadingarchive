@@ -1,7 +1,12 @@
 import { normalizeTitle, titlesAreCloseEnough } from './utils.js';
 
-// Content descriptors 3 (Nudity) en 4 (Sexual Content) → return null zodat aanroeper de game droppt
+// Content descriptors 3 (Nudity) en 4 (Sexual Content) → ADULT_CONTENT_BLOCKED,
+// te onderscheiden van "gewoon" null (geen data / fetch mislukt) zodat een
+// aanroeper de game daadwerkelijk kan droppen i.p.v. hem alleen onverrijkt
+// (maar wél zichtbaar) te laten — anders komt adult content via elke bron
+// zonder RAWG's eigen 18+-filters gewoon door.
 export const ADULT_DESCRIPTOR_IDS = new Set([3, 4]);
+export const ADULT_CONTENT_BLOCKED = Symbol('steam-adult-content-blocked');
 
 export async function fetchSteamAppDetails(appid) {
   try {
@@ -14,7 +19,7 @@ export async function fetchSteamAppDetails(appid) {
     const app = data?.[appid]?.data;
     if (!app) return null;
     const descIds = app.content_descriptors?.ids || [];
-    if (descIds.some(id => ADULT_DESCRIPTOR_IDS.has(id))) return null;
+    if (descIds.some(id => ADULT_DESCRIPTOR_IDS.has(id))) return ADULT_CONTENT_BLOCKED;
     return app;
   } catch (e) {
     console.error("Steam appdetails failed", appid, e.message);

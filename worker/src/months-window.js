@@ -46,6 +46,19 @@ export function windowEndKey(now = new Date()) {
   return toMonthKey(months[months.length - 1]);
 }
 
+/**
+ * KV-key + datumgrenzen voor één maand. Gedeelde plek zodat de cron
+ * (build-cache.js) en de TBA-datumreconciliatie (pipeline/tba-reconcile.js)
+ * niet elk hun eigen kopie van deze last-day-of-month-berekening bijhouden —
+ * die dreigen anders uit elkaar te lopen als er ooit iets aan verandert
+ * (bv. een extra veld, of een tijdzone-fix).
+ */
+export function makeMonthEntry(year, month) {
+  const mm = String(month).padStart(2, '0');
+  const lastDay = new Date(year, month, 0).getDate();
+  return { kvKey: `games:${year}-${mm}`, dateFrom: `${year}-${mm}-01`, dateTo: `${year}-${mm}-${lastDay}`, label: `${year}-${mm}` };
+}
+
 /** Eerste dag van het venster als "YYYY-MM-DD" — freeze-grens voor soft-delete. */
 export function windowStartDate(now = new Date()) {
   return `${toMonthKey(rollingMonths(now)[0])}-01`;

@@ -14,7 +14,7 @@ export async function handleGames(request, env, ctx) {
   const tba   = searchParams.get('tba');
 
   let key;
-  if (tba) {
+  if (tba && tba !== '0' && tba.toLowerCase() !== 'false') {
     key = 'games:tba';
   } else {
     const target = month ?? currentMonth();

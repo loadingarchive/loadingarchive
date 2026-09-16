@@ -13,6 +13,24 @@ import { normalizeTitle } from './utils.js';
  */
 export async function upsertGameToD1(entry, env) {
   const now = new Date().toISOString();
+  try {
+    await runUpsert(entry, env, now);
+  } catch (e) {
+    // idx_games_active_steam_appid (0003) kan botsen als twee verschillende
+    // slugs bijna gelijktijdig hetzelfde appid claimen (race tussen cron-
+    // paden) — dedupeActiveGames ruimt zo'n dubbele actieve rij normaal
+    // sowieso op, dus hier alleen loggen en overslaan i.p.v. de hele
+    // mapWithConcurrency-batch (en dus de rest van deze maand-run) te laten
+    // crashen op één game.
+    if (/UNIQUE constraint failed.*steam_appid/i.test(e.message || "")) {
+      console.error(`upsertGameToD1: steam_appid-botsing voor "${entry.slug}" (appid ${entry.steam}) — overgeslagen, dedupe-cron ruimt dit op`, e.message);
+      return;
+    }
+    throw e;
+  }
+}
+
+async function runUpsert(entry, env, now) {
   await env.GAMES_D1.prepare(`
     INSERT INTO games (
       slug, rawg_id, name, release_date, platforms, cover_image, steam_appid,
@@ -32,7 +50,9 @@ export async function upsertGameToD1(entry, env) {
                             ELSE COALESCE(excluded.rawg_id, rawg_id)
                           END,
       name              = excluded.name,
-      release_date      = excluded.release_date,
+      -- Nooit een bestaande releasedatum terugzetten naar TBA op een lege
+      -- excluded-waarde (zie merge.js saveGameToD1 voor het scenario).
+      release_date      = COALESCE(excluded.release_date, release_date),
       platforms         = excluded.platforms,
       cover_image       = COALESCE(excluded.cover_image, cover_image),
       steam_appid       = COALESCE(excluded.steam_appid, steam_appid),
@@ -146,6 +166,18 @@ export async function rebuildTbaGamePagesKv(env) {
     .all();
   await Promise.all(results.map(r => env.GAMES_KV.put(`game:${r.slug}`, r.raw_json)));
   return results.length;
+}
+
+/**
+ * Schrijft een maand- of TBA-lijst-KV weg in de gedeelde `{results,
+ * generatedAt}`-vorm die /api/games en month.js verwachten. Eén plek voor
+ * deze payload-vorm i.p.v. hem los te herhalen op elke schrijfplek (cron's
+ * processMonth/dedupe-rebuild en tba-reconcile.js) — voorkomt dat een
+ * toekomstige wijziging aan de vorm op de ene plek wordt doorgevoerd en op
+ * de andere vergeten wordt.
+ */
+export async function putGamesListKv(env, key, results) {
+  await env.GAMES_KV.put(key, JSON.stringify({ results, generatedAt: new Date().toISOString() }));
 }
 
 /**

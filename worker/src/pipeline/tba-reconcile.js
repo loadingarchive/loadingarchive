@@ -14,8 +14,8 @@
 
 import { fetchSteamReleaseDate } from './steam.js';
 import { mapWithConcurrency, parseSteamDate } from './utils.js';
-import { queryActiveTbaGames, queryActiveMonthGames } from './d1.js';
-import { rollingMonths, toMonthKey } from '../months-window.js';
+import { queryActiveTbaGames, queryActiveMonthGames, putGamesListKv } from './d1.js';
+import { rollingMonths, toMonthKey, makeMonthEntry } from '../months-window.js';
 
 const TBA_RECONCILE_DAILY_CAP = 30;
 
@@ -32,13 +32,6 @@ export function parseFullSteamDate(str) {
   const s = String(str || '').trim();
   if (!/^(\d{1,2}\s+[A-Za-z]{3},?\s+\d{4}|[A-Za-z]{3}\s+\d{1,2},?\s+\d{4})$/.test(s)) return null;
   return parseSteamDate(s);
-}
-
-function monthEntry(mon) {
-  const [y, m] = mon.split('-').map(Number);
-  const mm      = String(m).padStart(2, '0');
-  const lastDay = new Date(y, m, 0).getDate();
-  return { kvKey: `games:${y}-${mm}`, dateFrom: `${y}-${mm}-01`, dateTo: `${y}-${mm}-${lastDay}` };
 }
 
 export async function reconcileTbaDates(env) {
@@ -93,14 +86,15 @@ export async function reconcileTbaDates(env) {
   // eerder deze nacht al). Maanden búiten het venster: vóór het venster ruimt
   // de purge het record de volgende nacht op, erna bestaat de maand nog niet.
   const tbaResults = await queryActiveTbaGames(env);
-  await env.GAMES_KV.put('games:tba', JSON.stringify({ results: tbaResults, generatedAt: new Date().toISOString() }));
+  await putGamesListKv(env, 'games:tba', tbaResults);
 
   const windowKeys = new Set(rollingMonths().map(toMonthKey));
   for (const mon of movedMonths) {
     if (!windowKeys.has(mon)) continue;
-    const { kvKey, dateFrom, dateTo } = monthEntry(mon);
+    const [y, m] = mon.split('-').map(Number);
+    const { kvKey, dateFrom, dateTo } = makeMonthEntry(y, m);
     const monthResults = await queryActiveMonthGames(env, dateFrom, dateTo);
-    await env.GAMES_KV.put(kvKey, JSON.stringify({ results: monthResults, generatedAt: new Date().toISOString() }));
+    await putGamesListKv(env, kvKey, monthResults);
   }
   console.log(`  TBA-datumcheck: ${moved} game(s) een datum gegeven (maanden: ${[...movedMonths].join(', ')})`);
   return { moved, months: [...movedMonths] };
