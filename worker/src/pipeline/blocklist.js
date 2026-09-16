@@ -32,8 +32,15 @@ import { normalizeTitle } from './utils.js';
 // zelf ontdekt: geheel leeg record (geen dev, genre, Steam-appid of
 // beschrijving; alleen een RAWG-screenshot als cover), geen appid bekend
 // dus geen appid-match mogelijk.
-const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279', 'rawg-1019944', 'rawg-1019729']);
-const BLOCKED_APPIDS = new Set(['4840340', '4822430', '5087820']);
+//
+// Toegevoegd 2026-09-16: 挂机吧三国 (rawg-1019918, appid 5075090) — door
+// gebruiker zelf ontdekt: volledig Chinees mobiel/gacha idle-spel zonder
+// Engelse lokalisatie, niet gewenst op de site. Geen titel-entry hier: de
+// CJK-titel normaliseert (net als bij de dedup-guard) naar een lege string,
+// en een lege string in BLOCKED_TITLES zou daardoor ELK CJK-getiteld spel
+// blokkeren — id + appid zijn hier de enige veilige match.
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279', 'rawg-1019944', 'rawg-1019729', 'rawg-1019918']);
+const BLOCKED_APPIDS = new Set(['4840340', '4822430', '5087820', '5075090']);
 const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one', 'king quest', 'i have known you']); // normalizeTitle-vorm
 
 export function isBlockedGame(g) {
