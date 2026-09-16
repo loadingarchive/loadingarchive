@@ -15,8 +15,18 @@ export const ASSUMED_DURATION_MS = 4 * 3600 * 1000;
 // laat de pipeline hem definitief uit de KV vallen (zie igdb.js).
 export const RETENTION_MS = 30 * 24 * 3600 * 1000;
 
+// IGDB's end_time is community-submitted en soms fout (bv. verkeerd jaar
+// getypt door een submitter — geeft een "event" dat een heel jaar LIVE
+// lijkt). Een langere duur dan dit is bij geen enkel echt event aannemelijk
+// (zelfs meerdaagse expo's zoals SAGE duren hooguit ~1.5 week) — een
+// end_time die dit overschrijdt wordt genegeerd t.g.v. ASSUMED_DURATION_MS.
+const MAX_PLAUSIBLE_DURATION_MS = 14 * 24 * 3600 * 1000;
+
 export function eventEndMs(ev) {
-  return ev.endTime ? ev.endTime * 1000 : ev.startTime * 1000 + ASSUMED_DURATION_MS;
+  const startMs = ev.startTime * 1000;
+  if (!ev.endTime) return startMs + ASSUMED_DURATION_MS;
+  const endMs = ev.endTime * 1000;
+  return endMs - startMs > MAX_PLAUSIBLE_DURATION_MS ? startMs + ASSUMED_DURATION_MS : endMs;
 }
 
 export function isEventLive(ev, now = Date.now()) {
