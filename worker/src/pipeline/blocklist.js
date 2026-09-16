@@ -27,9 +27,14 @@ import { normalizeTitle } from './utils.js';
 // Toegevoegd 2026-09-16: King Quest (rawg-1019944, appid 5087820) — door
 // gebruiker zelf ontdekt en vermoedelijk fake: dev=publisher "slc studios",
 // geen website, generieke boilerplate-beschrijving, geen trailer.
-const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279', 'rawg-1019944']);
+//
+// Toegevoegd 2026-09-16: I Have Known You (rawg-1019729) — door gebruiker
+// zelf ontdekt: geheel leeg record (geen dev, genre, Steam-appid of
+// beschrijving; alleen een RAWG-screenshot als cover), geen appid bekend
+// dus geen appid-match mogelijk.
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279', 'rawg-1019944', 'rawg-1019729']);
 const BLOCKED_APPIDS = new Set(['4840340', '4822430', '5087820']);
-const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one', 'king quest']); // normalizeTitle-vorm
+const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one', 'king quest', 'i have known you']); // normalizeTitle-vorm
 
 export function isBlockedGame(g) {
   // TBA-records hebben id "rawg-tba-{n}", gedateerde "rawg-{n}".
