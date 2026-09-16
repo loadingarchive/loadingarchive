@@ -23,9 +23,13 @@ import { normalizeTitle } from './utils.js';
 // Toegevoegd 2026-07-29: Summer In The City - Season One (rawg-1019279) —
 // op gebruikersverzoek verwijderd wegens vermoedelijke 18+ content (geen
 // Steam-appid bekend, dus geen appid-match mogelijk).
-const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279']);
-const BLOCKED_APPIDS = new Set(['4840340', '4822430']);
-const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one']); // normalizeTitle-vorm
+//
+// Toegevoegd 2026-09-16: King Quest (rawg-1019944, appid 5087820) — door
+// gebruiker zelf ontdekt en vermoedelijk fake: dev=publisher "slc studios",
+// geen website, generieke boilerplate-beschrijving, geen trailer.
+const BLOCKED_IDS    = new Set(['rawg-1018411', 'wiki-assassin-s-creed-black-flag-resynced', 'rawg-1019167', 'rawg-1019279', 'rawg-1019944']);
+const BLOCKED_APPIDS = new Set(['4840340', '4822430', '5087820']);
+const BLOCKED_TITLES = new Set(['royale battle', 'last guest at sunset', 'summer in the city season one', 'king quest']); // normalizeTitle-vorm
 
 export function isBlockedGame(g) {
   // TBA-records hebben id "rawg-tba-{n}", gedateerde "rawg-{n}".
