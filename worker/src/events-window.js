@@ -22,6 +22,14 @@ export const RETENTION_MS = 30 * 24 * 3600 * 1000;
 // end_time die dit overschrijdt wordt genegeerd t.g.v. ASSUMED_DURATION_MS.
 const MAX_PLAUSIBLE_DURATION_MS = 14 * 24 * 3600 * 1000;
 
+// Boven deze duur is een event geen losse broadcast meer maar een
+// meerdaagse expo zonder één doorlopende stream (bv. SAGE: een hele week
+// "open" voor fandemo's, geen kijklink die daadwerkelijk continu live is).
+// Zo'n event krijgt geen pulsende LIVE-badge — die belooft iets dat er niet
+// is — maar telt (met zijn echte, ongekapte end_time) wél gewoon door tot
+// isEventPast/retentie: het is alleen de broadcast-suggestie die vervalt.
+const MAX_LIVE_BADGE_DURATION_MS = 24 * 3600 * 1000;
+
 export function eventEndMs(ev) {
   const startMs = ev.startTime * 1000;
   if (!ev.endTime) return startMs + ASSUMED_DURATION_MS;
@@ -31,7 +39,9 @@ export function eventEndMs(ev) {
 
 export function isEventLive(ev, now = Date.now()) {
   const startMs = ev.startTime * 1000;
-  return now >= startMs && now < eventEndMs(ev);
+  const endMs = eventEndMs(ev);
+  if (endMs - startMs > MAX_LIVE_BADGE_DURATION_MS) return false;
+  return now >= startMs && now < endMs;
 }
 
 export function isEventPast(ev, now = Date.now()) {
